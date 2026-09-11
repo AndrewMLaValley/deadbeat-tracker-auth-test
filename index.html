@@ -3,61 +3,142 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Deadbeat Tracker — Supabase Connection Test</title>
+  <meta name="theme-color" content="#12355b">
+  <title>Deadbeat Tracker — Authentication Test</title>
 
   <style>
+    :root {
+      --navy: #12355b;
+      --blue: #1d73c9;
+      --green: #13795b;
+      --red: #b42318;
+      --bg: #f4f7fb;
+      --text: #172033;
+      --muted: #64748b;
+      --border: #d9e1ec;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
       display: grid;
       place-items: center;
-      background: #f4f7fb;
-      color: #172033;
+      padding: 18px;
+      background: var(--bg);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     }
 
     .card {
-      width: min(90%, 440px);
+      width: min(100%, 440px);
       padding: 24px;
       background: white;
-      border: 1px solid #d9e1ec;
-      border-radius: 14px;
-      box-shadow: 0 4px 16px rgba(18, 53, 91, .10);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      box-shadow: 0 4px 18px rgba(18, 53, 91, .10);
     }
 
-    h1 { margin-top: 0; color: #12355b; }
-    p { line-height: 1.5; }
+    h1 { margin: 0; color: var(--navy); }
+    h2 { margin: 22px 0 0; font-size: 1.15rem; }
 
-    #status {
-      margin-top: 18px;
-      padding: 12px;
-      border-radius: 9px;
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .group { margin-top: 14px; }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: .85rem;
       font-weight: 700;
-      background: #e8eef6;
-      color: #12355b;
     }
 
-    .success {
-      background: #e5f6ee !important;
-      color: #13795b !important;
+    input {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #bdc9d8;
+      border-radius: 9px;
+      font: inherit;
     }
 
-    .error {
-      background: #fdecea !important;
-      color: #b42318 !important;
+    .password-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 7px;
     }
 
     button {
-      width: 100%;
-      margin-top: 14px;
-      padding: 11px;
       border: 0;
       border-radius: 9px;
-      background: #1d73c9;
-      color: white;
+      padding: 11px;
+      cursor: pointer;
       font: inherit;
       font-weight: 700;
-      cursor: pointer;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .primary {
+      background: var(--blue);
+      color: white;
+    }
+
+    .secondary {
+      background: #e8eef6;
+      color: var(--navy);
+    }
+
+    .wide {
+      width: 100%;
+      margin-top: 9px;
+    }
+
+    #message {
+      min-height: 22px;
+      margin: 16px 0 0;
+      padding: 10px;
+      border-radius: 9px;
+      color: var(--navy);
+      background: #e8eef6;
+      font-size: .9rem;
+      line-height: 1.4;
+    }
+
+    #message:empty {
+      display: none;
+    }
+
+    .success {
+      color: var(--green) !important;
+      background: #e5f6ee !important;
+    }
+
+    .error {
+      color: var(--red) !important;
+      background: #fdecea !important;
+    }
+
+    #signedInPanel {
+      display: none;
+      margin-top: 18px;
+    }
+
+    #signedInPanel.show {
+      display: block;
+    }
+
+    .hidden {
+      display: none;
     }
   </style>
 </head>
@@ -65,19 +146,70 @@
 <body>
   <main class="card">
     <h1>Deadbeat Tracker</h1>
-    <p>Supabase connection test</p>
+    <p class="sub">Supabase authentication test</p>
 
-    <div id="status">Checking connection...</div>
+    <div id="authPanel">
+      <h2>Create Account or Sign In</h2>
 
-    <button type="button" onclick="testConnection()">
-      Test Again
-    </button>
+      <div class="group">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" placeholder="name@example.com">
+      </div>
+
+      <div class="group">
+        <label for="password">Password</label>
+
+        <div class="password-row">
+          <input
+            id="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Enter password"
+          >
+          <button
+            id="showPasswordButton"
+            class="secondary"
+            type="button"
+            aria-label="Show password"
+            onclick="togglePassword()"
+          >👁</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" type="button" onclick="createAccount()">
+          Create Account
+        </button>
+
+        <button class="secondary" type="button" onclick="signIn()">
+          Sign In
+        </button>
+      </div>
+
+      <button class="secondary wide" type="button" onclick="resetPassword()">
+        Forgot Password
+      </button>
+    </div>
+
+    <div id="signedInPanel">
+      <h2>Signed In</h2>
+      <p id="signedInEmail" class="sub"></p>
+
+      <button class="primary wide" type="button" onclick="signOut()">
+        Sign Out
+      </button>
+    </div>
+
+    <p id="message"></p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    /* Paste your existing Supabase values between the quotation marks. */
+    /*
+      Keep your existing working values between the quotation marks.
+      Use the Project URL and the Publishable key only.
+    */
     const SUPABASE_URL = "https://jjffdtsohryyubmjnq.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
 
@@ -86,40 +218,172 @@
       SUPABASE_PUBLISHABLE_KEY
     );
 
-    async function testConnection() {
-      const status = document.getElementById("status");
+    const $ = id => document.getElementById(id);
 
-      status.className = "";
-      status.textContent = "Checking connection...";
+    function setMessage(text, type = "") {
+      const message = $("message");
+      message.textContent = text || "";
+      message.className = type;
+    }
 
-      try {
-        const { error } = await supabaseClient
-          .from("trackers")
-          .select("id")
-          .limit(1);
+    function getCredentials() {
+      return {
+        email: $("email").value.trim(),
+        password: $("password").value
+      };
+    }
 
-        if (error) {
-          /*
-            A database permission message still proves the browser
-            successfully contacted Supabase.
-          */
-          status.className = "success";
-          status.textContent =
-            "Connected to Supabase. Database replied: " + error.message;
-          return;
+    function validateCredentials() {
+      const { email, password } = getCredentials();
+
+      if (!email || !password) {
+        setMessage("Enter both an email address and password.", "error");
+        return false;
+      }
+
+      if (password.length < 6) {
+        setMessage("Password must contain at least 6 characters.", "error");
+        return false;
+      }
+
+      return true;
+    }
+
+    function togglePassword() {
+      const password = $("password");
+      const button = $("showPasswordButton");
+      const isHidden = password.type === "password";
+
+      password.type = isHidden ? "text" : "password";
+      button.textContent = isHidden ? "🙈" : "👁";
+      button.setAttribute(
+        "aria-label",
+        isHidden ? "Hide password" : "Show password"
+      );
+    }
+
+    function showSignedIn(user) {
+      $("authPanel").classList.add("hidden");
+      $("signedInPanel").classList.add("show");
+      $("signedInEmail").textContent = user.email || "Signed in";
+      setMessage("Authentication test succeeded.", "success");
+    }
+
+    function showSignedOut() {
+      $("authPanel").classList.remove("hidden");
+      $("signedInPanel").classList.remove("show");
+    }
+
+    async function createAccount() {
+      if (!validateCredentials()) return;
+
+      const { email, password } = getCredentials();
+
+      setMessage("Creating account...");
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin + window.location.pathname
         }
+      });
 
-        status.className = "success";
-        status.textContent =
-          "Success — the browser connected to Supabase and reached the database.";
-      } catch (error) {
-        status.className = "error";
-        status.textContent =
-          "Connection failed: " + (error.message || "Unknown error");
+      if (error) {
+        setMessage(error.message, "error");
+        return;
+      }
+
+      if (data.session) {
+        showSignedIn(data.session.user);
+        return;
+      }
+
+      setMessage(
+        "Account created. Check your email and use the confirmation link before signing in.",
+        "success"
+      );
+    }
+
+    async function signIn() {
+      if (!validateCredentials()) return;
+
+      const { email, password } = getCredentials();
+
+      setMessage("Signing in...");
+
+      const { data, error } =
+        await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+      if (error) {
+        setMessage(error.message, "error");
+        return;
+      }
+
+      showSignedIn(data.user);
+    }
+
+    async function resetPassword() {
+      const email = $("email").value.trim();
+
+      if (!email) {
+        setMessage("Enter your email address first.", "error");
+        return;
+      }
+
+      setMessage("Sending password-reset email...");
+
+      const { error } =
+        await supabaseClient.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + window.location.pathname
+        });
+
+      if (error) {
+        setMessage(error.message, "error");
+        return;
+      }
+
+      setMessage("Password-reset email sent.", "success");
+    }
+
+    async function signOut() {
+      const { error } = await supabaseClient.auth.signOut();
+
+      if (error) {
+        setMessage(error.message, "error");
+        return;
+      }
+
+      $("password").value = "";
+      showSignedOut();
+      setMessage("Signed out.", "success");
+    }
+
+    async function checkExistingSession() {
+      const {
+        data: { session }
+      } = await supabaseClient.auth.getSession();
+
+      if (session?.user) {
+        showSignedIn(session.user);
+      } else {
+        showSignedOut();
+        setMessage("Ready to create an account or sign in.");
       }
     }
 
-    testConnection();
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        showSignedIn(session.user);
+      } else {
+        showSignedOut();
+      }
+    });
+
+    checkExistingSession();
   </script>
 </body>
 </html>
