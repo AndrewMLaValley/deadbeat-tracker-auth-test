@@ -1,905 +1,125 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#12355b">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>Deadbeat Tracker</title>
-<style>
-:root{--n:#12355b;--b:#1d73c9;--g:#13795b;--r:#b42318;--bg:#f4f7fb;--t:#172033;--m:#64748b;--bd:#d9e1ec}
-*{box-sizing:border-box}
-body{margin:0;padding-bottom:105px;background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-button,input,select,textarea{font:inherit}
-button{border:0;border-radius:9px;padding:10px;cursor:pointer;font-weight:700}
-.app{max-width:760px;margin:auto;min-height:100vh}
-header{background:var(--n);color:#fff;padding:18px}
-header h1{margin:0;font-size:1.3rem}
-header p{margin:4px 0 0;color:#cbdcf1;font-size:.85rem}
-main{padding:15px}
-.page{display:none}.page.active{display:block}
-.row,.head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.head{margin:18px 0 9px}.head h2{margin:0;font-size:1.1rem}
-.panel,.card{background:#fff;border:1px solid var(--bd);border-radius:13px;padding:14px;box-shadow:0 4px 14px #12355b12}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.total{background:linear-gradient(135deg,var(--n),var(--b));color:#fff;border-radius:15px;padding:20px}
-.total strong{display:block;font-size:2rem;margin-top:5px}
-.sub{font-size:.84rem;color:var(--m)}
-.card strong{display:block;font-size:1.35rem;margin-top:12px}
-.interest{margin-top:8px;padding-top:8px;border-top:1px solid var(--bd);font-size:.8rem;line-height:1.45;color:var(--m)}
-input,select,textarea{width:100%;padding:10px;border:1px solid #bdc9d8;border-radius:9px;background:#fff}
-textarea{min-height:75px;resize:vertical}
-.group{margin-top:12px}
-label{display:block;font-size:.84rem;font-weight:750;margin-bottom:4px}
-.primary{background:var(--b);color:#fff}
-.secondary{background:#e8eef6;color:var(--n)}
-.danger{background:var(--r);color:#fff}
-.quick{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
-.quick button{padding:6px 8px;font-size:.77rem;background:#e8eef6;color:var(--n)}
-.actions{display:flex;gap:7px;margin-top:12px}.actions button{flex:1;font-size:.78rem}
-.list{width:100%;text-align:left;background:#fff;border:0;border-bottom:1px solid var(--bd);border-radius:0}
-.empty{padding:25px;text-align:center;background:#fff;border:1px dashed #b6c4d6;border-radius:13px;color:var(--m)}
-.modalbg{display:none;position:fixed;z-index:30;inset:0;background:#0008;padding:14px;align-items:flex-end;justify-content:center}
-.modalbg.show{display:flex}
-.modal{width:min(100%,650px);max-height:90vh;overflow:auto;background:#fff;padding:17px;border-radius:17px 17px 9px 9px}
-.close{width:35px;height:35px;border-radius:50%;padding:0;font-size:1.2rem;background:#e8eef6;color:var(--n)}
-.nav{position:fixed;z-index:10;bottom:12px;left:50%;transform:translateX(-50%);width:min(calc(100% - 24px),760px);display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:1px solid var(--bd);border-radius:13px;overflow:hidden;box-shadow:0 4px 16px #12355b20}
-.nav button{border-radius:0;background:#fff;color:var(--m)}.nav .on{background:#f2f8ff;color:var(--b)}
-.add{position:fixed;right:20px;bottom:82px;z-index:9;border-radius:50%;font-size:1.6rem;background:var(--b);color:#fff}
-.hidden{display:none}
-@media(max-width:430px){.grid{grid-template-columns:1fr}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Deadbeat Tracker — Supabase Connection Test</title>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f4f7fb;
+      color: #172033;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    .card {
+      width: min(90%, 440px);
+      padding: 24px;
+      background: white;
+      border: 1px solid #d9e1ec;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(18, 53, 91, .10);
+    }
+
+    h1 { margin-top: 0; color: #12355b; }
+    p { line-height: 1.5; }
+
+    #status {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 9px;
+      font-weight: 700;
+      background: #e8eef6;
+      color: #12355b;
+    }
+
+    .success {
+      background: #e5f6ee !important;
+      color: #13795b !important;
+    }
+
+    .error {
+      background: #fdecea !important;
+      color: #b42318 !important;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 11px;
+      border: 0;
+      border-radius: 9px;
+      background: #1d73c9;
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
 </head>
 
 <body>
-<div class="app">
-<header>
-  <div class="row">
-    <div>
-      <h1>Deadbeat Tracker</h1>
-      <p>Pay the balance. Avoid the interest.</p>
-    </div>
-    <button class="secondary" type="button" onclick="saveAndClose()">Save & Close</button>
-  </div>
-</header>
+  <main class="card">
+    <h1>Deadbeat Tracker</h1>
+    <p>Supabase connection test</p>
 
-<main>
-<section id="dash" class="page active">
-  <div class="total">
-    <small>Total Tracked Spending</small>
-    <strong id="total">$0.00</strong>
-  </div>
+    <div id="status">Checking connection...</div>
 
-  <div class="panel">
-    <div class="head"><h2>Monthly Budget</h2></div>
-    <label for="budget">Budgeted Amount</label>
-    <input id="budget" type="number" min="0" step=".01" onchange="saveBudget()">
-    <p class="sub">Spent This Calendar Month: <b id="spent">$0.00</b></p>
-    <p class="sub">Still Allotted: <b id="remain">$0.00</b></p>
-  </div>
-
-  <div class="head">
-    <h2>Credit Cards</h2>
-    <button class="secondary" type="button" onclick="showPage('cards')">View all</button>
-  </div>
-  <div id="dashCards" class="grid"></div>
-
-  <div class="head">
-    <h2>Recent Activity</h2>
-    <button class="secondary" type="button" onclick="showPage('expenses')">View all</button>
-  </div>
-  <div id="recent" class="panel"></div>
-</section>
-
-<section id="expenses" class="page">
-  <div class="head">
-    <h2>Expenses and Payments</h2>
-    <button class="primary" type="button" onclick="openExpense()">+ Add Entry</button>
-  </div>
-  <div id="expenseList" class="panel"></div>
-</section>
-
-<section id="cards" class="page">
-  <div class="head">
-    <h2>Credit Cards</h2>
-    <div>
-      <button class="secondary" type="button" onclick="openClear()">Clear Paid Month</button>
-      <button class="primary" type="button" onclick="openCard()">+ Add Card</button>
-    </div>
-  </div>
-
-  <div id="cardList" class="grid"></div>
-
-  <div class="head"><h2>Backup</h2></div>
-  <div class="panel">
-    <button class="secondary" type="button" onclick="exportBackup()">Export Backup</button>
-    <button class="secondary" type="button" onclick="$('importFile').click()">Import Backup</button>
-    <input id="importFile" class="hidden" type="file" accept="application/json" onchange="importBackup(event)">
-    <button class="danger" type="button" style="float:right" onclick="wipe()">Delete All</button>
-  </div>
-</section>
-</main>
-</div>
-
-<button class="add" type="button" onclick="openExpense()">+</button>
-
-<nav class="nav">
-  <button id="dashNav" class="on" type="button" onclick="showPage('dash')">Dashboard</button>
-  <button id="expensesNav" type="button" onclick="showPage('expenses')">Expenses</button>
-  <button id="cardsNav" type="button" onclick="showPage('cards')">Cards</button>
-</nav>
-
-<!-- Expense / Payment Window -->
-<div id="entryModal" class="modalbg">
-  <div class="modal">
-    <div class="row">
-      <h2 id="entryTitle">Add Entry</h2>
-      <button type="button" class="close" aria-label="Close entry window" onclick="closeModal('entryModal', event)">×</button>
-    </div>
-
-    <form id="entryForm" onsubmit="saveExpense(event)">
-      <input id="entryId" type="hidden">
-
-      <div class="group">
-        <label for="entryType">Entry Type</label>
-        <select id="entryType">
-          <option value="expense">Expense</option>
-          <option value="payment">Payment</option>
-        </select>
-      </div>
-
-      <div class="group">
-        <label for="entryCard">Credit Card</label>
-        <select id="entryCard" required></select>
-      </div>
-
-      <div class="group">
-        <label for="merchant">Merchant or Payment Source</label>
-        <input id="merchant" required>
-        <div id="merchantButtons" class="quick"></div>
-      </div>
-
-      <div class="group">
-        <label for="amount">Amount</label>
-        <input id="amount" type="number" min=".01" step=".01" required>
-      </div>
-
-      <div class="group">
-        <label for="entryDate">Date</label>
-        <input id="entryDate" type="date" required>
-      </div>
-
-      <div class="group">
-        <label for="category">Category</label>
-        <select id="category">
-          <option>Dining</option>
-          <option>Groceries</option>
-          <option>Gas</option>
-          <option>Travel</option>
-          <option>Shopping</option>
-          <option>Entertainment</option>
-          <option>Utilities</option>
-          <option>Health</option>
-          <option selected>Other</option>
-        </select>
-      </div>
-
-      <div class="group">
-        <label for="notes">Notes</label>
-        <textarea id="notes"></textarea>
-      </div>
-
-      <div class="actions">
-        <button type="button" class="secondary" onclick="closeModal('entryModal', event)">Cancel</button>
-        <button type="submit" class="primary">Save Entry</button>
-      </div>
-
-      <button id="deleteEntry" type="button" class="danger hidden" style="width:100%;margin-top:10px" onclick="deleteEntry()">
-        Delete Entry
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- Card Window -->
-<div id="cardModal" class="modalbg">
-  <div class="modal">
-    <div class="row">
-      <h2 id="cardTitle">Add Credit Card</h2>
-      <button type="button" class="close" aria-label="Close card window" onclick="closeModal('cardModal', event)">×</button>
-    </div>
-
-    <form id="cardForm" onsubmit="saveCard(event)">
-      <input id="cardId" type="hidden">
-
-      <div class="group">
-        <label for="cardName">Card Name</label>
-        <input id="cardName" required>
-      </div>
-
-      <div class="group">
-        <label for="lastFour">Last Four Digits</label>
-        <input id="lastFour" maxlength="4" inputmode="numeric">
-      </div>
-
-      <div class="group">
-        <label for="cycleDay">Statement Cycle End Day</label>
-        <input id="cycleDay" type="number" min="1" max="31">
-      </div>
-
-      <div class="group">
-        <label for="dueDay">Payment Due Day</label>
-        <input id="dueDay" type="number" min="1" max="31">
-      </div>
-
-      <div class="group">
-        <label for="apr">Purchase APR (%)</label>
-        <input id="apr" type="number" min="0" step=".01">
-      </div>
-
-      <div class="group">
-        <label for="startingBalance">Starting or Statement Balance</label>
-        <input id="startingBalance" type="number" min="0" step=".01">
-      </div>
-
-      <div class="actions">
-        <button type="button" class="secondary" onclick="closeModal('cardModal', event)">Cancel</button>
-        <button type="submit" class="primary">Save Card</button>
-      </div>
-
-      <button id="deleteCard" type="button" class="danger hidden" style="width:100%;margin-top:10px" onclick="deleteCard()">
-        Delete Card and Entries
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- Clear Paid Month Window -->
-<div id="clearModal" class="modalbg">
-  <div class="modal">
-    <div class="row">
-      <h2>Clear Paid Month</h2>
-      <button type="button" class="close" aria-label="Close clear-paid window" onclick="closeModal('clearModal', event)">×</button>
-    </div>
-
-    <p class="sub">
-      This deletes selected expense entries only. The card and its current calculated balance remain saved.
-    </p>
-
-    <div class="group">
-      <label for="clearCard">Credit Card</label>
-      <select id="clearCard"></select>
-    </div>
-
-    <div class="group">
-      <label for="clearMonth">Calendar Month</label>
-      <input id="clearMonth" type="month">
-    </div>
-
-    <label>
-      <input id="paidConfirm" type="checkbox" style="width:auto">
-      I confirm the bill has been paid.
-    </label>
-
-    <div class="actions">
-      <button type="button" class="secondary" onclick="closeModal('clearModal', event)">Cancel</button>
-      <button type="button" class="danger" onclick="clearPaid()">Delete Expenses</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const KEY = "deadbeatTrackerLocalV2";
-const $ = id => document.getElementById(id);
-
-let state = {
-  cards: [],
-  entries: [],
-  budget: 0,
-  merchants: []
-};
-
-function uid() {
-  return Date.now() + "-" + Math.random().toString(16).slice(2);
-}
-
-function today() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function month() {
-  return today().slice(0, 7);
-}
-
-function cash(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD"
-  }).format(Number(value || 0));
-}
-
-function esc(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function save() {
-  localStorage.setItem(KEY, JSON.stringify(state));
-}
-
-function load() {
-  try {
-    const oldData =
-      localStorage.getItem(KEY) ||
-      localStorage.getItem("deadbeatTrackerLocalV1") ||
-      localStorage.getItem("creditTrackerV10");
-
-    if (!oldData) return;
-
-    const parsed = JSON.parse(oldData);
-
-    state.cards = parsed.cards || [];
-    state.entries = parsed.entries || parsed.expenses || [];
-    state.budget = Number(parsed.budget || parsed.monthlyBudget || 0);
-    state.merchants = parsed.merchants || parsed.merchantHistory || [];
-  } catch (error) {
-    console.error("Could not load tracker data.", error);
-  }
-}
-
-function openModal(id) {
-  const modal = $(id);
-
-  if (!modal) {
-    console.error("Window not found:", id);
-    return;
-  }
-
-  modal.classList.add("show");
-}
-
-function closeModal(id, event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  const modal = $(id);
-
-  if (!modal) {
-    console.error("Window not found:", id);
-    return;
-  }
-
-  modal.classList.remove("show");
-}
-
-function card(id) {
-  return state.cards.find(c => c.id === id);
-}
-
-function cardName(id) {
-  const c = card(id);
-
-  if (!c) return "Unknown Card";
-
-  return c.lastFour
-    ? `${c.name} •••• ${c.lastFour}`
-    : c.name;
-}
-
-function entriesFor(id) {
-  return state.entries.filter(e => e.cardId === id);
-}
-
-function balance(id) {
-  const c = card(id);
-  let total = Number(c?.startingBalance || 0);
-
-  entriesFor(id).forEach(entry => {
-    if (entry.type === "payment") {
-      total -= Number(entry.amount);
-    } else {
-      total += Number(entry.amount);
-    }
-  });
-
-  return Math.max(0, total);
-}
-
-function monthKey(entry) {
-  return String(entry.date || "").slice(0, 7);
-}
-
-function totalSpending() {
-  return state.entries
-    .filter(entry => entry.type !== "payment")
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-}
-
-function currentMonthSpending() {
-  return state.entries
-    .filter(entry =>
-      entry.type !== "payment" &&
-      monthKey(entry) === month()
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-}
-
-function estimatedInterest(cardObject) {
-  const currentBalance = balance(cardObject.id);
-  const rate = Number(cardObject.apr || 0);
-  const days = 30;
-
-  if (currentBalance <= 0 || rate <= 0) {
-    return 0;
-  }
-
-  return currentBalance * (
-    Math.pow(1 + (rate / 100) / 365, days) - 1
-  );
-}
-
-function cardInfo(cardObject) {
-  const currentBalance = balance(cardObject.id);
-  const interest = estimatedInterest(cardObject);
-
-  return `
-    <div class="interest">
-      Cycle End Day: ${cardObject.cycleDay || "Not set"}<br>
-      Due Day: ${cardObject.dueDay || "Not set"}<br>
-      Current Calculated Balance: ${cash(currentBalance)}<br>
-      Estimated 30-Day Interest if Unpaid: ${cash(interest)}
-    </div>
-  `;
-}
-
-function showPage(pageName) {
-  ["dash", "expenses", "cards"].forEach(name => {
-    $(name).classList.toggle("active", name === pageName);
-    $(name + "Nav").classList.toggle("on", name === pageName);
-  });
-
-  render();
-}
-
-function saveBudget() {
-  state.budget = Number($("budget").value || 0);
-  save();
-  render();
-}
-
-function renderEntry(entry) {
-  const isPayment = entry.type === "payment";
-
-  return `
-    <button class="list" type="button" onclick="openExpense('${entry.id}')">
-      <div class="row">
-        <b>${esc(entry.merchant)}</b>
-        <b>${isPayment ? "−" : ""}${cash(entry.amount)}</b>
-      </div>
-      <div class="sub">
-        ${isPayment ? "Payment" : "Expense"} ·
-        ${entry.date} ·
-        ${esc(cardName(entry.cardId))}
-      </div>
+    <button type="button" onclick="testConnection()">
+      Test Again
     </button>
-  `;
-}
-
-function render() {
-  const spent = currentMonthSpending();
-  const remaining = Number(state.budget || 0) - spent;
-
-  $("budget").value = state.budget || "";
-  $("spent").textContent = cash(spent);
-  $("remain").textContent = cash(remaining);
-  $("remain").style.color = remaining < 0 ? "var(--r)" : "var(--g)";
-  $("total").textContent = cash(totalSpending());
-
-  $("dashCards").innerHTML = state.cards.length
-    ? state.cards.map(c => `
-        <div class="card">
-          <div class="row">
-            <b>${esc(c.name)}</b>
-            <span>💳</span>
-          </div>
-          <div class="sub">${c.lastFour ? "•••• " + c.lastFour : "Manual card"}</div>
-          <strong>${cash(balance(c.id))}</strong>
-          <div class="sub">Current calculated balance</div>
-          ${cardInfo(c)}
-        </div>
-      `).join("")
-    : `<div class="empty">No cards saved.</div>`;
-
-  const sortedEntries = [...state.entries]
-    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-
-  $("recent").innerHTML = sortedEntries.length
-    ? sortedEntries.slice(0, 5).map(renderEntry).join("")
-    : `<div class="empty">No entries yet.</div>`;
-
-  $("expenseList").innerHTML = sortedEntries.length
-    ? sortedEntries.map(renderEntry).join("")
-    : `<div class="empty">No entries yet.</div>`;
-
-  $("cardList").innerHTML = state.cards.length
-    ? state.cards.map(c => `
-        <div class="card">
-          <b>${esc(c.name)}</b>
-          <div class="sub">${c.lastFour ? "•••• " + c.lastFour : ""}</div>
-          <strong>${cash(balance(c.id))}</strong>
-          ${cardInfo(c)}
-
-          <div class="actions">
-            <button class="secondary" type="button" onclick="openCard('${c.id}')">
-              Edit Card
-            </button>
-            <button class="primary" type="button" onclick="openClear('${c.id}')">
-              Clear Paid Month
-            </button>
-          </div>
-        </div>
-      `).join("")
-    : `<div class="empty">No cards saved.</div>`;
-}
-
-function fillCards(selectedId = "") {
-  $("entryCard").innerHTML = state.cards.map(c => `
-    <option value="${c.id}">${esc(cardName(c.id))}</option>
-  `).join("");
-
-  if (selectedId) {
-    $("entryCard").value = selectedId;
-  }
-}
-
-function renderMerchantButtons() {
-  $("merchantButtons").innerHTML = "";
-
-  state.merchants.slice(0, 8).forEach(name => {
-    const button = document.createElement("button");
-
-    button.type = "button";
-    button.textContent = name;
-
-    button.addEventListener("click", function() {
-      $("merchant").value = name;
-    });
-
-    $("merchantButtons").appendChild(button);
-  });
-}
-
-function rememberMerchant(name) {
-  const cleanName = String(name || "").trim();
-
-  if (!cleanName) return;
-
-  state.merchants = state.merchants.filter(
-    existing => existing.toLowerCase() !== cleanName.toLowerCase()
-  );
-
-  state.merchants.unshift(cleanName);
-  state.merchants = state.merchants.slice(0, 30);
-}
-
-function openExpense(id = "") {
-  if (!state.cards.length) {
-    alert("Add a credit card first.");
-    openCard();
-    return;
-  }
-
-  $("entryForm").reset();
-  $("entryId").value = "";
-  $("entryDate").value = today();
-  $("entryTitle").textContent = "Add Entry";
-  $("deleteEntry").classList.add("hidden");
-
-  fillCards();
-  renderMerchantButtons();
-
-  if (id) {
-    const entry = state.entries.find(e => e.id === id);
-
-    if (!entry) return;
-
-    $("entryId").value = entry.id;
-    $("entryTitle").textContent = "Edit Entry";
-    $("entryType").value = entry.type;
-    $("merchant").value = entry.merchant;
-    $("amount").value = entry.amount;
-    $("entryDate").value = entry.date;
-    $("category").value = entry.category || "Other";
-    $("notes").value = entry.notes || "";
-
-    fillCards(entry.cardId);
-    $("deleteEntry").classList.remove("hidden");
-  }
-
-  openModal("entryModal");
-}
-
-function saveExpense(event) {
-  event.preventDefault();
-
-  const id = $("entryId").value;
-  const existing = state.entries.find(e => e.id === id);
-
-  const entry = {
-    id: id || uid(),
-    type: $("entryType").value,
-    cardId: $("entryCard").value,
-    merchant: $("merchant").value.trim(),
-    amount: Number($("amount").value),
-    date: $("entryDate").value,
-    category: $("category").value,
-    notes: $("notes").value
-  };
-
-  rememberMerchant(entry.merchant);
-
-  if (existing) {
-    Object.assign(existing, entry);
-  } else {
-    state.entries.push(entry);
-  }
-
-  save();
-  closeModal("entryModal");
-  render();
-}
-
-function deleteEntry() {
-  if (!confirm("Delete this entry?")) return;
-
-  state.entries = state.entries.filter(
-    entry => entry.id !== $("entryId").value
-  );
-
-  save();
-  closeModal("entryModal");
-  render();
-}
-
-function openCard(id = "") {
-  $("cardForm").reset();
-  $("cardId").value = "";
-  $("cardTitle").textContent = "Add Credit Card";
-  $("deleteCard").classList.add("hidden");
-
-  if (id) {
-    const c = card(id);
-
-    if (!c) return;
-
-    $("cardId").value = c.id;
-    $("cardName").value = c.name;
-    $("lastFour").value = c.lastFour || "";
-    $("cycleDay").value = c.cycleDay || "";
-    $("dueDay").value = c.dueDay || "";
-    $("apr").value = c.apr || "";
-    $("startingBalance").value = c.startingBalance || "";
-
-    $("cardTitle").textContent = "Edit Credit Card";
-    $("deleteCard").classList.remove("hidden");
-  }
-
-  openModal("cardModal");
-}
-
-function saveCard(event) {
-  event.preventDefault();
-
-  const id = $("cardId").value;
-  const cycleDay = Number($("cycleDay").value || 0);
-  const dueDay = Number($("dueDay").value || 0);
-
-  if (
-    (cycleDay && (cycleDay < 1 || cycleDay > 31)) ||
-    (dueDay && (dueDay < 1 || dueDay > 31))
-  ) {
-    alert("Cycle end day and due day must be between 1 and 31.");
-    return;
-  }
-
-  const newCard = {
-    id: id || uid(),
-    name: $("cardName").value.trim(),
-    lastFour: $("lastFour").value.replace(/\D/g, "").slice(0, 4),
-    cycleDay,
-    dueDay,
-    apr: Number($("apr").value || 0),
-    startingBalance: Number($("startingBalance").value || 0)
-  };
-
-  const existing = card(id);
-
-  if (existing) {
-    Object.assign(existing, newCard);
-  } else {
-    state.cards.push(newCard);
-  }
-
-  save();
-  closeModal("cardModal");
-  render();
-}
-
-function deleteCard() {
-  const id = $("cardId").value;
-
-  if (!confirm("Delete this card and all associated entries?")) return;
-
-  state.cards = state.cards.filter(c => c.id !== id);
-  state.entries = state.entries.filter(e => e.cardId !== id);
-
-  save();
-  closeModal("cardModal");
-  render();
-}
-
-function openClear(selectedCardId = "") {
-  if (!state.cards.length) {
-    alert("Add a credit card first.");
-    return;
-  }
-
-  $("clearCard").innerHTML = state.cards.map(c => `
-    <option value="${c.id}">${esc(cardName(c.id))}</option>
-  `).join("");
-
-  if (selectedCardId) {
-    $("clearCard").value = selectedCardId;
-  }
-
-  $("clearMonth").value = month();
-  $("paidConfirm").checked = false;
-
-  openModal("clearModal");
-}
-
-function clearPaid() {
-  const cardId = $("clearCard").value;
-  const selectedMonth = $("clearMonth").value;
-
-  if (!$("paidConfirm").checked) {
-    alert("Confirm that the bill has been paid.");
-    return;
-  }
-
-  const paidExpenses = state.entries.filter(entry =>
-    entry.cardId === cardId &&
-    entry.type === "expense" &&
-    monthKey(entry) === selectedMonth
-  );
-
-  if (!paidExpenses.length) {
-    alert("No expenses were found for that card and month.");
-    return;
-  }
-
-  if (!confirm(`Delete ${paidExpenses.length} paid expense entries? The card and balance remain saved.`)) {
-    return;
-  }
-
-  state.entries = state.entries.filter(entry =>
-    !(
-      entry.cardId === cardId &&
-      entry.type === "expense" &&
-      monthKey(entry) === selectedMonth
-    )
-  );
-
-  save();
-  closeModal("clearModal");
-  render();
-}
-
-function saveAndClose() {
-  const openWindow = ["entryModal", "cardModal", "clearModal"]
-    .some(id => $(id).classList.contains("show"));
-
-  if (openWindow) {
-    alert("Save or cancel the open window first.");
-    return;
-  }
-
-  save();
-
-  alert(
-    "Your tracker data has been saved. Return to the Home Screen or close the browser tab to exit."
-  );
-}
-
-function exportBackup() {
-  const blob = new Blob(
-    [JSON.stringify(state, null, 2)],
-    { type: "application/json" }
-  );
-
-  const link = document.createElement("a");
-
-  link.href = URL.createObjectURL(blob);
-  link.download = `deadbeat-tracker-${today()}.json`;
-  link.click();
-
-  URL.revokeObjectURL(link.href);
-}
-
-function importBackup(event) {
-  const file = event.target.files[0];
-
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function() {
-    try {
-      state = JSON.parse(reader.result);
-
-      state.cards = state.cards || [];
-      state.entries = state.entries || [];
-      state.budget = Number(state.budget || 0);
-      state.merchants = state.merchants || [];
-
-      save();
-      render();
-
-      alert("Backup imported successfully.");
-    } catch (error) {
-      alert("The selected file is not a valid backup.");
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    /* Paste your existing Supabase values between the quotation marks. */
+    const SUPABASE_URL = "https://jjffdtsohryyubmjnq.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    async function testConnection() {
+      const status = document.getElementById("status");
+
+      status.className = "";
+      status.textContent = "Checking connection...";
+
+      try {
+        const { error } = await supabaseClient
+          .from("trackers")
+          .select("id")
+          .limit(1);
+
+        if (error) {
+          /*
+            A database permission message still proves the browser
+            successfully contacted Supabase.
+          */
+          status.className = "success";
+          status.textContent =
+            "Connected to Supabase. Database replied: " + error.message;
+          return;
+        }
+
+        status.className = "success";
+        status.textContent =
+          "Success — the browser connected to Supabase and reached the database.";
+      } catch (error) {
+        status.className = "error";
+        status.textContent =
+          "Connection failed: " + (error.message || "Unknown error");
+      }
     }
-  };
 
-  reader.readAsText(file);
-  event.target.value = "";
-}
-
-function wipe() {
-  if (!confirm("Delete all saved local tracker data?")) return;
-
-  state = {
-    cards: [],
-    entries: [],
-    budget: 0,
-    merchants: []
-  };
-
-  save();
-  render();
-}
-
-document.querySelectorAll(".modalbg").forEach(modal => {
-  modal.addEventListener("click", function(event) {
-    if (event.target === modal) {
-      closeModal(modal.id);
-    }
-  });
-});
-
-document.addEventListener("keydown", function(event) {
-  if (event.key === "Escape") {
-    closeModal("entryModal");
-    closeModal("cardModal");
-    closeModal("clearModal");
-  }
-});
-
-window.addEventListener("pagehide", save);
-
-document.addEventListener("visibilitychange", function() {
-  if (document.visibilityState === "hidden") {
-    save();
-  }
-});
-
-load();
-render();
-</script>
+    testConnection();
+  </script>
 </body>
 </html>
