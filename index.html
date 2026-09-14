@@ -4,214 +4,743 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#12355b">
-  <title>Deadbeat Tracker — Authentication Test</title>
+  <title>Deadbeat Tracker</title>
 
   <style>
-    :root {
-      --navy: #12355b;
-      --blue: #1d73c9;
-      --green: #13795b;
-      --red: #b42318;
-      --bg: #f4f7fb;
-      --text: #172033;
-      --muted: #64748b;
-      --border: #d9e1ec;
+    :root{
+      --navy:#12355b;
+      --blue:#1d73c9;
+      --green:#13795b;
+      --red:#b42318;
+      --bg:#f4f7fb;
+      --text:#172033;
+      --muted:#64748b;
+      --border:#d9e1ec;
+      --light:#e8eef6;
     }
 
-    * { box-sizing: border-box; }
+    *{box-sizing:border-box}
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 18px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
     }
 
-    .card {
-      width: min(100%, 440px);
-      padding: 24px;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 15px;
-      box-shadow: 0 4px 18px rgba(18, 53, 91, .10);
+    button,input,select,textarea{font:inherit}
+
+    button{
+      border:0;
+      border-radius:9px;
+      padding:10px;
+      cursor:pointer;
+      font-weight:700;
     }
 
-    h1 { margin: 0; color: var(--navy); }
-    h2 { margin: 22px 0 0; font-size: 1.15rem; }
-
-    .sub {
-      margin: 6px 0 0;
-      color: var(--muted);
-      font-size: .9rem;
+    input,select,textarea{
+      width:100%;
+      padding:11px;
+      border:1px solid #bdc9d8;
+      border-radius:9px;
+      background:white;
+      color:var(--text);
     }
 
-    .group { margin-top: 14px; }
-
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-size: .85rem;
-      font-weight: 700;
+    textarea{
+      min-height:76px;
+      resize:vertical;
     }
 
-    input {
-      width: 100%;
-      padding: 11px;
-      border: 1px solid #bdc9d8;
-      border-radius: 9px;
-      font: inherit;
+    .hidden{display:none!important}
+    .screen{display:none;min-height:100vh}
+    .screen.active{display:block}
+    .page{display:none}
+    .page.active{display:block}
+
+    .auth-wrap{
+      width:min(100%,440px);
+      margin:auto;
+      padding:60px 18px;
     }
 
-    .password-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 7px;
+    .app{
+      width:min(100%,760px);
+      min-height:100vh;
+      margin:auto;
+      padding-bottom:94px;
     }
 
-    button {
-      border: 0;
-      border-radius: 9px;
-      padding: 11px;
-      cursor: pointer;
-      font: inherit;
-      font-weight: 700;
+    .card,.panel{
+      background:white;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      box-shadow:0 4px 16px rgba(18,53,91,.08);
     }
 
-    .actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 18px;
+    header{
+      padding:18px;
+      color:white;
+      background:var(--navy);
     }
 
-    .primary {
-      background: var(--blue);
-      color: white;
+    header h1{margin:0;font-size:1.3rem}
+    header p{margin:4px 0 0;color:#cbdcf1;font-size:.85rem}
+
+    main{padding:16px}
+
+    h2{margin:0;font-size:1.15rem}
+
+    .row,.heading{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
     }
 
-    .secondary {
-      background: #e8eef6;
-      color: var(--navy);
+    .heading{margin:20px 0 10px}
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:10px;
     }
 
-    .wide {
-      width: 100%;
-      margin-top: 9px;
+    .group{margin-top:13px}
+
+    label{
+      display:block;
+      margin-bottom:5px;
+      font-size:.85rem;
+      font-weight:750;
     }
 
-    #message {
-      min-height: 22px;
-      margin: 16px 0 0;
-      padding: 10px;
-      border-radius: 9px;
-      color: var(--navy);
-      background: #e8eef6;
-      font-size: .9rem;
-      line-height: 1.4;
+    .sub{
+      color:var(--muted);
+      font-size:.85rem;
+      line-height:1.4;
     }
 
-    #message:empty {
-      display: none;
+    .primary{background:var(--blue);color:white}
+    .secondary{background:var(--light);color:var(--navy)}
+    .success{background:var(--green);color:white}
+    .danger{background:var(--red);color:white}
+
+    .wide{width:100%;margin-top:10px}
+
+    .actions{
+      display:flex;
+      gap:8px;
+      margin-top:15px;
     }
 
-    .success {
-      color: var(--green) !important;
-      background: #e5f6ee !important;
+    .actions button{flex:1}
+
+    .total{
+      padding:20px;
+      border-radius:15px;
+      color:white;
+      background:linear-gradient(135deg,#12355b,#1d73c9);
     }
 
-    .error {
-      color: var(--red) !important;
-      background: #fdecea !important;
+    .total strong{
+      display:block;
+      margin-top:5px;
+      font-size:2rem;
     }
 
-    #signedInPanel {
-      display: none;
-      margin-top: 18px;
+    .card strong{
+      display:block;
+      margin-top:12px;
+      font-size:1.35rem;
     }
 
-    #signedInPanel.show {
-      display: block;
+    .interest{
+      margin-top:10px;
+      padding-top:10px;
+      border-top:1px solid var(--border);
+      color:var(--muted);
+      font-size:.8rem;
+      line-height:1.45;
     }
 
-    .hidden {
-      display: none;
+    .list{
+      width:100%;
+      border:0;
+      border-bottom:1px solid var(--border);
+      border-radius:0;
+      background:white;
+      text-align:left;
+    }
+
+    .list:last-child{border-bottom:0}
+
+    .nav{
+      position:fixed;
+      z-index:10;
+      bottom:12px;
+      left:50%;
+      transform:translateX(-50%);
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      overflow:hidden;
+      width:min(calc(100% - 24px),760px);
+      border:1px solid var(--border);
+      border-radius:13px;
+      background:white;
+      box-shadow:0 4px 16px rgba(18,53,91,.16);
+    }
+
+    .nav button{
+      border-radius:0;
+      color:var(--muted);
+      background:white;
+    }
+
+    .nav .active{
+      color:var(--blue);
+      background:#f2f8ff;
+    }
+
+    .add{
+      position:fixed;
+      z-index:9;
+      right:20px;
+      bottom:84px;
+      width:58px;
+      height:58px;
+      border-radius:50%;
+      background:var(--blue);
+      color:white;
+      font-size:1.6rem;
+      box-shadow:0 7px 18px rgba(29,115,201,.35);
+    }
+
+    .modal-bg{
+      display:none;
+      position:fixed;
+      z-index:30;
+      inset:0;
+      padding:14px;
+      align-items:flex-end;
+      justify-content:center;
+      background:rgba(0,0,0,.55);
+    }
+
+    .modal-bg.show{display:flex}
+
+    .modal{
+      width:min(100%,650px);
+      max-height:90vh;
+      overflow:auto;
+      padding:17px;
+      border-radius:17px 17px 9px 9px;
+      background:white;
+    }
+
+    .close{
+      width:36px;
+      height:36px;
+      padding:0;
+      border-radius:50%;
+      background:var(--light);
+      color:var(--navy);
+      font-size:1.2rem;
+    }
+
+    .password-row{
+      display:grid;
+      grid-template-columns:1fr 45px;
+      gap:8px;
+    }
+
+    .eye{
+      padding:0;
+      background:var(--light);
+      color:var(--navy);
+    }
+
+    .message{
+      display:none;
+      margin-top:15px;
+      padding:11px;
+      border-radius:9px;
+      font-size:.9rem;
+      line-height:1.4;
+      background:var(--light);
+      color:var(--navy);
+    }
+
+    .message.show{display:block}
+    .message.error{background:#fdecea;color:var(--red)}
+    .message.good{background:#e5f6ee;color:var(--green)}
+
+    .notice{
+      margin-top:12px;
+      padding:11px;
+      border-radius:9px;
+      color:#725817;
+      background:#fff9e8;
+      font-size:.85rem;
+      line-height:1.4;
+    }
+
+    .empty{
+      padding:22px;
+      color:var(--muted);
+      text-align:center;
+    }
+
+    .tracker-name{
+      margin:0;
+      font-size:1.45rem;
+      color:var(--navy);
+    }
+
+    .password-panel{
+      display:none;
+    }
+
+    .password-panel.active{
+      display:block;
+    }
+
+    @media(max-width:430px){
+      .grid{grid-template-columns:1fr}
     }
   </style>
 </head>
 
 <body>
-  <main class="card">
-    <h1>Deadbeat Tracker</h1>
-    <p class="sub">Supabase authentication test</p>
 
-    <div id="authPanel">
-      <h2>Create Account or Sign In</h2>
+  <!-- AUTHENTICATION -->
+  <section id="authScreen" class="screen active">
+    <div class="auth-wrap">
+      <div class="card">
+        <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
+        <p class="sub">Pay the balance. Avoid the interest.</p>
 
-      <div class="group">
-        <label for="email">Email</label>
-        <input id="email" type="email" autocomplete="email" placeholder="name@example.com">
-      </div>
+        <!-- SIGN IN -->
+        <div id="signInPanel" class="password-panel active">
+          <div class="heading">
+            <h2>Sign In</h2>
+          </div>
 
-      <div class="group">
-        <label for="password">Password</label>
+          <form id="signInForm">
+            <div class="group">
+              <label for="signInEmail">Email</label>
+              <input id="signInEmail" type="email" autocomplete="email" required>
+            </div>
 
-        <div class="password-row">
-          <input
-            id="password"
-            type="password"
-            autocomplete="current-password"
-            placeholder="Enter password"
-          >
-          <button
-            id="showPasswordButton"
-            class="secondary"
-            type="button"
-            aria-label="Show password"
-            onclick="togglePassword()"
-          >👁</button>
+            <div class="group">
+              <label for="signInPassword">Password</label>
+              <div class="password-row">
+                <input id="signInPassword" type="password" autocomplete="current-password" required>
+                <button id="signInEye" class="eye" type="button"
+                  onclick="togglePassword('signInPassword','signInEye')">👁</button>
+              </div>
+            </div>
+
+            <button class="primary wide" type="submit">Sign In</button>
+          </form>
+
+          <button class="secondary wide" type="button"
+            onclick="showAuthPanel('createAccountPanel')">
+            Create Account
+          </button>
+
+          <button class="secondary wide" type="button"
+            onclick="showAuthPanel('resetPanel')">
+            Forgot Password
+          </button>
         </div>
-      </div>
 
-      <div class="actions">
-        <button class="primary" type="button" onclick="createAccount()">
-          Create Account
+        <!-- CREATE ACCOUNT -->
+        <div id="createAccountPanel" class="password-panel">
+          <div class="heading">
+            <h2>Create Account</h2>
+          </div>
+
+          <form id="createAccountForm">
+            <div class="group">
+              <label for="displayName">Display Name</label>
+              <input id="displayName" type="text" autocomplete="name" required>
+            </div>
+
+            <div class="group">
+              <label for="createEmail">Email</label>
+              <input id="createEmail" type="email" autocomplete="email" required>
+            </div>
+
+            <div class="group">
+              <label for="createPassword">Password</label>
+              <div class="password-row">
+                <input id="createPassword" type="password" autocomplete="new-password" required>
+                <button id="createEye" class="eye" type="button"
+                  onclick="togglePassword('createPassword','createEye')">👁</button>
+              </div>
+            </div>
+
+            <div class="group">
+              <label for="confirmPassword">Confirm Password</label>
+              <div class="password-row">
+                <input id="confirmPassword" type="password" autocomplete="new-password" required>
+                <button id="confirmEye" class="eye" type="button"
+                  onclick="togglePassword('confirmPassword','confirmEye')">👁</button>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="secondary" type="button"
+                onclick="showAuthPanel('signInPanel')">Back</button>
+              <button class="primary" type="submit">Create Account</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PASSWORD RESET -->
+        <div id="resetPanel" class="password-panel">
+          <div class="heading">
+            <h2>Reset Password</h2>
+          </div>
+
+          <form id="resetForm">
+            <div class="group">
+              <label for="resetEmail">Email</label>
+              <input id="resetEmail" type="email" autocomplete="email" required>
+            </div>
+
+            <div class="actions">
+              <button class="secondary" type="button"
+                onclick="showAuthPanel('signInPanel')">Back</button>
+              <button class="primary" type="submit">Send Email</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="authMessage" class="message"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRACKER SELECTION -->
+  <section id="trackerScreen" class="screen">
+    <div class="auth-wrap">
+      <div class="card">
+        <div class="row">
+          <div>
+            <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
+            <p id="signedInName" class="sub"></p>
+          </div>
+          <button class="secondary" type="button" onclick="signOut()">Sign Out</button>
+        </div>
+
+        <div class="heading">
+          <h2>Open a Tracker</h2>
+        </div>
+
+        <div class="group">
+          <label for="trackerSelect">Your Trackers</label>
+          <select id="trackerSelect"></select>
+        </div>
+
+        <button class="primary wide" type="button" onclick="openSelectedTracker()">
+          Open Selected Tracker
         </button>
 
-        <button class="secondary" type="button" onclick="signIn()">
-          Sign In
-        </button>
-      </div>
+        <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
 
-      <button class="secondary wide" type="button" onclick="resetPassword()">
-        Forgot Password
-      </button>
+        <h2>Create a New Tracker</h2>
+
+        <div class="group">
+          <label for="newTrackerName">Tracker Name</label>
+          <input id="newTrackerName" placeholder="Example: Family Credit Cards">
+        </div>
+
+        <button class="success wide" type="button" onclick="createTracker()">
+          Create Tracker
+        </button>
+
+        <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
+
+        <h2>Join a Shared Tracker</h2>
+
+        <div class="group">
+          <label for="inviteCode">Invite Code</label>
+          <input id="inviteCode" placeholder="Example: A1B2C3D4">
+        </div>
+
+        <button class="secondary wide" type="button" onclick="joinTracker()">
+          Join Shared Tracker
+        </button>
+
+        <div id="trackerMessage" class="message"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN TRACKER -->
+  <section id="appScreen" class="screen">
+    <div class="app">
+      <header>
+        <div class="row">
+          <div>
+            <h1 id="trackerTitle">Deadbeat Tracker</h1>
+            <p id="trackerSubtitle">Shared credit-card spending tracker</p>
+          </div>
+          <button class="secondary" type="button" onclick="openSettings()">
+            Settings
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <!-- DASHBOARD -->
+        <section id="dashPage" class="page active">
+          <div class="total">
+            <small>Total Tracked Spending</small>
+            <strong id="totalSpending">$0.00</strong>
+          </div>
+
+          <div class="card" style="margin-top:14px">
+            <div class="row">
+              <h2>Monthly Budget</h2>
+              <button class="secondary" type="button" onclick="openSettings()">
+                Edit Budget
+              </button>
+            </div>
+            <p class="sub">Spent This Calendar Month: <b id="monthSpent">$0.00</b></p>
+            <p class="sub">Still Allotted to Spend: <b id="monthRemaining">$0.00</b></p>
+          </div>
+
+          <div class="heading">
+            <h2>Credit Cards</h2>
+            <button class="secondary" type="button" onclick="showPage('cards')">View All</button>
+          </div>
+          <div id="dashboardCards" class="grid"></div>
+
+          <div class="heading">
+            <h2>Recent Activity</h2>
+            <button class="secondary" type="button" onclick="showPage('entries')">View All</button>
+          </div>
+          <div id="recentEntries" class="card"></div>
+        </section>
+
+        <!-- ENTRIES -->
+        <section id="entriesPage" class="page">
+          <div class="row">
+            <h2>Expenses and Payments</h2>
+            <button class="primary" type="button" onclick="openEntry()">+ Add Entry</button>
+          </div>
+          <div id="entriesList" class="card" style="margin-top:12px"></div>
+        </section>
+
+        <!-- CARDS -->
+        <section id="cardsPage" class="page">
+          <div class="row">
+            <h2>Credit Cards</h2>
+            <button class="primary" type="button" onclick="openCard()">+ Add Card</button>
+          </div>
+          <div id="cardsList" class="grid" style="margin-top:12px"></div>
+        </section>
+      </main>
     </div>
 
-    <div id="signedInPanel">
-      <h2>Signed In</h2>
-      <p id="signedInEmail" class="sub"></p>
+    <button class="add" type="button" onclick="openEntry()">+</button>
 
-      <button class="primary wide" type="button" onclick="signOut()">
+    <nav class="nav">
+      <button id="dashNav" class="active" type="button" onclick="showPage('dash')">
+        Dashboard
+      </button>
+      <button id="entriesNav" type="button" onclick="showPage('entries')">
+        Entries
+      </button>
+      <button id="cardsNav" type="button" onclick="showPage('cards')">
+        Cards
+      </button>
+    </nav>
+  </section>
+
+  <!-- ENTRY MODAL -->
+  <div id="entryModal" class="modal-bg">
+    <div class="modal">
+      <div class="row">
+        <h2 id="entryTitle">Add Entry</h2>
+        <button class="close" type="button" onclick="closeModal('entryModal')">×</button>
+      </div>
+
+      <form id="entryForm">
+        <input id="entryId" type="hidden">
+
+        <div class="group">
+          <label for="entryType">Entry Type</label>
+          <select id="entryType">
+            <option value="expense">Expense</option>
+            <option value="payment">Payment</option>
+          </select>
+        </div>
+
+        <div class="group">
+          <label for="entryCard">Credit Card</label>
+          <select id="entryCard" required></select>
+        </div>
+
+        <div class="group">
+          <label for="entryMerchant">Merchant or Payment Source</label>
+          <input id="entryMerchant" required>
+        </div>
+
+        <div class="group">
+          <label for="entryAmount">Amount</label>
+          <input id="entryAmount" type="number" min=".01" step=".01" required>
+        </div>
+
+        <div class="group">
+          <label for="entryDate">Date</label>
+          <input id="entryDate" type="date" required>
+        </div>
+
+        <div class="group">
+          <label for="entryCategory">Category</label>
+          <select id="entryCategory">
+            <option>Dining</option>
+            <option>Groceries</option>
+            <option>Gas</option>
+            <option>Travel</option>
+            <option>Shopping</option>
+            <option>Entertainment</option>
+            <option>Utilities</option>
+            <option>Health</option>
+            <option selected>Other</option>
+          </select>
+        </div>
+
+        <div class="group">
+          <label for="entryNotes">Notes</label>
+          <textarea id="entryNotes"></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" type="button" onclick="closeModal('entryModal')">
+            Cancel
+          </button>
+          <button class="primary" type="submit">Save Entry</button>
+        </div>
+
+        <button id="deleteEntryButton" class="danger wide hidden" type="button"
+          onclick="deleteEntry()">
+          Delete Entry
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CARD MODAL -->
+  <div id="cardModal" class="modal-bg">
+    <div class="modal">
+      <div class="row">
+        <h2 id="cardTitle">Add Card</h2>
+        <button class="close" type="button" onclick="closeModal('cardModal')">×</button>
+      </div>
+
+      <form id="cardForm">
+        <input id="cardId" type="hidden">
+
+        <div class="group">
+          <label for="cardName">Card Name</label>
+          <input id="cardName" placeholder="Example: Visa Rewards" required>
+        </div>
+
+        <div class="group">
+          <label for="cardLastFour">Last Four Digits</label>
+          <input id="cardLastFour" maxlength="4" inputmode="numeric" placeholder="1234">
+        </div>
+
+        <div class="group">
+          <label for="cardCycleDay">Cycle End Day</label>
+          <input id="cardCycleDay" type="number" min="1" max="31" placeholder="Example: 16">
+        </div>
+
+        <div class="group">
+          <label for="cardDueDay">Payment Due Day</label>
+          <input id="cardDueDay" type="number" min="1" max="31" placeholder="Example: 18">
+        </div>
+
+        <div class="group">
+          <label for="cardApr">Purchase APR (%)</label>
+          <input id="cardApr" type="number" min="0" step=".01" placeholder="Example: 24.99">
+        </div>
+
+        <div class="group">
+          <label for="cardBalance">Starting Balance</label>
+          <input id="cardBalance" type="number" min="0" step=".01" placeholder="0.00">
+        </div>
+
+        <div class="notice">
+          Do not enter full card numbers, CVV codes, bank passwords, or account numbers.
+        </div>
+
+        <div class="actions">
+          <button class="secondary" type="button" onclick="closeModal('cardModal')">
+            Cancel
+          </button>
+          <button class="primary" type="submit">Save Card</button>
+        </div>
+
+        <button id="deleteCardButton" class="danger wide hidden" type="button"
+          onclick="deleteCard()">
+          Delete Card and Its Entries
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="modal-bg">
+    <div class="modal">
+      <div class="row">
+        <h2>Tracker Settings</h2>
+        <button class="close" type="button" onclick="closeModal('settingsModal')">×</button>
+      </div>
+
+      <p class="sub" style="margin-top:16px">Share this invite code with another authorized user:</p>
+      <p style="margin:6px 0 0"><b id="inviteCodeDisplay"></b></p>
+
+      <div class="group">
+        <label for="budgetInput">Monthly Budget</label>
+        <input id="budgetInput" type="number" min="0" step=".01">
+      </div>
+
+      <button class="primary wide" type="button" onclick="saveBudget()">
+        Save Budget
+      </button>
+
+      <button class="secondary wide" type="button" onclick="refreshData()">
+        Refresh Shared Data
+      </button>
+
+      <button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
+        Switch Tracker
+      </button>
+
+      <button class="danger wide" type="button" onclick="signOut()">
         Sign Out
       </button>
-    </div>
 
-    <p id="message"></p>
-  </main>
+      <div id="settingsMessage" class="message"></div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     /*
-      Keep your existing working values between the quotation marks.
-      Use the Project URL and the Publishable key only.
+      PASTE YOUR NEW SUPABASE PROJECT VALUES HERE.
+      Use the Project URL and Publishable Key only.
     */
-    const SUPABASE_URL = "https://jjffdtsohryyubmjnq.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
+    const SUPABASE_URL = "https://qrdbvybjhxtaqlndqkwo.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_pSM8d80N4FHwvlhzbnKyrA_9vBGSqQe";
 
     const supabaseClient = window.supabase.createClient(
       SUPABASE_URL,
@@ -220,170 +749,761 @@
 
     const $ = id => document.getElementById(id);
 
-    function setMessage(text, type = "") {
-      const message = $("message");
-      message.textContent = text || "";
-      message.className = type;
+    let currentUser = null;
+    let currentTracker = null;
+    let cards = [];
+    let entries = [];
+
+    function cash(value) {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD"
+      }).format(Number(value || 0));
     }
 
-    function getCredentials() {
-      return {
-        email: $("email").value.trim(),
-        password: $("password").value
-      };
+    function esc(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
-    function validateCredentials() {
-      const { email, password } = getCredentials();
-
-      if (!email || !password) {
-        setMessage("Enter both an email address and password.", "error");
-        return false;
-      }
-
-      if (password.length < 6) {
-        setMessage("Password must contain at least 6 characters.", "error");
-        return false;
-      }
-
-      return true;
+    function today() {
+      const date = new Date();
+      return `${date.getFullYear()}-${
+        String(date.getMonth() + 1).padStart(2, "0")
+      }-${String(date.getDate()).padStart(2, "0")}`;
     }
 
-    function togglePassword() {
-      const password = $("password");
-      const button = $("showPasswordButton");
-      const isHidden = password.type === "password";
+    function currentMonth() {
+      return today().slice(0, 7);
+    }
 
-      password.type = isHidden ? "text" : "password";
-      button.textContent = isHidden ? "🙈" : "👁";
-      button.setAttribute(
-        "aria-label",
-        isHidden ? "Hide password" : "Show password"
+    function setMessage(id, text = "", type = "") {
+      const message = $(id);
+      message.textContent = text;
+      message.className = "message";
+
+      if (!text) return;
+
+      message.classList.add("show");
+
+      if (type === "error") message.classList.add("error");
+      if (type === "good") message.classList.add("good");
+    }
+
+    function showScreen(id) {
+      ["authScreen", "trackerScreen", "appScreen"].forEach(screen => {
+        $(screen).classList.toggle("active", screen === id);
+      });
+    }
+
+    function showAuthPanel(id) {
+      ["signInPanel", "createAccountPanel", "resetPanel"].forEach(panel => {
+        $(panel).classList.toggle("active", panel === id);
+      });
+
+      setMessage("authMessage", "");
+    }
+
+    function togglePassword(inputId, buttonId) {
+      const input = $(inputId);
+      const button = $(buttonId);
+      const hidden = input.type === "password";
+
+      input.type = hidden ? "text" : "password";
+      button.textContent = hidden ? "🙈" : "👁";
+    }
+
+    function openModal(id) {
+      $(id).classList.add("show");
+    }
+
+    function closeModal(id) {
+      $(id).classList.remove("show");
+    }
+
+    function showPage(pageName) {
+      ["dash", "entries", "cards"].forEach(page => {
+        $(page + "Page").classList.toggle("active", page === pageName);
+        $(page + "Nav").classList.toggle("active", page === pageName);
+      });
+    }
+
+    function cardById(id) {
+      return cards.find(card => card.id === id);
+    }
+
+    function cardName(id) {
+      const card = cardById(id);
+
+      if (!card) return "Unknown Card";
+
+      return card.last_four
+        ? `${card.name} •••• ${card.last_four}`
+        : card.name;
+    }
+
+    function cardBalance(cardId) {
+      const card = cardById(cardId);
+      let total = Number(card?.starting_balance || 0);
+
+      entries
+        .filter(entry => entry.card_id === cardId)
+        .forEach(entry => {
+          if (entry.entry_type === "payment") {
+            total -= Number(entry.amount);
+          } else {
+            total += Number(entry.amount);
+          }
+        });
+
+      return Math.max(0, total);
+    }
+
+    function totalSpending() {
+      return entries
+        .filter(entry => entry.entry_type === "expense")
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
+    function monthSpending() {
+      return entries
+        .filter(entry =>
+          entry.entry_type === "expense" &&
+          String(entry.entry_date).slice(0, 7) === currentMonth()
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
+    function estimatedInterest(card) {
+      const balance = cardBalance(card.id);
+      const apr = Number(card.apr || 0);
+
+      if (balance <= 0 || apr <= 0) return 0;
+
+      return balance * (
+        Math.pow(1 + (apr / 100) / 365, 30) - 1
       );
     }
 
-    function showSignedIn(user) {
-      $("authPanel").classList.add("hidden");
-      $("signedInPanel").classList.add("show");
-      $("signedInEmail").textContent = user.email || "Signed in";
-      setMessage("Authentication test succeeded.", "success");
+    function cardInfoHTML(card) {
+      return `
+        <div class="interest">
+          Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
+          Due Day: ${card.due_day || "Not set"}<br>
+          Current Balance: ${cash(cardBalance(card.id))}<br>
+          Estimated 30-Day Interest if Unpaid:
+          ${cash(estimatedInterest(card))}
+        </div>
+      `;
     }
 
-    function showSignedOut() {
-      $("authPanel").classList.remove("hidden");
-      $("signedInPanel").classList.remove("show");
+    function entryHTML(entry) {
+      const payment = entry.entry_type === "payment";
+
+      return `
+        <button class="list" type="button" onclick="openEntry('${entry.id}')">
+          <div class="row">
+            <b>${esc(entry.merchant)}</b>
+            <b>${payment ? "−" : ""}${cash(entry.amount)}</b>
+          </div>
+          <div class="sub">
+            ${payment ? "Payment" : "Expense"} ·
+            ${entry.entry_date} ·
+            ${esc(cardName(entry.card_id))}
+          </div>
+        </button>
+      `;
     }
 
-    async function createAccount() {
-      if (!validateCredentials()) return;
+    function render() {
+      if (!currentTracker) return;
 
-      const { email, password } = getCredentials();
+      const spent = monthSpending();
+      const budget = Number(currentTracker.monthly_budget || 0);
+      const remaining = budget - spent;
 
-      setMessage("Creating account...");
+      $("totalSpending").textContent = cash(totalSpending());
+      $("monthSpent").textContent = cash(spent);
+      $("monthRemaining").textContent = cash(remaining);
+      $("monthRemaining").style.color =
+        remaining < 0 ? "var(--red)" : "var(--green)";
+
+      $("dashboardCards").innerHTML = cards.length
+        ? cards.map(card => `
+          <div class="card">
+            <div class="row">
+              <b>${esc(card.name)}</b>
+              <span>💳</span>
+            </div>
+            <div class="sub">
+              ${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
+            </div>
+            <strong>${cash(cardBalance(card.id))}</strong>
+            <div class="sub">Current calculated balance</div>
+            ${cardInfoHTML(card)}
+          </div>
+        `).join("")
+        : `<div class="card empty">No credit cards saved.</div>`;
+
+      $("recentEntries").innerHTML = entries.length
+        ? entries.slice(0, 5).map(entryHTML).join("")
+        : `<div class="empty">No expenses or payments yet.</div>`;
+
+      $("entriesList").innerHTML = entries.length
+        ? entries.map(entryHTML).join("")
+        : `<div class="empty">No expenses or payments yet.</div>`;
+
+      $("cardsList").innerHTML = cards.length
+        ? cards.map(card => `
+          <div class="card">
+            <div class="row">
+              <b>${esc(card.name)}</b>
+              <button class="secondary" type="button"
+                onclick="openCard('${card.id}')">
+                Edit
+              </button>
+            </div>
+            <div class="sub">
+              ${card.last_four ? `•••• ${card.last_four}` : "No last four saved"}
+            </div>
+            <strong>${cash(cardBalance(card.id))}</strong>
+            ${cardInfoHTML(card)}
+          </div>
+        `).join("")
+        : `<div class="card empty">No credit cards saved.</div>`;
+    }
+
+    async function loadTrackers() {
+      const { data, error } = await supabaseClient
+        .from("trackers")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        setMessage("trackerMessage", error.message, "error");
+        return;
+      }
+
+      $("signedInName").textContent =
+        currentUser.user_metadata?.display_name ||
+        currentUser.email;
+
+      $("trackerSelect").innerHTML = data.length
+        ? data.map(tracker => `
+          <option value="${tracker.id}">${esc(tracker.name)}</option>
+        `).join("")
+        : `<option value="">No trackers available</option>`;
+
+      showScreen("trackerScreen");
+    }
+
+    async function createTracker() {
+      const name = $("newTrackerName").value.trim();
+
+      if (!name) {
+        setMessage("trackerMessage", "Enter a tracker name.", "error");
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from("trackers")
+        .insert({
+          name: name,
+          owner_id: currentUser.id,
+          monthly_budget: 0
+        })
+        .select()
+        .single();
+
+      if (error) {
+        setMessage("trackerMessage", error.message, "error");
+        return;
+      }
+
+      $("newTrackerName").value = "";
+      currentTracker = data;
+
+      await openTracker(data.id);
+    }
+
+    async function joinTracker() {
+      const code = $("inviteCode").value.trim();
+
+      if (!code) {
+        setMessage("trackerMessage", "Enter an invite code.", "error");
+        return;
+      }
+
+      const { data, error } = await supabaseClient.rpc(
+        "join_tracker_by_invite",
+        { supplied_invite_code: code }
+      );
+
+      if (error) {
+        setMessage("trackerMessage", error.message, "error");
+        return;
+      }
+
+      $("inviteCode").value = "";
+      await openTracker(data);
+    }
+
+    async function openSelectedTracker() {
+      const id = $("trackerSelect").value;
+
+      if (!id) {
+        setMessage("trackerMessage", "Create or join a tracker first.", "error");
+        return;
+      }
+
+      await openTracker(id);
+    }
+
+    async function openTracker(trackerId) {
+      const { data, error } = await supabaseClient
+        .from("trackers")
+        .select("*")
+        .eq("id", trackerId)
+        .single();
+
+      if (error) {
+        setMessage("trackerMessage", error.message, "error");
+        return;
+      }
+
+      currentTracker = data;
+      $("trackerTitle").textContent = currentTracker.name;
+      $("trackerSubtitle").textContent =
+        `Invite Code: ${currentTracker.invite_code}`;
+
+      showScreen("appScreen");
+      showPage("dash");
+
+      await refreshData();
+    }
+
+    async function refreshData() {
+      if (!currentTracker) return;
+
+      const [cardsResult, entriesResult, trackerResult] = await Promise.all([
+        supabaseClient
+          .from("cards")
+          .select("*")
+          .eq("tracker_id", currentTracker.id)
+          .order("created_at", { ascending: true }),
+
+        supabaseClient
+          .from("entries")
+          .select("*")
+          .eq("tracker_id", currentTracker.id)
+          .order("entry_date", { ascending: false }),
+
+        supabaseClient
+          .from("trackers")
+          .select("*")
+          .eq("id", currentTracker.id)
+          .single()
+      ]);
+
+      if (cardsResult.error) {
+        alert(cardsResult.error.message);
+        return;
+      }
+
+      if (entriesResult.error) {
+        alert(entriesResult.error.message);
+        return;
+      }
+
+      if (trackerResult.error) {
+        alert(trackerResult.error.message);
+        return;
+      }
+
+      cards = cardsResult.data || [];
+      entries = entriesResult.data || [];
+      currentTracker = trackerResult.data;
+
+      $("trackerTitle").textContent = currentTracker.name;
+      $("trackerSubtitle").textContent =
+        `Invite Code: ${currentTracker.invite_code}`;
+
+      render();
+    }
+
+    function fillCardSelect(selectedId = "") {
+      $("entryCard").innerHTML = cards.map(card => `
+        <option value="${card.id}">
+          ${esc(cardName(card.id))}
+        </option>
+      `).join("");
+
+      if (selectedId) $("entryCard").value = selectedId;
+    }
+
+    function openEntry(id = "") {
+      if (!cards.length) {
+        alert("Add a credit card before adding an expense or payment.");
+        openCard();
+        return;
+      }
+
+      $("entryForm").reset();
+      $("entryId").value = "";
+      $("entryDate").value = today();
+      $("entryTitle").textContent = "Add Entry";
+      $("deleteEntryButton").classList.add("hidden");
+      fillCardSelect();
+
+      if (id) {
+        const entry = entries.find(item => item.id === id);
+        if (!entry) return;
+
+        $("entryId").value = entry.id;
+        $("entryTitle").textContent = "Edit Entry";
+        $("entryType").value = entry.entry_type;
+        $("entryMerchant").value = entry.merchant;
+        $("entryAmount").value = entry.amount;
+        $("entryDate").value = entry.entry_date;
+        $("entryCategory").value = entry.category || "Other";
+        $("entryNotes").value = entry.notes || "";
+        fillCardSelect(entry.card_id);
+
+        $("deleteEntryButton").classList.remove("hidden");
+      }
+
+      openModal("entryModal");
+    }
+
+    async function saveEntry(event) {
+      event.preventDefault();
+
+      const id = $("entryId").value;
+
+      const record = {
+        tracker_id: currentTracker.id,
+        card_id: $("entryCard").value,
+        entry_type: $("entryType").value,
+        merchant: $("entryMerchant").value.trim(),
+        amount: Number($("entryAmount").value),
+        entry_date: $("entryDate").value,
+        category: $("entryCategory").value,
+        notes: $("entryNotes").value.trim()
+      };
+
+      let result;
+
+      if (id) {
+        result = await supabaseClient
+          .from("entries")
+          .update(record)
+          .eq("id", id)
+          .select()
+          .single();
+      } else {
+        record.created_by = currentUser.id;
+
+        result = await supabaseClient
+          .from("entries")
+          .insert(record)
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        alert(result.error.message);
+        return;
+      }
+
+      closeModal("entryModal");
+      await refreshData();
+    }
+
+    async function deleteEntry() {
+      const id = $("entryId").value;
+
+      if (!id || !confirm("Delete this entry?")) return;
+
+      const { error } = await supabaseClient
+        .from("entries")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      closeModal("entryModal");
+      await refreshData();
+    }
+
+    function openCard(id = "") {
+      $("cardForm").reset();
+      $("cardId").value = "";
+      $("cardTitle").textContent = "Add Card";
+      $("deleteCardButton").classList.add("hidden");
+
+      if (id) {
+        const card = cardById(id);
+        if (!card) return;
+
+        $("cardId").value = card.id;
+        $("cardName").value = card.name;
+        $("cardLastFour").value = card.last_four || "";
+        $("cardCycleDay").value = card.cycle_end_day || "";
+        $("cardDueDay").value = card.due_day || "";
+        $("cardApr").value = card.apr || "";
+        $("cardBalance").value = card.starting_balance || "";
+
+        $("cardTitle").textContent = "Edit Card";
+        $("deleteCardButton").classList.remove("hidden");
+      }
+
+      openModal("cardModal");
+    }
+
+    async function saveCard(event) {
+      event.preventDefault();
+
+      const id = $("cardId").value;
+
+      const record = {
+        tracker_id: currentTracker.id,
+        name: $("cardName").value.trim(),
+        last_four: $("cardLastFour").value.replace(/\D/g, "").slice(0, 4),
+        cycle_end_day: Number($("cardCycleDay").value || 0) || null,
+        due_day: Number($("cardDueDay").value || 0) || null,
+        apr: Number($("cardApr").value || 0),
+        starting_balance: Number($("cardBalance").value || 0)
+      };
+
+      let result;
+
+      if (id) {
+        result = await supabaseClient
+          .from("cards")
+          .update(record)
+          .eq("id", id)
+          .select()
+          .single();
+      } else {
+        result = await supabaseClient
+          .from("cards")
+          .insert(record)
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        alert(result.error.message);
+        return;
+      }
+
+      closeModal("cardModal");
+      await refreshData();
+    }
+
+    async function deleteCard() {
+      const id = $("cardId").value;
+
+      if (!id || !confirm("Delete this card and all entries associated with it?")) {
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("cards")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      closeModal("cardModal");
+      await refreshData();
+    }
+
+    function openSettings() {
+      $("inviteCodeDisplay").textContent = currentTracker.invite_code;
+      $("budgetInput").value = currentTracker.monthly_budget || 0;
+      setMessage("settingsMessage", "");
+      openModal("settingsModal");
+    }
+
+    async function saveBudget() {
+      const budget = Number($("budgetInput").value || 0);
+
+      const { data, error } = await supabaseClient
+        .from("trackers")
+        .update({ monthly_budget: budget })
+        .eq("id", currentTracker.id)
+        .select()
+        .single();
+
+      if (error) {
+        setMessage(
+          "settingsMessage",
+          "Only the tracker owner can update the budget. " + error.message,
+          "error"
+        );
+        return;
+      }
+
+      currentTracker = data;
+      render();
+      setMessage("settingsMessage", "Budget saved.", "good");
+    }
+
+    async function returnToTrackerSelection() {
+      closeModal("settingsModal");
+      currentTracker = null;
+      cards = [];
+      entries = [];
+      await loadTrackers();
+    }
+
+    async function signIn(event) {
+      event.preventDefault();
+
+      const email = $("signInEmail").value.trim();
+      const password = $("signInPassword").value;
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        setMessage("authMessage", error.message, "error");
+        return;
+      }
+
+      currentUser = data.user;
+      await loadTrackers();
+    }
+
+    async function createAccount(event) {
+      event.preventDefault();
+
+      const displayName = $("displayName").value.trim();
+      const email = $("createEmail").value.trim();
+      const password = $("createPassword").value;
+      const confirmPassword = $("confirmPassword").value;
+
+      if (password !== confirmPassword) {
+        setMessage("authMessage", "Passwords do not match.", "error");
+        return;
+      }
+
+      if (password.length < 6) {
+        setMessage("authMessage", "Password must have at least 6 characters.", "error");
+        return;
+      }
 
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin + window.location.pathname
+          emailRedirectTo: window.location.origin + window.location.pathname,
+          data: { display_name: displayName }
         }
       });
 
       if (error) {
-        setMessage(error.message, "error");
+        setMessage("authMessage", error.message, "error");
         return;
       }
 
-      if (data.session) {
-        showSignedIn(data.session.user);
+      if (data.session?.user) {
+        currentUser = data.session.user;
+        await loadTrackers();
         return;
       }
 
+      showAuthPanel("signInPanel");
       setMessage(
-        "Account created. Check your email and use the confirmation link before signing in.",
-        "success"
+        "authMessage",
+        "Account created. Check your email, confirm your account, then sign in.",
+        "good"
       );
     }
 
-    async function signIn() {
-      if (!validateCredentials()) return;
+    async function resetPassword(event) {
+      event.preventDefault();
 
-      const { email, password } = getCredentials();
+      const email = $("resetEmail").value.trim();
 
-      setMessage("Signing in...");
-
-      const { data, error } =
-        await supabaseClient.auth.signInWithPassword({
-          email,
-          password
-        });
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+      });
 
       if (error) {
-        setMessage(error.message, "error");
+        setMessage("authMessage", error.message, "error");
         return;
       }
 
-      showSignedIn(data.user);
-    }
-
-    async function resetPassword() {
-      const email = $("email").value.trim();
-
-      if (!email) {
-        setMessage("Enter your email address first.", "error");
-        return;
-      }
-
-      setMessage("Sending password-reset email...");
-
-      const { error } =
-        await supabaseClient.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + window.location.pathname
-        });
-
-      if (error) {
-        setMessage(error.message, "error");
-        return;
-      }
-
-      setMessage("Password-reset email sent.", "success");
+      setMessage("authMessage", "Password reset email sent.", "good");
     }
 
     async function signOut() {
-      const { error } = await supabaseClient.auth.signOut();
+      await supabaseClient.auth.signOut();
 
-      if (error) {
-        setMessage(error.message, "error");
-        return;
-      }
+      currentUser = null;
+      currentTracker = null;
+      cards = [];
+      entries = [];
 
-      $("password").value = "";
-      showSignedOut();
-      setMessage("Signed out.", "success");
+      showScreen("authScreen");
+      showAuthPanel("signInPanel");
+      setMessage("authMessage", "Signed out.", "good");
     }
 
-    async function checkExistingSession() {
+    async function initialize() {
       const {
         data: { session }
       } = await supabaseClient.auth.getSession();
 
       if (session?.user) {
-        showSignedIn(session.user);
+        currentUser = session.user;
+        await loadTrackers();
       } else {
-        showSignedOut();
-        setMessage("Ready to create an account or sign in.");
+        showScreen("authScreen");
       }
     }
 
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        showSignedIn(session.user);
-      } else {
-        showSignedOut();
+    $("signInForm").addEventListener("submit", signIn);
+    $("createAccountForm").addEventListener("submit", createAccount);
+    $("resetForm").addEventListener("submit", resetPassword);
+    $("entryForm").addEventListener("submit", saveEntry);
+    $("cardForm").addEventListener("submit", saveCard);
+
+    document.querySelectorAll(".modal-bg").forEach(modal => {
+      modal.addEventListener("click", event => {
+        if (event.target === modal) closeModal(modal.id);
+      });
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        closeModal("entryModal");
+        closeModal("cardModal");
+        closeModal("settingsModal");
       }
     });
 
-    checkExistingSession();
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+      }
+    });
+
+    initialize();
   </script>
 </body>
 </html>
