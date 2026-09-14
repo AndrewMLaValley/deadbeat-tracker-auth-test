@@ -1004,7 +1004,7 @@
       showScreen("trackerScreen");
     }
 
-   async function createTracker() {
+  async function createTracker() {
   const name = $("newTrackerName").value.trim();
 
   if (!name) {
@@ -1022,9 +1022,37 @@
     return;
   }
 
+  // Clear the input
   $("newTrackerName").value = "";
 
-  await openTracker(data);
+  // Depending on how the RPC is written, `data` may be:
+  // - the new tracker id (UUID), or
+  // - an object/row with `id` and other fields, or
+  // - an array of rows.
+  let trackerId;
+
+  if (!data) {
+    setMessage("trackerMessage", "Tracker was not created. No data returned from server.", "error");
+    return;
+  }
+
+  if (typeof data === "string") {
+    // RPC returns just the ID
+    trackerId = data;
+  } else if (Array.isArray(data) && data.length > 0) {
+    // RPC returns an array of rows
+    trackerId = data[0].id;
+  } else if (data.id) {
+    // RPC returns a single row object
+    trackerId = data.id;
+  } else {
+    setMessage("trackerMessage", "Unexpected response when creating tracker.", "error");
+    return;
+  }
+
+  // Refresh the list of trackers and open the new one
+  await loadTrackers();
+  await openTracker(trackerId);
 }
     async function joinTracker() {
       const code = $("inviteCode").value.trim();
