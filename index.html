@@ -1022,14 +1022,11 @@
     return;
   }
 
-  // Clear the input
+  // Clear the input field
   $("newTrackerName").value = "";
 
-  // Depending on how the RPC is written, `data` may be:
-  // - the new tracker id (UUID), or
-  // - an object/row with `id` and other fields, or
-  // - an array of rows.
-  let trackerId;
+  // Determine the tracker ID from the RPC result
+  let trackerId = null;
 
   if (!data) {
     setMessage("trackerMessage", "Tracker was not created. No data returned from server.", "error");
@@ -1037,12 +1034,12 @@
   }
 
   if (typeof data === "string") {
-    // RPC returns just the ID
+    // RPC returns just the tracker ID (UUID string)
     trackerId = data;
   } else if (Array.isArray(data) && data.length > 0) {
     // RPC returns an array of rows
     trackerId = data[0].id;
-  } else if (data.id) {
+  } else if (data && data.id) {
     // RPC returns a single row object
     trackerId = data.id;
   } else {
@@ -1050,8 +1047,7 @@
     return;
   }
 
-  // Refresh the list of trackers and open the new one
-  await loadTrackers();
+  // Load and open the newly created tracker
   await openTracker(trackerId);
 }
     async function joinTracker() {
