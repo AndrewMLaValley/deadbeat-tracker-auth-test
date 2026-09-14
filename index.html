@@ -811,15 +811,14 @@
       setMessage("authMessage", "");
     }
 
-    function togglePassword(inputId, buttonId) {
-      const input = $(inputId);
-      const button = $(buttonId);
-      const hidden = input.type === "password";
+function togglePassword(inputId, buttonId) {
+    const input = $(inputId);
+    const button = $(buttonId);
+    const hidden = input.type === "password";
 
-      input.type = hidden ? "text" : "password";
-      button.textContent = hidden ? "🙈" : "👁";
-    }
-
+    input.type = hidden ? "text" : "password";
+    button.textContent = hidden ? "🙈" : "👁";
+  }
     function openModal(id) {
       $(id).classList.add("show");
     }
@@ -1495,31 +1494,27 @@
       }
     }
 
-    $("signInForm").addEventListener("submit", signIn);
-    $("createAccountForm").addEventListener("submit", createAccount);
-    $("resetForm").addEventListener("submit", resetPassword);
-    $("entryForm").addEventListener("submit", saveEntry);
-    $("cardForm").addEventListener("submit", saveCard);
+  $("signInForm").addEventListener("submit", signIn);
 
-    document.querySelectorAll(".modal-bg").forEach(modal => {
-      modal.addEventListener("click", event => {
-        if (event.target === modal) closeModal(modal.id);
-      });
+  async function signIn(event) {
+    event.preventDefault();
+
+    const email = $("signInEmail").value.trim();
+    const password = $("signInPassword").value;
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
     });
 
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape") {
-        closeModal("entryModal");
-        closeModal("cardModal");
-        closeModal("settingsModal");
-      }
-    });
+    if (error) {
+      setMessage("authMessage", error.message, "error");
+      return;
+    }
 
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        currentUser = session.user;
-      }
-    });
+    currentUser = data.user;
+    await loadTrackers();
+  }
 
     initialize();
   </script>
