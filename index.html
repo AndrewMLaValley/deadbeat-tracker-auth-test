@@ -1014,7 +1014,8 @@
 
   const { data, error } = await supabaseClient.rpc(
     "create_tracker",
-    { tracker_name: name }
+    { tracker_name: name },
+    { head: false, schema: "public" }
   );
 
   if (error) {
@@ -1022,10 +1023,8 @@
     return;
   }
 
-  // Clear the input field
   $("newTrackerName").value = "";
 
-  // Determine the tracker ID from the RPC result
   let trackerId = null;
 
   if (!data) {
@@ -1034,19 +1033,18 @@
   }
 
   if (typeof data === "string") {
-    // RPC returns just the tracker ID (UUID string)
     trackerId = data;
   } else if (Array.isArray(data) && data.length > 0) {
-    // RPC returns an array of rows
     trackerId = data[0].id;
   } else if (data && data.id) {
-    // RPC returns a single row object
     trackerId = data.id;
   } else {
     setMessage("trackerMessage", "Unexpected response when creating tracker.", "error");
     return;
   }
 
+  await openTracker(trackerId);
+}
   // Load and open the newly created tracker
   await openTracker(trackerId);
 }
