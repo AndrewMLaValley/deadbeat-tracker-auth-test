@@ -274,36 +274,50 @@
       $("signedInPanel").classList.remove("show");
     }
 
-    async function createAccount() {
-      if (!validateCredentials()) return;
+   async function createAccount() {
+  if (!validateCredentials()) return;
 
-      const { email, password } = getCredentials();
+  const { email, password } = getCredentials();
 
-      setMessage("Creating account...");
+  setMessage("Sending account-creation request...");
 
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin + window.location.pathname
-        }
-      });
-
-      if (error) {
-        setMessage(error.message, "error");
-        return;
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/auth/v1/signup`,
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
       }
+    );
 
-      if (data.session) {
-        showSignedIn(data.session.user);
-        return;
-      }
+    const responseText = await response.text();
 
+    if (!response.ok) {
       setMessage(
-        "Account created. Check your email and use the confirmation link before signing in.",
-        "success"
+        `Supabase returned HTTP ${response.status}: ${responseText}`,
+        "error"
       );
+      return;
     }
+
+    setMessage(
+      "Supabase accepted the account request. Check your email for a confirmation link.",
+      "success"
+    );
+  } catch (error) {
+    setMessage(
+      `Browser network error: ${error.message || "Unknown error"}`,
+      "error"
+    );
+  }
+}
 
     async function signIn() {
       if (!validateCredentials()) return;
