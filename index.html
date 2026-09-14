@@ -1025,7 +1025,28 @@
       }
 
       $("newTrackerName").value = "";
-      currentTracker = data;
+      currentTracker = data;async function createTracker() {
+  const name = $("newTrackerName").value.trim();
+
+  if (!name) {
+    setMessage("trackerMessage", "Enter a tracker name.", "error");
+    return;
+  }
+
+  const { data, error } = await supabaseClient.rpc(
+    "create_tracker",
+    { tracker_name: name }
+  );
+
+  if (error) {
+    setMessage("trackerMessage", error.message, "error");
+    return;
+  }
+
+  $("newTrackerName").value = "";
+
+  await openTracker(data);
+}
 
       await openTracker(data.id);
     }
