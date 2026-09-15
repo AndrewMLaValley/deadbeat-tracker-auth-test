@@ -424,7 +424,7 @@
     </div>
   </section>
 
-  <!-- TRACKER SELECTION -->
+  <!-- TRACKER SELECTION (SIMPLIFIED) -->
   <section id="trackerScreen" class="screen">
     <div class="auth-wrap">
       <div class="card">
@@ -437,29 +437,16 @@
         </div>
 
         <div class="heading">
-          <h2>Open a Tracker</h2>
+          <h2>Use This Tracker</h2>
         </div>
 
-        <div class="group">
-          <label for="trackerSelect">Your Trackers</label>
-          <select id="trackerSelect"></select>
-        </div>
+        <p class="sub">
+          This app already has a built‑in tracker. You can start using it immediately
+          or join another shared tracker with an invite code.
+        </p>
 
-        <button class="primary wide" type="button" onclick="openSelectedTracker()">
-          Open Selected Tracker
-        </button>
-
-        <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
-
-        <h2>Create a New Tracker</h2>
-
-        <div class="group">
-          <label for="newTrackerName">Tracker Name</label>
-          <input id="newTrackerName" placeholder="Example: Family Credit Cards">
-        </div>
-
-        <button class="success wide" type="button" onclick="createTracker()">
-          Create Tracker
+        <button class="primary wide" type="button" onclick="useDefaultTracker()">
+          Open Built‑in Tracker
         </button>
 
         <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
@@ -487,6 +474,9 @@
         <div class="row">
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
+            <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
+              BUILD 9 — Shared Supabase Version
+            </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
           <button class="secondary" type="button" onclick="openSettings()">
@@ -735,12 +725,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    /*
-      PASTE YOUR NEW SUPABASE PROJECT VALUES HERE.
-      Use the Project URL and Publishable Key only.
-    */
     const SUPABASE_URL = "https://qrdbvybjhxtaqlndqkwo.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_pSM8d80N4FHwvlhzbnKyrA_9vBGSqQe";
+
+    // IMPORTANT: set this to the UUID of your built-in tracker row
+    const DEFAULT_TRACKER_ID = "11111111-2222-3333-4444-555555555555";
 
     const supabaseClient = window.supabase.createClient(
       SUPABASE_URL,
@@ -783,6 +772,8 @@
 
     function setMessage(id, text = "", type = "") {
       const message = $(id);
+      if (!message) return;
+
       message.textContent = text;
       message.className = "message";
 
@@ -811,6 +802,8 @@
     function togglePassword(inputId, buttonId) {
       const input = $(inputId);
       const button = $(buttonId);
+      if (!input || !button) return;
+
       const hidden = input.type === "password";
 
       input.type = hidden ? "text" : "password";
@@ -838,7 +831,6 @@
 
     function cardName(id) {
       const card = cardById(id);
-
       if (!card) return "Unknown Card";
 
       return card.last_four
@@ -978,56 +970,20 @@
     }
 
     async function loadTrackers() {
-      const { data, error } = await supabaseClient
-        .from("trackers")
-        .select("*")
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        setMessage("trackerMessage", error.message, "error");
-        return;
-      }
-
+      // Just show the simplified tracker screen with the user's name
       $("signedInName").textContent =
         currentUser.user_metadata?.display_name ||
         currentUser.email;
 
-      $("trackerSelect").innerHTML = data.length
-        ? data.map(tracker => `
-          <option value="${tracker.id}">${esc(tracker.name)}</option>
-        `).join("")
-        : `<option value="">No trackers available</option>`;
-
       showScreen("trackerScreen");
     }
 
-    async function createTracker() {
-      const name = $("newTrackerName").value.trim();
-
-      if (!name) {
-        setMessage("trackerMessage", "Enter a tracker name.", "error");
+    async function useDefaultTracker() {
+      if (!DEFAULT_TRACKER_ID) {
+        setMessage("trackerMessage", "Default tracker ID is not configured.", "error");
         return;
       }
-
-      const { data, error } = await supabaseClient
-        .from("trackers")
-        .insert({
-          name: name,
-          owner_id: currentUser.id,
-          monthly_budget: 0
-        })
-        .select()
-        .single();
-
-      if (error) {
-        setMessage("trackerMessage", error.message, "error");
-        return;
-      }
-
-      $("newTrackerName").value = "";
-      currentTracker = data;
-
-      await openTracker(data.id);
+      await openTracker(DEFAULT_TRACKER_ID);
     }
 
     async function joinTracker() {
@@ -1050,17 +1006,6 @@
 
       $("inviteCode").value = "";
       await openTracker(data);
-    }
-
-    async function openSelectedTracker() {
-      const id = $("trackerSelect").value;
-
-      if (!id) {
-        setMessage("trackerMessage", "Create or join a tracker first.", "error");
-        return;
-      }
-
-      await openTracker(id);
     }
 
     async function openTracker(trackerId) {
@@ -1110,17 +1055,17 @@
       ]);
 
       if (cardsResult.error) {
-        alert(cardsResult.error.message);
+        setMessage("settingsMessage", cardsResult.error.message, "error");
         return;
       }
 
       if (entriesResult.error) {
-        alert(entriesResult.error.message);
+        setMessage("settingsMessage", entriesResult.error.message, "error");
         return;
       }
 
       if (trackerResult.error) {
-        alert(trackerResult.error.message);
+        setMessage("settingsMessage", trackerResult.error.message, "error");
         return;
       }
 
@@ -1147,7 +1092,11 @@
 
     function openEntry(id = "") {
       if (!cards.length) {
-        alert("Add a credit card before adding an expense or payment.");
+        setMessage(
+          "trackerMessage",
+          "Add a credit card before adding an expense or payment.",
+          "error"
+        );
         openCard();
         return;
       }
@@ -1215,7 +1164,7 @@
       }
 
       if (result.error) {
-        alert(result.error.message);
+        setMessage("settingsMessage", result.error.message, "error");
         return;
       }
 
@@ -1234,7 +1183,7 @@
         .eq("id", id);
 
       if (error) {
-        alert(error.message);
+        setMessage("settingsMessage", error.message, "error");
         return;
       }
 
@@ -1300,7 +1249,7 @@
       }
 
       if (result.error) {
-        alert(result.error.message);
+        setMessage("settingsMessage", result.error.message, "error");
         return;
       }
 
@@ -1321,7 +1270,7 @@
         .eq("id", id);
 
       if (error) {
-        alert(error.message);
+        setMessage("settingsMessage", error.message, "error");
         return;
       }
 
