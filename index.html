@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 9 Pay the balance. Avoid the interest.</p>
+        <p class="sub">Pay the balance. Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -487,9 +487,6 @@
         <div class="row">
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
-          <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-  BUILD 9 — Shared Supabase Version
-</p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
           <button class="secondary" type="button" onclick="openSettings()">
@@ -811,14 +808,15 @@
       setMessage("authMessage", "");
     }
 
-function togglePassword(inputId, buttonId) {
-    const input = $(inputId);
-    const button = $(buttonId);
-    const hidden = input.type === "password";
+    function togglePassword(inputId, buttonId) {
+      const input = $(inputId);
+      const button = $(buttonId);
+      const hidden = input.type === "password";
 
-    input.type = hidden ? "text" : "password";
-    button.textContent = hidden ? "🙈" : "👁";
-  }
+      input.type = hidden ? "text" : "password";
+      button.textContent = hidden ? "🙈" : "👁";
+    }
+
     function openModal(id) {
       $(id).classList.add("show");
     }
@@ -1003,50 +1001,35 @@ function togglePassword(inputId, buttonId) {
       showScreen("trackerScreen");
     }
 
-  async function createTracker() {
-  const name = $("newTrackerName").value.trim();
+    async function createTracker() {
+      const name = $("newTrackerName").value.trim();
 
-  if (!name) {
-    setMessage("trackerMessage", "Enter a tracker name.", "error");
-    return;
-  }
+      if (!name) {
+        setMessage("trackerMessage", "Enter a tracker name.", "error");
+        return;
+      }
 
-  const { data, error } = await supabaseClient.rpc(
-    "create_tracker",
-    { tracker_name: name },
-    { head: false, schema: "public" }
-  );
+      const { data, error } = await supabaseClient
+        .from("trackers")
+        .insert({
+          name: name,
+          owner_id: currentUser.id,
+          monthly_budget: 0
+        })
+        .select()
+        .single();
 
-  if (error) {
-    setMessage("trackerMessage", error.message, "error");
-    return;
-  }
+      if (error) {
+        setMessage("trackerMessage", error.message, "error");
+        return;
+      }
 
-  $("newTrackerName").value = "";
+      $("newTrackerName").value = "";
+      currentTracker = data;
 
-  let trackerId = null;
+      await openTracker(data.id);
+    }
 
-  if (!data) {
-    setMessage("trackerMessage", "Tracker was not created. No data returned from server.", "error");
-    return;
-  }
-
-  if (typeof data === "string") {
-    trackerId = data;
-  } else if (Array.isArray(data) && data.length > 0) {
-    trackerId = data[0].id;
-  } else if (data && data.id) {
-    trackerId = data.id;
-  } else {
-    setMessage("trackerMessage", "Unexpected response when creating tracker.", "error");
-    return;
-  }
-
-  await openTracker(trackerId);
-}
-  // Load and open the newly created tracker
-  await openTracker(trackerId);
-}
     async function joinTracker() {
       const code = $("inviteCode").value.trim();
 
@@ -1494,27 +1477,31 @@ function togglePassword(inputId, buttonId) {
       }
     }
 
-  $("signInForm").addEventListener("submit", signIn);
+    $("signInForm").addEventListener("submit", signIn);
+    $("createAccountForm").addEventListener("submit", createAccount);
+    $("resetForm").addEventListener("submit", resetPassword);
+    $("entryForm").addEventListener("submit", saveEntry);
+    $("cardForm").addEventListener("submit", saveCard);
 
-  async function signIn(event) {
-    event.preventDefault();
-
-    const email = $("signInEmail").value.trim();
-    const password = $("signInPassword").value;
-
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password
+    document.querySelectorAll(".modal-bg").forEach(modal => {
+      modal.addEventListener("click", event => {
+        if (event.target === modal) closeModal(modal.id);
+      });
     });
 
-    if (error) {
-      setMessage("authMessage", error.message, "error");
-      return;
-    }
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        closeModal("entryModal");
+        closeModal("cardModal");
+        closeModal("settingsModal");
+      }
+    });
 
-    currentUser = data.user;
-    await loadTrackers();
-  }
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+      }
+    });
 
     initialize();
   </script>
