@@ -978,13 +978,15 @@
       showScreen("trackerScreen");
     }
 
-    async function useDefaultTracker() {
-      if (!DEFAULT_TRACKER_ID) {
-        setMessage("trackerMessage", "Default tracker ID is not configured.", "error");
-        return;
-      }
-      await openTracker(DEFAULT_TRACKER_ID);
-    }
+   async function useDefaultTracker() {
+  if (!DEFAULT_TRACKER_ID) {
+    setMessage("trackerMessage", "Default tracker ID is not configured.", "error");
+    return;
+  }
+
+  console.log("Using default tracker id:", DEFAULT_TRACKER_ID);
+  await openTracker(DEFAULT_TRACKER_ID);
+}
 
     async function joinTracker() {
       const code = $("inviteCode").value.trim();
@@ -1007,7 +1009,53 @@
       $("inviteCode").value = "";
       await openTracker(data);
     }
+async function joinTracker() {
+  const code = $("inviteCode").value.trim();
 
+  if (!code) {
+    setMessage("trackerMessage", "Enter an invite code.", "error");
+    return;
+  }
+
+  const { data, error } = await supabaseClient.rpc(
+    "join_tracker_by_invite",
+    { supplied_invite_code: code }
+  );
+
+  console.log("joinTracker RPC result:", { data, error });
+
+  if (error) {
+    setMessage("trackerMessage", error.message, "error");
+    return;
+  }
+
+  if (!data) {
+    setMessage("trackerMessage", "No tracker id returned from invite code.", "error");
+    return;
+  }
+
+  // data might be:
+  // - a string UUID
+  // - an array containing the UUID
+  // - an object with an id field
+  let trackerId = null;
+
+  if (typeof data === "string") {
+    trackerId = data;
+  } else if (Array.isArray(data) && data.length > 0) {
+    trackerId = typeof data[0] === "string" ? data[0] : data[0].id;
+  } else if (data && data.id) {
+    trackerId = data.id;
+  }
+
+  if (!trackerId) {
+    setMessage("trackerMessage", "Unexpected response from invite code.", "error");
+    return;
+  }
+
+  $("inviteCode").value = "";
+  await openTracker(trackerId);
+}
     async function openTracker(trackerId) {
       const { data, error } = await supabaseClient
         .from("trackers")
