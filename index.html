@@ -505,6 +505,8 @@
             </div>
             <p class="sub">Spent This Calendar Month: <b id="monthSpent">$0.00</b></p>
             <p class="sub">Still Allotted to Spend: <b id="monthRemaining">$0.00</b></p>
+            <p class="sub">Cash Moved This Month: <b id="cashMovedThisMonth">$0.00</b></p>
+            <p class="sub">Cash Still To Move This Month: <b id="cashStillToMove">$0.00</b></p>
           </div>
 
           <div class="heading">
@@ -917,6 +919,26 @@
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
+    function cashMovedThisMonth() {
+      return entries
+        .filter(entry =>
+          entry.entry_type === "expense" &&
+          entry.cash_moved &&
+          String(entry.entry_date).slice(0, 7) === currentMonth()
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
+    function cashStillToMoveThisMonth() {
+      return entries
+        .filter(entry =>
+          entry.entry_type === "expense" &&
+          !entry.cash_moved &&
+          String(entry.entry_date).slice(0, 7) === currentMonth()
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
     function estimatedInterest(card) {
       const balance = cardBalance(card.id);
       const apr = Number(card.apr || 0);
@@ -982,10 +1004,15 @@
       const spent = monthSpending();
       const budget = Number(currentTracker.monthly_budget || 0);
       const remaining = budget - spent;
+      const moved = cashMovedThisMonth();
+      const stillToMove = cashStillToMoveThisMonth();
 
       $("totalSpending").textContent = cash(totalSpending());
       $("monthSpent").textContent = cash(spent);
       $("monthRemaining").textContent = cash(remaining);
+      $("cashMovedThisMonth").textContent = cash(moved);
+      $("cashStillToMove").textContent = cash(stillToMove);
+
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
 
