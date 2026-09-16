@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.1 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.3 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.1 — Shared Supabase Version
+              BUILD 9.3 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -517,6 +517,46 @@
             <button class="secondary" type="button" onclick="showPage('entries')">View All</button>
           </div>
           <div id="recentEntries" class="card"></div>
+<div class="heading">...</div>
+          <div id="recentEntries" class="card"></div>
+          
+          <!-- INVITE SOMEONE -->
+          <div id="inviteSection" class="card" style="margin-top:14px">
+            <h2>Invite Someone to This Tracker</h2>
+            <p class="sub">
+              Share this tracker with someone by sending them the invite code below.
+              They can join using the Join Shared Tracker box on the previous screen.
+            </p>
+
+            <div class="group">
+              <label for="inviteContact">Email or Phone</label>
+              <input id="inviteContact" type="text"
+                     placeholder="e.g. person@example.com or 555-123-4567">
+            </div>
+
+            <div class="group">
+              <label>Invite Code</label>
+              <div class="row">
+                <input id="currentInviteCode" type="text" readonly>
+                <button type="button" class="secondary" onclick="copyInviteCode()">
+                  Copy Code
+                </button>
+              </div>
+            </div>
+
+            <div class="group">
+              <label for="inviteMessage">Message (optional)</label>
+              <textarea id="inviteMessage" rows="2"
+                placeholder="I’m sharing my Deadbeat Tracker with you. Use this invite code to join."></textarea>
+            </div>
+
+            <button type="button" class="primary wide" onclick="prepareInvite()">
+              Prepare Invite Text
+            </button>
+
+            <div id="inviteStatus" class="message"></div>
+          </div>
+          
         </section>
 
         <!-- ENTRIES -->
@@ -1015,53 +1055,7 @@ async function joinTracker() {
 
   await openTracker(data);
 }
-async function joinTracker() {
-  const code = $("inviteCode").value.trim();
 
-  if (!code) {
-    setMessage("trackerMessage", "Enter an invite code.", "error");
-    return;
-  }
-
-  const { data, error } = await supabaseClient.rpc(
-    "join_tracker_by_invite",
-    { supplied_invite_code: code }
-  );
-
-  console.log("joinTracker RPC result:", { data, error });
-
-  if (error) {
-    setMessage("trackerMessage", error.message, "error");
-    return;
-  }
-
-  if (!data) {
-    setMessage("trackerMessage", "No tracker id returned from invite code.", "error");
-    return;
-  }
-
-  // data might be:
-  // - a string UUID
-  // - an array containing the UUID
-  // - an object with an id field
-  let trackerId = null;
-
-  if (typeof data === "string") {
-    trackerId = data;
-  } else if (Array.isArray(data) && data.length > 0) {
-    trackerId = typeof data[0] === "string" ? data[0] : data[0].id;
-  } else if (data && data.id) {
-    trackerId = data.id;
-  }
-
-  if (!trackerId) {
-    setMessage("trackerMessage", "Unexpected response from invite code.", "error");
-    return;
-  }
-
-  $("inviteCode").value = "";
-  await openTracker(trackerId);
-}
 async function openTracker(trackerId) {
   const { data, error } = await supabaseClient
     .from("trackers")
@@ -1084,12 +1078,88 @@ async function openTracker(trackerId) {
   $("trackerSubtitle").textContent =
     `Invite Code: ${currentTracker.invite_code}`;
 
+  if ($("currentInviteCode")) {
+    $("currentInviteCode").value = currentTracker.invite_code || "";
+  }
+
   showScreen("appScreen");
   showPage("dash");
 
   await refreshData();
 }
+function copyInviteCode() {
+  const input = $("currentInviteCode");
+  if (!input || !input.value) {
+    setMessage("inviteStatus", "No invite code available.", "error");
+    return;
+  }
 
+  input.select();
+  input.setSelectionRange(0, 99999); // for mobile
+
+  try {
+    document.execCommand("copy");
+    setMessage("inviteStatus", "Invite code copied to clipboard. Paste it into an email or text.", "success");
+  } catch (e) {
+    setMessage("inviteStatus", "Could not copy automatically. Please copy the code manually.", "error");
+  }
+}
+    async function prepareInvite() {
+  if (!currentTracker) {
+    setMessage("inviteStatus", "Open a tracker first.", "error");
+    return;
+  }
+
+  const contact = $("inviteContact").value.trim();
+  const message = $("inviteMessage").value.trim();
+  const inviteCode = currentTracker.invite_code;
+
+  if (!contact) {
+    setMessage("inviteStatus", "Enter an email or phone number.", "error");
+    return;
+  }
+
+  if (!inviteCode) {
+    setMessage("inviteStatus", "This tracker does not have an invite code.", "error");
+    return;
+  }
+
+  // Simple guess: email if it has '@', otherwise phone.
+  const contactType = contact.includes("@") ? "email" : "phone";
+
+  // Try to store in tracker_invites (optional; ignore error if table doesn’t exist)
+  try {
+    await supabaseClient
+      .from("tracker_invites")
+      .insert({
+        tracker_id: currentTracker.id,
+        contact,
+        contact_type: contactType,
+        invite_code: inviteCode,
+        created_by: currentUser ? currentUser.id : null
+      });
+  } catch (e) {
+    // If tracker_invites doesn't exist or RLS blocks it, we ignore and still prepare text.
+  }
+
+  const defaultMsg = message || (
+    "I\u2019m sharing my Deadbeat Tracker with you. Use this invite code to join: " +
+    inviteCode
+  );
+
+  let instructions = "";
+
+  if (contactType === "email") {
+    instructions =
+      "Copy this text and paste it into an email to " + contact + ":\n\n" + defaultMsg;
+  } else {
+    instructions =
+      "Copy this text and paste it into a text message to " + contact + ":\n\n" + defaultMsg;
+  }
+
+  setMessage("inviteStatus", instructions, "good");
+}
+    
     async function refreshData() {
       if (!currentTracker) return;
 
