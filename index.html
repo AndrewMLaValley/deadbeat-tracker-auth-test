@@ -980,37 +980,41 @@
       showScreen("trackerScreen");
     }
 
-   async function useDefaultTracker() {
+  async function useDefaultTracker() {
   if (!DEFAULT_TRACKER_ID) {
     setMessage("trackerMessage", "Default tracker ID is not configured.", "error");
     return;
   }
-
-  console.log("Using default tracker id:", DEFAULT_TRACKER_ID);
   await openTracker(DEFAULT_TRACKER_ID);
 }
 
-    async function joinTracker() {
-      const code = $("inviteCode").value.trim();
+async function joinTracker() {
+  const code = $("inviteCode").value.trim();
 
-      if (!code) {
-        setMessage("trackerMessage", "Enter an invite code.", "error");
-        return;
-      }
+  if (!code) {
+    setMessage("trackerMessage", "Enter an invite code.", "error");
+    return;
+  }
 
-      const { data, error } = await supabaseClient.rpc(
-        "join_tracker_by_invite",
-        { supplied_invite_code: code }
-      );
+  const { data, error } = await supabaseClient.rpc(
+    "join_tracker_by_invite",
+    { supplied_invite_code: code }
+  );
 
-      if (error) {
-        setMessage("trackerMessage", error.message, "error");
-        return;
-      }
+  if (error) {
+    setMessage("trackerMessage", error.message || "Failed to join tracker.", "error");
+    return;
+  }
 
-      $("inviteCode").value = "";
-      await openTracker(data);
-    }
+  if (!data) {
+    setMessage("trackerMessage", "No tracker ID returned for that invite code.", "error");
+    return;
+  }
+
+  $("inviteCode").value = "";
+
+  await openTracker(data);
+}
 async function joinTracker() {
   const code = $("inviteCode").value.trim();
 
@@ -1058,28 +1062,33 @@ async function joinTracker() {
   $("inviteCode").value = "";
   await openTracker(trackerId);
 }
-    async function openTracker(trackerId) {
-      const { data, error } = await supabaseClient
-        .from("trackers")
-        .select("*")
-        .eq("id", trackerId)
-        .single();
+async function openTracker(trackerId) {
+  const { data, error } = await supabaseClient
+    .from("trackers")
+    .select("*")
+    .eq("id", trackerId);
 
-      if (error) {
-        setMessage("trackerMessage", error.message, "error");
-        return;
-      }
+  if (error) {
+    setMessage("trackerMessage", error.message || "Error loading tracker.", "error");
+    return;
+  }
 
-      currentTracker = data;
-      $("trackerTitle").textContent = currentTracker.name;
-      $("trackerSubtitle").textContent =
-        `Invite Code: ${currentTracker.invite_code}`;
+  if (!data || !data.length) {
+    setMessage("trackerMessage", "No tracker found with that ID.", "error");
+    return;
+  }
 
-      showScreen("appScreen");
-      showPage("dash");
+  currentTracker = data[0];
 
-      await refreshData();
-    }
+  $("trackerTitle").textContent = currentTracker.name;
+  $("trackerSubtitle").textContent =
+    `Invite Code: ${currentTracker.invite_code}`;
+
+  showScreen("appScreen");
+  showPage("dash");
+
+  await refreshData();
+}
 
     async function refreshData() {
       if (!currentTracker) return;
