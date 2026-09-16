@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.4 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.5 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.4 — Shared Supabase Version
+              BUILD 9.5 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -937,19 +937,37 @@
 
     function entryHTML(entry) {
       const payment = entry.entry_type === "payment";
+      const isCashMoved = !!entry.cash_moved;
+
+      const statusLabel = isCashMoved ? "Cash moved" : "Cash not moved";
+      const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
+      const toggleText = isCashMoved ? "Mark as not moved" : "Mark as moved";
 
       return `
-        <button class="list" type="button" onclick="openEntry('${entry.id}')">
-          <div class="row">
-            <b>${esc(entry.merchant)}</b>
-            <b>${payment ? "−" : ""}${cash(entry.amount)}</b>
+        <div class="card" style="margin-bottom:6px;padding:10px">
+          <button class="list" type="button"
+            onclick="openEntry('${entry.id}')"
+            style="border-bottom:0;border-radius:9px 9px 0 0">
+            <div class="row">
+              <b>${esc(entry.merchant)}</b>
+              <b>${payment ? "−" : ""}${cash(entry.amount)}</b>
+            </div>
+            <div class="sub">
+              ${payment ? "Payment" : "Expense"} ·
+              ${entry.entry_date} ·
+              ${esc(cardName(entry.card_id))}
+            </div>
+          </button>
+          <div class="row" style="margin-top:6px;justify-content:space-between">
+            <span class="sub" style="color:${statusColor}">
+              ${statusLabel}
+            </span>
+            <button type="button" class="secondary"
+              onclick="toggleCashMoved('${entry.id}')">
+              ${toggleText}
+            </button>
           </div>
-          <div class="sub">
-            ${payment ? "Payment" : "Expense"} ·
-            ${entry.entry_date} ·
-            ${esc(cardName(entry.card_id))}
-          </div>
-        </button>
+        </div>
       `;
     }
 
@@ -1237,12 +1255,13 @@ async function prepareInvite() {
         return;
       }
 
-      $("entryForm").reset();
+   $("entryForm").reset();
       $("entryId").value = "";
       $("entryDate").value = today();
       $("entryTitle").textContent = "Add Entry";
+      $("entryCashMoved").checked = false;
       $("deleteEntryButton").classList.add("hidden");
-      fillCardSelect();
+      fillCardSelect(););
 
       if (id) {
         const entry = entries.find(item => item.id === id);
@@ -1254,10 +1273,10 @@ async function prepareInvite() {
         $("entryMerchant").value = entry.merchant;
         $("entryAmount").value = entry.amount;
         $("entryDate").value = entry.entry_date;
-        $("entryCategory").value = entry.category || "Other";
+$("entryCategory").value = entry.category || "Other";
         $("entryNotes").value = entry.notes || "";
+        $("entryCashMoved").checked = !!entry.cash_moved;
         fillCardSelect(entry.card_id);
-
         $("deleteEntryButton").classList.remove("hidden");
       }
 
@@ -1269,7 +1288,7 @@ async function prepareInvite() {
 
       const id = $("entryId").value;
 
-      const record = {
+const record = {
         tracker_id: currentTracker.id,
         card_id: $("entryCard").value,
         entry_type: $("entryType").value,
@@ -1277,7 +1296,8 @@ async function prepareInvite() {
         amount: Number($("entryAmount").value),
         entry_date: $("entryDate").value,
         category: $("entryCategory").value,
-        notes: $("entryNotes").value.trim()
+        notes: $("entryNotes").value.trim(),
+        cash_moved: $("entryCashMoved").checked
       };
 
       let result;
@@ -1326,7 +1346,32 @@ async function prepareInvite() {
       closeModal("entryModal");
       await refreshData();
     }
+async function toggleCashMoved(entryId) {
+      const entry = entries.find(e => e.id === entryId);
+      if (!entry) return;
 
+      const newValue = !entry.cash_moved;
+
+      const { data, error } = await supabaseClient
+        .from("entries")
+        .update({ cash_moved: newValue })
+        .eq("id", entryId)
+        .select()
+        .single();
+
+      if (error) {
+        setMessage("settingsMessage", error.message, "error");
+        return;
+      }
+
+      // Update in-memory entries array
+      const idx = entries.findIndex(e => e.id === entryId);
+      if (idx !== -1) {
+        entries[idx] = data;
+      }
+
+      render();
+    }
     function openCard(id = "") {
       $("cardForm").reset();
       $("cardId").value = "";
