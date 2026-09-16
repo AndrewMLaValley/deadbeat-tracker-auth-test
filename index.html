@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.3 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.4 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.3 — Shared Supabase Version
+              BUILD 9.4 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1104,7 +1104,7 @@ function copyInviteCode() {
     setMessage("inviteStatus", "Could not copy automatically. Please copy the code manually.", "error");
   }
 }
-    async function prepareInvite() {
+async function prepareInvite() {
   if (!currentTracker) {
     setMessage("inviteStatus", "Open a tracker first.", "error");
     return;
@@ -1127,7 +1127,7 @@ function copyInviteCode() {
   // Simple guess: email if it has '@', otherwise phone.
   const contactType = contact.includes("@") ? "email" : "phone";
 
-  // Try to store in tracker_invites (optional; ignore error if table doesn’t exist)
+  // Optional: store invite in tracker_invites
   try {
     await supabaseClient
       .from("tracker_invites")
@@ -1139,22 +1139,29 @@ function copyInviteCode() {
         created_by: currentUser ? currentUser.id : null
       });
   } catch (e) {
-    // If tracker_invites doesn't exist or RLS blocks it, we ignore and still prepare text.
+    // If tracker_invites doesn't exist or RLS blocks it, ignore and continue.
   }
 
-  const defaultMsg = message || (
-    "I\u2019m sharing my Deadbeat Tracker with you. Use this invite code to join: " +
-    inviteCode
-  );
+  // Build the app link (GitHub Pages or whatever your app URL is)
+  const appUrl = window.location.origin + window.location.pathname;
+
+  const baseMsg =
+    message ||
+    (
+      "I\u2019m sharing my Deadbeat Tracker with you.\n\n" +
+      "App link: " + appUrl + "\n" +
+      "Invite code: " + inviteCode + "\n\n" +
+      "Sign in or create an account, then use this invite code under 'Join a Shared Tracker' to join this specific tracker."
+    );
 
   let instructions = "";
 
   if (contactType === "email") {
     instructions =
-      "Copy this text and paste it into an email to " + contact + ":\n\n" + defaultMsg;
+      "Copy this text and paste it into an email to " + contact + ":\n\n" + baseMsg;
   } else {
     instructions =
-      "Copy this text and paste it into a text message to " + contact + ":\n\n" + defaultMsg;
+      "Copy this text and paste it into a text message to " + contact + ":\n\n" + baseMsg;
   }
 
   setMessage("inviteStatus", instructions, "good");
