@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.6 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.7 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -478,7 +478,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.6 — Shared Supabase Version
+              BUILD 9.7 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -777,7 +777,6 @@
     const SUPABASE_URL = "https://ljifsttsohryyuobmjnq.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
 
-    // IMPORTANT: set this to the UUID of your built-in tracker row
     const DEFAULT_TRACKER_ID = "58e8ba40-f09c-4683-be70-081f8bbb505d";
 
     const supabaseClient = window.supabase.createClient(
@@ -1016,8 +1015,10 @@
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
 
-      $("dashboardCards").innerHTML = cards.length
-        ? cards.map(card => `
+      // DASHBOARD CARDS: show only cards with non-zero balance
+      const cardsWithBalance = cards.filter(card => cardBalance(card.id) > 0.01);
+      $("dashboardCards").innerHTML = cardsWithBalance.length
+        ? cardsWithBalance.map(card => `
           <div class="card">
             <div class="row">
               <b>${esc(card.name)}</b>
@@ -1031,25 +1032,35 @@
             ${cardInfoHTML(card)}
           </div>
         `).join("")
-        : `<div class="card empty">No credit cards saved.</div>`;
+        : `<div class="card empty">No cards with a balance. View All to see all cards.</div>`;
 
-      $("recentEntries").innerHTML = entries.length
-        ? entries.slice(0, 5).map(entryHTML).join("")
-        : `<div class="empty">No expenses or payments yet.</div>`;
+      // DASHBOARD RECENT ACTIVITY: last 10 entries
+      const recent = entries.slice(0, 10);
+      $("recentEntries").innerHTML = recent.length
+        ? recent.map(entryHTML).join("")
+        : `<div class="empty">No recent expenses or payments.</div>`;
 
+      // FULL ENTRIES LIST
       $("entriesList").innerHTML = entries.length
         ? entries.map(entryHTML).join("")
         : `<div class="empty">No expenses or payments yet.</div>`;
 
+      // FULL CARDS LIST
       $("cardsList").innerHTML = cards.length
         ? cards.map(card => `
           <div class="card">
             <div class="row">
               <b>${esc(card.name)}</b>
-              <button class="secondary" type="button"
-                onclick="openCard('${card.id}')">
-                Edit
-              </button>
+              <div class="row" style="gap:6px">
+                <button class="secondary" type="button"
+                  onclick="openCard('${card.id}')">
+                  Edit
+                </button>
+                <button class="secondary" type="button"
+                  onclick="clearCardEntries('${card.id}')">
+                  Clear Entries
+                </button>
+              </div>
             </div>
             <div class="sub">
               ${card.last_four ? `•••• ${card.last_four}` : "No last four saved"}
@@ -1401,6 +1412,28 @@
       }
 
       render();
+    }
+
+    async function clearCardEntries(cardId) {
+      const card = cardById(cardId);
+      if (!card) return;
+
+      if (!confirm("Clear all entries for this card? This will delete all expenses and payments tied to this card, but keep the card itself.")) {
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("entries")
+        .delete()
+        .eq("tracker_id", currentTracker.id)
+        .eq("card_id", cardId);
+
+      if (error) {
+        setMessage("settingsMessage", error.message, "error");
+        return;
+      }
+
+      await refreshData();
     }
 
     function openCard(id = "") {
