@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.5 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.6 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -448,9 +448,10 @@
         <button class="primary wide" type="button" onclick="useDefaultTracker()">
           Open Built‑in Tracker
         </button>
-<button class="secondary wide" type="button" onclick="openTracker('58e8ba40-f09c-4683-be70-081f8bbb505d')">
-  DEBUG: Open Tracker by ID
-</button>
+        <button class="secondary wide" type="button" onclick="openTracker('58e8ba40-f09c-4683-be70-081f8bbb505d')">
+          DEBUG: Open Tracker by ID
+        </button>
+
         <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
 
         <h2>Join a Shared Tracker</h2>
@@ -477,7 +478,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.5 — Shared Supabase Version
+              BUILD 9.6 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -517,9 +518,7 @@
             <button class="secondary" type="button" onclick="showPage('entries')">View All</button>
           </div>
           <div id="recentEntries" class="card"></div>
-<div class="heading">...</div>
-          <div id="recentEntries" class="card"></div>
-          
+
           <!-- INVITE SOMEONE -->
           <div id="inviteSection" class="card" style="margin-top:14px">
             <h2>Invite Someone to This Tracker</h2>
@@ -556,7 +555,6 @@
 
             <div id="inviteStatus" class="message"></div>
           </div>
-          
         </section>
 
         <!-- ENTRIES -->
@@ -651,6 +649,13 @@
         <div class="group">
           <label for="entryNotes">Notes</label>
           <textarea id="entryNotes"></textarea>
+        </div>
+
+        <div class="group">
+          <label>
+            <input id="entryCashMoved" type="checkbox" style="width:auto;margin-right:8px">
+            Cash moved to cover this entry
+          </label>
         </div>
 
         <div class="actions">
@@ -1030,7 +1035,6 @@
     }
 
     async function loadTrackers() {
-      // Just show the simplified tracker screen with the user's name
       $("signedInName").textContent =
         currentUser.user_metadata?.display_name ||
         currentUser.email;
@@ -1038,153 +1042,152 @@
       showScreen("trackerScreen");
     }
 
-  async function useDefaultTracker() {
-  if (!DEFAULT_TRACKER_ID) {
-    setMessage("trackerMessage", "Default tracker ID is not configured.", "error");
-    return;
-  }
-  await openTracker(DEFAULT_TRACKER_ID);
-}
+    async function useDefaultTracker() {
+      if (!DEFAULT_TRACKER_ID) {
+        setMessage("trackerMessage", "Default tracker ID is not configured.", "error");
+        return;
+      }
+      await openTracker(DEFAULT_TRACKER_ID);
+    }
 
-async function joinTracker() {
-  const code = $("inviteCode").value.trim();
+    async function joinTracker() {
+      const code = $("inviteCode").value.trim();
 
-  if (!code) {
-    setMessage("trackerMessage", "Enter an invite code.", "error");
-    return;
-  }
+      if (!code) {
+        setMessage("trackerMessage", "Enter an invite code.", "error");
+        return;
+      }
 
-  const { data, error } = await supabaseClient.rpc(
-    "join_tracker_by_invite",
-    { supplied_invite_code: code }
-  );
+      const { data, error } = await supabaseClient.rpc(
+        "join_tracker_by_invite",
+        { supplied_invite_code: code }
+      );
 
-  if (error) {
-    setMessage("trackerMessage", error.message || "Failed to join tracker.", "error");
-    return;
-  }
+      if (error) {
+        setMessage("trackerMessage", error.message || "Failed to join tracker.", "error");
+        return;
+      }
 
-  if (!data) {
-    setMessage("trackerMessage", "No tracker ID returned for that invite code.", "error");
-    return;
-  }
+      if (!data) {
+        setMessage("trackerMessage", "No tracker ID returned for that invite code.", "error");
+        return;
+      }
 
-  $("inviteCode").value = "";
+      $("inviteCode").value = "";
 
-  await openTracker(data);
-}
+      await openTracker(data);
+    }
 
-async function openTracker(trackerId) {
-  const { data, error } = await supabaseClient
-    .from("trackers")
-    .select("*")
-    .eq("id", trackerId);
+    async function openTracker(trackerId) {
+      const { data, error } = await supabaseClient
+        .from("trackers")
+        .select("*")
+        .eq("id", trackerId);
 
-  if (error) {
-    setMessage("trackerMessage", error.message || "Error loading tracker.", "error");
-    return;
-  }
+      if (error) {
+        setMessage("trackerMessage", error.message || "Error loading tracker.", "error");
+        return;
+      }
 
-  if (!data || !data.length) {
-    setMessage("trackerMessage", "No tracker found with that ID.", "error");
-    return;
-  }
+      if (!data || !data.length) {
+        setMessage("trackerMessage", "No tracker found with that ID.", "error");
+        return;
+      }
 
-  currentTracker = data[0];
+      currentTracker = data[0];
 
-  $("trackerTitle").textContent = currentTracker.name;
-  $("trackerSubtitle").textContent =
-    `Invite Code: ${currentTracker.invite_code}`;
+      $("trackerTitle").textContent = currentTracker.name;
+      $("trackerSubtitle").textContent =
+        `Invite Code: ${currentTracker.invite_code}`;
 
-  if ($("currentInviteCode")) {
-    $("currentInviteCode").value = currentTracker.invite_code || "";
-  }
+      if ($("currentInviteCode")) {
+        $("currentInviteCode").value = currentTracker.invite_code || "";
+      }
 
-  showScreen("appScreen");
-  showPage("dash");
+      showScreen("appScreen");
+      showPage("dash");
 
-  await refreshData();
-}
-function copyInviteCode() {
-  const input = $("currentInviteCode");
-  if (!input || !input.value) {
-    setMessage("inviteStatus", "No invite code available.", "error");
-    return;
-  }
+      await refreshData();
+    }
 
-  input.select();
-  input.setSelectionRange(0, 99999); // for mobile
+    function copyInviteCode() {
+      const input = $("currentInviteCode");
+      if (!input || !input.value) {
+        setMessage("inviteStatus", "No invite code available.", "error");
+        return;
+      }
 
-  try {
-    document.execCommand("copy");
-    setMessage("inviteStatus", "Invite code copied to clipboard. Paste it into an email or text.", "success");
-  } catch (e) {
-    setMessage("inviteStatus", "Could not copy automatically. Please copy the code manually.", "error");
-  }
-}
-async function prepareInvite() {
-  if (!currentTracker) {
-    setMessage("inviteStatus", "Open a tracker first.", "error");
-    return;
-  }
+      input.select();
+      input.setSelectionRange(0, 99999);
 
-  const contact = $("inviteContact").value.trim();
-  const message = $("inviteMessage").value.trim();
-  const inviteCode = currentTracker.invite_code;
+      try {
+        document.execCommand("copy");
+        setMessage("inviteStatus", "Invite code copied to clipboard. Paste it into an email or text.", "good");
+      } catch (e) {
+        setMessage("inviteStatus", "Could not copy automatically. Please copy the code manually.", "error");
+      }
+    }
 
-  if (!contact) {
-    setMessage("inviteStatus", "Enter an email or phone number.", "error");
-    return;
-  }
+    async function prepareInvite() {
+      if (!currentTracker) {
+        setMessage("inviteStatus", "Open a tracker first.", "error");
+        return;
+      }
 
-  if (!inviteCode) {
-    setMessage("inviteStatus", "This tracker does not have an invite code.", "error");
-    return;
-  }
+      const contact = $("inviteContact").value.trim();
+      const message = $("inviteMessage").value.trim();
+      const inviteCode = currentTracker.invite_code;
 
-  // Simple guess: email if it has '@', otherwise phone.
-  const contactType = contact.includes("@") ? "email" : "phone";
+      if (!contact) {
+        setMessage("inviteStatus", "Enter an email or phone number.", "error");
+        return;
+      }
 
-  // Optional: store invite in tracker_invites
-  try {
-    await supabaseClient
-      .from("tracker_invites")
-      .insert({
-        tracker_id: currentTracker.id,
-        contact,
-        contact_type: contactType,
-        invite_code: inviteCode,
-        created_by: currentUser ? currentUser.id : null
-      });
-  } catch (e) {
-    // If tracker_invites doesn't exist or RLS blocks it, ignore and continue.
-  }
+      if (!inviteCode) {
+        setMessage("inviteStatus", "This tracker does not have an invite code.", "error");
+        return;
+      }
 
-  // Build the app link (GitHub Pages or whatever your app URL is)
-  const appUrl = window.location.origin + window.location.pathname;
+      const contactType = contact.includes("@") ? "email" : "phone";
 
-  const baseMsg =
-    message ||
-    (
-      "I\u2019m sharing my Deadbeat Tracker with you.\n\n" +
-      "App link: " + appUrl + "\n" +
-      "Invite code: " + inviteCode + "\n\n" +
-      "Sign in or create an account, then use this invite code under 'Join a Shared Tracker' to join this specific tracker."
-    );
+      try {
+        await supabaseClient
+          .from("tracker_invites")
+          .insert({
+            tracker_id: currentTracker.id,
+            contact,
+            contact_type: contactType,
+            invite_code: inviteCode,
+            created_by: currentUser ? currentUser.id : null
+          });
+      } catch (e) {
+        // ignore
+      }
 
-  let instructions = "";
+      const appUrl = window.location.origin + window.location.pathname;
 
-  if (contactType === "email") {
-    instructions =
-      "Copy this text and paste it into an email to " + contact + ":\n\n" + baseMsg;
-  } else {
-    instructions =
-      "Copy this text and paste it into a text message to " + contact + ":\n\n" + baseMsg;
-  }
+      const baseMsg =
+        message ||
+        (
+          "I\u2019m sharing my Deadbeat Tracker with you.\n\n" +
+          "App link: " + appUrl + "\n" +
+          "Invite code: " + inviteCode + "\n\n" +
+          "Sign in or create an account, then use this invite code under 'Join a Shared Tracker' to join this specific tracker."
+        );
 
-  setMessage("inviteStatus", instructions, "good");
-}
-    
+      let instructions = "";
+
+      if (contactType === "email") {
+        instructions =
+          "Copy this text and paste it into an email to " + contact + ":\n\n" + baseMsg;
+      } else {
+        instructions =
+          "Copy this text and paste it into a text message to " + contact + ":\n\n" + baseMsg;
+      }
+
+      setMessage("inviteStatus", instructions, "good");
+    }
+
     async function refreshData() {
       if (!currentTracker) return;
 
@@ -1255,13 +1258,13 @@ async function prepareInvite() {
         return;
       }
 
-   $("entryForm").reset();
+      $("entryForm").reset();
       $("entryId").value = "";
       $("entryDate").value = today();
       $("entryTitle").textContent = "Add Entry";
-      $("entryCashMoved").checked = false;
+      if ($("entryCashMoved")) $("entryCashMoved").checked = false;
       $("deleteEntryButton").classList.add("hidden");
-      fillCardSelect(););
+      fillCardSelect();
 
       if (id) {
         const entry = entries.find(item => item.id === id);
@@ -1273,9 +1276,9 @@ async function prepareInvite() {
         $("entryMerchant").value = entry.merchant;
         $("entryAmount").value = entry.amount;
         $("entryDate").value = entry.entry_date;
-$("entryCategory").value = entry.category || "Other";
+        $("entryCategory").value = entry.category || "Other";
         $("entryNotes").value = entry.notes || "";
-        $("entryCashMoved").checked = !!entry.cash_moved;
+        if ($("entryCashMoved")) $("entryCashMoved").checked = !!entry.cash_moved;
         fillCardSelect(entry.card_id);
         $("deleteEntryButton").classList.remove("hidden");
       }
@@ -1288,7 +1291,7 @@ $("entryCategory").value = entry.category || "Other";
 
       const id = $("entryId").value;
 
-const record = {
+      const record = {
         tracker_id: currentTracker.id,
         card_id: $("entryCard").value,
         entry_type: $("entryType").value,
@@ -1297,7 +1300,7 @@ const record = {
         entry_date: $("entryDate").value,
         category: $("entryCategory").value,
         notes: $("entryNotes").value.trim(),
-        cash_moved: $("entryCashMoved").checked
+        cash_moved: $("entryCashMoved") ? $("entryCashMoved").checked : false
       };
 
       let result;
@@ -1346,7 +1349,8 @@ const record = {
       closeModal("entryModal");
       await refreshData();
     }
-async function toggleCashMoved(entryId) {
+
+    async function toggleCashMoved(entryId) {
       const entry = entries.find(e => e.id === entryId);
       if (!entry) return;
 
@@ -1364,7 +1368,6 @@ async function toggleCashMoved(entryId) {
         return;
       }
 
-      // Update in-memory entries array
       const idx = entries.findIndex(e => e.id === entryId);
       if (idx !== -1) {
         entries[idx] = data;
@@ -1372,6 +1375,7 @@ async function toggleCashMoved(entryId) {
 
       render();
     }
+
     function openCard(id = "") {
       $("cardForm").reset();
       $("cardId").value = "";
