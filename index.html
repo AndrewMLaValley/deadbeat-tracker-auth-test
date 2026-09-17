@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.8 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.9 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -482,7 +482,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.8 — Shared Supabase Version
+              BUILD 9.9 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -761,6 +761,11 @@
 
       <button class="secondary wide" type="button" onclick="refreshData()">
         Refresh Shared Data
+      </button>
+
+      <!-- NEW: Plaid link button -->
+      <button class="secondary wide" type="button" onclick="linkBankAccount()">
+        Link Bank Account (Plaid)
       </button>
 
       <button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
@@ -1549,6 +1554,61 @@
       currentTracker = data;
       render();
       setMessage("settingsMessage", "Budget saved.", "good");
+    }
+
+    // NEW: Link Bank Account (Plaid)
+    async function linkBankAccount() {
+      if (!currentTracker) {
+        setMessage("settingsMessage", "Open a tracker before linking a bank.", "error");
+        return;
+      }
+
+      try {
+        setMessage("settingsMessage", "Requesting Plaid link token...", "");
+
+        const {
+          data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session?.access_token) {
+          setMessage("settingsMessage", "Not signed in.", "error");
+          return;
+        }
+
+        const jwt = session.access_token;
+
+        const resp = await fetch(
+          "https://YOUR-RENDER-APP.onrender.com/plaid-create-link-token",  // REPLACE with your Render URL
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + jwt
+            },
+            body: JSON.stringify({ tracker_id: currentTracker.id })
+          }
+        );
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          setMessage(
+            "settingsMessage",
+            data.error || "Failed to get Plaid link token.",
+            "error"
+          );
+          return;
+        }
+
+        setMessage(
+          "settingsMessage",
+          "Plaid link token received. Next step is wiring Plaid Link UI.\nToken: " + data.link_token,
+          "good"
+        );
+      } catch (e) {
+        console.error("linkBankAccount error", e);
+        setMessage("settingsMessage", "Error requesting Plaid link token.", "error");
+      }
     }
 
     async function returnToTrackerSelection() {
