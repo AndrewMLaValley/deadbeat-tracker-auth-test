@@ -319,7 +319,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.7 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.8 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -424,7 +424,7 @@
     </div>
   </section>
 
-  <!-- TRACKER SELECTION (SIMPLIFIED) -->
+  <!-- TRACKER SELECTION -->
   <section id="trackerScreen" class="screen">
     <div class="auth-wrap">
       <div class="card">
@@ -448,9 +448,13 @@
         <button class="primary wide" type="button" onclick="useDefaultTracker()">
           Open Built‑in Tracker
         </button>
+
+        <!--
+        DEBUG button kept here for later; just remove the comment markers to show it again.
         <button class="secondary wide" type="button" onclick="openTracker('58e8ba40-f09c-4683-be70-081f8bbb505d')">
           DEBUG: Open Tracker by ID
         </button>
+        -->
 
         <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
 
@@ -478,7 +482,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.7 — Shared Supabase Version
+              BUILD 9.8 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -776,7 +780,6 @@
   <script>
     const SUPABASE_URL = "https://ljifsttsohryyuobmjnq.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
-
     const DEFAULT_TRACKER_ID = "58e8ba40-f09c-4683-be70-081f8bbb505d";
 
     const supabaseClient = window.supabase.createClient(
@@ -886,9 +889,9 @@
         : card.name;
     }
 
+    // Card balance from entries only (starting_balance ignored)
     function cardBalance(cardId) {
-      const card = cardById(cardId);
-      let total = Number(card?.starting_balance || 0);
+      let total = 0;
 
       entries
         .filter(entry => entry.card_id === cardId)
@@ -1015,7 +1018,6 @@
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
 
-      // DASHBOARD CARDS: show only cards with non-zero balance
       const cardsWithBalance = cards.filter(card => cardBalance(card.id) > 0.01);
       $("dashboardCards").innerHTML = cardsWithBalance.length
         ? cardsWithBalance.map(card => `
@@ -1034,18 +1036,15 @@
         `).join("")
         : `<div class="card empty">No cards with a balance. View All to see all cards.</div>`;
 
-      // DASHBOARD RECENT ACTIVITY: last 10 entries
       const recent = entries.slice(0, 10);
       $("recentEntries").innerHTML = recent.length
         ? recent.map(entryHTML).join("")
         : `<div class="empty">No recent expenses or payments.</div>`;
 
-      // FULL ENTRIES LIST
       $("entriesList").innerHTML = entries.length
         ? entries.map(entryHTML).join("")
         : `<div class="empty">No expenses or payments yet.</div>`;
 
-      // FULL CARDS LIST
       $("cardsList").innerHTML = cards.length
         ? cards.map(card => `
           <div class="card">
@@ -1198,9 +1197,7 @@
             invite_code: inviteCode,
             created_by: currentUser ? currentUser.id : null
           });
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
 
       const appUrl = window.location.origin + window.location.pathname;
 
