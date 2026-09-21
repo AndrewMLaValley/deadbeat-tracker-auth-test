@@ -321,7 +321,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.11 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.12 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -484,7 +484,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.11 — Shared Supabase Version
+              BUILD 9.12 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1558,7 +1558,7 @@
       setMessage("settingsMessage", "Budget saved.", "good");
     }
 
-    // NEW: Link Bank Account (Plaid)
+  // NEW: Link Bank Account (Plaid)
     async function linkBankAccount() {
       if (!currentTracker) {
         setMessage("settingsMessage", "Open a tracker before linking a bank.", "error");
@@ -1579,8 +1579,9 @@
 
         const jwt = session.access_token;
 
+        // 1) Ask backend for Plaid Link token
         const resp = await fetch(
-         "https://deadbeat-plaid-server.onrender.com/plaid-create-link-token",  // REPLACE with your Render URL
+          "https://deadbeat-plaid-server.onrender.com/plaid-create-link-token",
           {
             method: "POST",
             headers: {
@@ -1602,11 +1603,84 @@
           return;
         }
 
-        setMessage(
-          "settingsMessage",
-          "Plaid link token received. Next step is wiring Plaid Link UI.\nToken: " + data.link_token,
-          "good"
-        );
+        const linkToken = data.link_token;
+
+        // 2) Initialize Plaid Link UI
+        const handler = Plaid.create({
+          token: linkToken,
+          onSuccess: async function(public_token, metadata) {
+            try {
+              setMessage(
+                "settingsMessage",
+                "Exchanging public token and saving linked accounts...",
+                ""
+              );
+
+              // 3) Send public_token to backend to exchange and save accounts
+              const exchangeResp = await fetch(
+                "https://deadbeat-plaid-server.onrender.com/plaid-exchange-public-token",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + jwt
+                  },
+                  body: JSON.stringify({
+                    public_token,
+                    tracker_id: currentTracker.id
+                  })
+                }
+              );
+
+              const exchangeData = await exchangeResp.json();
+
+              if (!exchangeResp.ok) {
+                setMessage(
+                  "settingsMessage",
+                  exchangeData.error || "Failed to save linked accounts.",
+                  "error"
+                );
+                return;
+              }
+
+              setMessage(
+                "settingsMessage",
+                "Bank account linked (Plaid sandbox) and saved to Supabase.",
+                "good"
+              );
+            } catch (e) {
+              console.error("exchange public_token error", e);
+              setMessage(
+                "settingsMessage",
+                "Error exchanging public token.",
+                "error"
+              );
+            }
+          },
+          onExit: function(err, metadata) {
+            if (err) {
+              console.error("Plaid Link exit with error", err);
+              setMessage(
+                "settingsMessage",
+                "Plaid Link closed with an error: " +
+                  (err.display_message || err.error_message || "See console"),
+                "error"
+              );
+            } else {
+              setMessage(
+                "settingsMessage",
+                "Plaid Link closed before linking an account.",
+                "error"
+              );
+            }
+          },
+          onEvent: function(eventName, metadata) {
+            console.log("Plaid Link event", eventName, metadata);
+          }
+        });
+
+        // 4) Open Plaid Link modal
+        handler.open();
       } catch (e) {
         console.error("linkBankAccount error", e);
         setMessage("settingsMessage", "Error requesting Plaid link token.", "error");
