@@ -321,7 +321,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.17 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.18 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.17 — Shared Supabase Version
+              BUILD 9.18 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -516,6 +516,20 @@
             </div>
             <p class="sub">
               The selected month is used to calculate "this cycle" spending, payments, and cash moved.
+            </p>
+          </div>
+
+          <div class="card" style="margin-top:14px">
+            <div class="row">
+              <h2>Spending Accounts</h2>
+            </div>
+            <p class="sub">
+              Linked bank accounts (via Plaid) used as spending sources.
+            </p>
+            <div id="spendingAccountsList" class="sub" style="margin-top:8px"></div>
+            <p class="sub" style="margin-top:8px">
+              Total cash available in spending accounts:
+              <b id="totalSpendingAccountsCash">$0.00</b>
             </p>
           </div>
 
@@ -769,12 +783,12 @@
         Refresh Shared Data
       </button>
 
-      <!-- NEW: Plaid link button -->
+      <!-- Plaid link button -->
       <button class="secondary wide" type="button" onclick="linkBankAccount()">
         Link Bank Account (Plaid)
       </button>
 
-      <!-- NEW: Linked accounts display -->
+      <!-- Linked accounts display -->
       <div class="group">
         <label>Linked Bank Accounts (Plaid sandbox)</label>
         <div id="linkedAccounts" class="sub">
@@ -812,6 +826,7 @@
     let currentTracker = null;
     let cards = [];
     let entries = [];
+    let linkedAccountsList = [];
 
     function cash(value) {
       return new Intl.NumberFormat("en-US", {
@@ -1139,6 +1154,72 @@
       `;
     }
 
+    function totalSpendingAccountsCash() {
+      return linkedAccountsList
+        .filter(acct =>
+          acct.available_balance != null &&
+          acct.plaid_account_subtype === "checking" // adjust rule as needed
+        )
+        .reduce((sum, acct) => sum + Number(acct.available_balance || 0), 0);
+    }
+
+    function spendingAccountsHTML() {
+      if (!linkedAccountsList.length) {
+        return "No spending accounts linked yet.";
+      }
+
+      return linkedAccountsList.map(acct => {
+        const institution = acct.institution_name || "Bank";
+        const name = acct.plaid_account_name || "Account";
+        const last4 = acct.plaid_account_mask || "";
+        const available = acct.available_balance != null
+          ? cash(acct.available_balance)
+          : "";
+
+        const label = [
+          institution + ":",
+          name,
+          last4 ? "•••• " + last4 : "",
+        ].join(" ");
+
+        return `${esc(label.replace(/\s+/g, " ").trim())} — Available: ${available}`;
+      }).join("<br>");
+    }
+
+    function renderLinkedAccounts(accounts) {
+      const container = $("linkedAccounts");
+      if (!container) return;
+
+      linkedAccountsList = accounts || [];
+
+      if (!linkedAccountsList.length) {
+        container.textContent = "No bank accounts linked yet.";
+        return;
+      }
+
+      container.innerHTML = linkedAccountsList.map(acct => {
+        const institution = acct.institution_name || "Bank";
+        const name = acct.plaid_account_name || "Account";
+        const last4 = acct.plaid_account_mask || "";
+        const typeLabel = acct.plaid_account_type || "";
+        const subtypeLabel = acct.plaid_account_subtype || "";
+        const available = acct.available_balance != null
+          ? cash(acct.available_balance)
+          : "";
+
+        const parts = [
+          institution + ":",
+          name,
+          last4 ? "•••• " + last4 : "",
+          typeLabel || "",
+          subtypeLabel ? "(" + subtypeLabel + ")" : "",
+          available ? "Available: " + available : ""
+        ];
+
+        return `<div>${esc(parts.join(" ").replace(/\s+/g, " ").trim())}</div>`;
+      }).join("");
+    }
+
     function render() {
       if (!currentTracker) return;
 
@@ -1156,6 +1237,17 @@
 
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
+
+      // Spending accounts (linked bank accounts)
+      const totalSpendingCash = totalSpendingAccountsCash();
+      const spendingHtml = spendingAccountsHTML();
+
+      if ($("spendingAccountsList")) {
+        $("spendingAccountsList").innerHTML = spendingHtml;
+      }
+      if ($("totalSpendingAccountsCash")) {
+        $("totalSpendingAccountsCash").textContent = cash(totalSpendingCash);
+      }
 
       const cardsWithBalance = cards.filter(card => cardBalance(card.id) > 0.01);
       $("dashboardCards").innerHTML = cardsWithBalance.length
@@ -1208,34 +1300,6 @@
           </div>
         `).join("")
         : `<div class="card empty">No credit cards saved.</div>`;
-    }
-
-    function renderLinkedAccounts(accounts) {
-      const container = $("linkedAccounts");
-      if (!container) return;
-
-      if (!accounts || !accounts.length) {
-        container.textContent = "No bank accounts linked yet.";
-        return;
-      }
-
-      container.innerHTML = accounts.map(acct => {
-        const institution = acct.institution_name || "Bank";
-        const name = acct.plaid_account_name || "Account";
-        const last4 = acct.plaid_account_mask || "";
-        const typeLabel = acct.plaid_account_type || "";
-        const subtypeLabel = acct.plaid_account_subtype || "";
-
-        const parts = [
-          institution + ":",
-          name,
-          last4 ? "•••• " + last4 : "",
-          typeLabel || "",
-          subtypeLabel ? "(" + subtypeLabel + ")" : ""
-        ];
-
-        return `<div>${esc(parts.join(" ").replace(/\s+/g, " ").trim())}</div>`;
-      }).join("");
     }
 
     async function loadTrackers() {
