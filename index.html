@@ -321,7 +321,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.19 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.20 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.19 — Shared Supabase Version
+              BUILD 9.20 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -516,6 +516,9 @@
             </p>
             <p class="sub">
               Cash Still To Move This Period: <b id="cashStillToMove">$0.00</b>
+            </p>
+            <p class="sub" id="budgetAheadBehind">
+              <!-- Filled in by render() -->
             </p>
           </div>
 
@@ -1336,7 +1339,7 @@
       const payPeriodBudget = Number(currentTracker.pay_period_budget || 0);
       const firstPayDateStr = currentTracker.pay_period_first_date || "";
 
-      let spent, moved, stillToMove, budgetUsed, periodLabel;
+      let spent, moved, stillToMove, budgetUsed, periodLabel, aheadBehindText, aheadBehindColor;
 
       if (budgetType === "pay_period" && firstPayDateStr) {
         const range = getCurrentPayPeriod(firstPayDateStr);
@@ -1354,7 +1357,16 @@
         }
 
         $("budgetTitle").textContent = "Pay Period Budget (2 weeks)";
+      } else if (budgetType === "pay_period" && !firstPayDateStr) {
+        // Pay period selected but no first pay date; fall back to month
+        spent = monthSpending();
+        moved = cashMovedThisMonth();
+        stillToMove = cashStillToMoveThisMonth();
+        budgetUsed = monthlyBudget;
+        periodLabel = "Pay Period mode needs a first pay date. Showing calendar month instead.";
+        $("budgetTitle").textContent = "Monthly Budget";
       } else {
+        // Monthly
         spent = monthSpending();
         moved = cashMovedThisMonth();
         stillToMove = cashStillToMoveThisMonth();
@@ -1365,6 +1377,21 @@
 
       const remaining = budgetUsed - spent;
 
+      // Ahead/behind indicator
+      if (!budgetUsed || budgetUsed <= 0) {
+        aheadBehindText = "No budget set for this period.";
+        aheadBehindColor = "var(--muted)";
+      } else if (remaining > 0) {
+        aheadBehindText = `You are ${cash(remaining)} under budget this period.`;
+        aheadBehindColor = "var(--green)";
+      } else if (remaining < 0) {
+        aheadBehindText = `You are ${cash(-remaining)} over budget this period.`;
+        aheadBehindColor = "var(--red)";
+      } else {
+        aheadBehindText = "You are exactly on your budget for this period.";
+        aheadBehindColor = "var(--muted)";
+      }
+
       $("budgetPeriodLabel").textContent = periodLabel;
       $("totalSpending").textContent = cash(totalSpending());
       $("monthSpent").textContent = cash(spent);
@@ -1374,6 +1401,13 @@
 
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
+
+      const aheadBehindEl = $("budgetAheadBehind");
+      if (aheadBehindEl) {
+        aheadBehindEl.textContent = aheadBehindText;
+        aheadBehindEl.style.color = aheadBehindColor;
+        aheadBehindEl.style.fontWeight = "600";
+      }
 
       const totalSpendingCash = totalSpendingAccountsCash();
       const spendingHtml = spendingAccountsHTML();
