@@ -321,7 +321,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.16 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.17 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.16 — Shared Supabase Version
+              BUILD 9.17 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -506,6 +506,17 @@
             <p class="sub">Still Allotted to Spend: <b id="monthRemaining">$0.00</b></p>
             <p class="sub">Cash Moved This Month: <b id="cashMovedThisMonth">$0.00</b></p>
             <p class="sub">Cash Still To Move This Month: <b id="cashStillToMove">$0.00</b></p>
+          </div>
+
+          <div class="card" style="margin-top:14px">
+            <div class="row">
+              <h2>Cycle View</h2>
+              <select id="monthSelect" onchange="changeSelectedMonth(this.value)">
+              </select>
+            </div>
+            <p class="sub">
+              The selected month is used to calculate "this cycle" spending, payments, and cash moved.
+            </p>
           </div>
 
           <div class="heading">
@@ -829,6 +840,8 @@
       return today().slice(0, 7);
     }
 
+    let selectedMonth = currentMonth();
+
     function setMessage(id, text = "", type = "") {
       const message = $(id);
       if (!message) return;
@@ -842,6 +855,38 @@
 
       if (type === "error") message.classList.add("error");
       if (type === "good") message.classList.add("good");
+    }
+
+    function buildMonthOptions() {
+      const select = $("monthSelect");
+      if (!select) return;
+
+      const options = [];
+      const now = new Date();
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const value = `${year}-${month}`;
+
+        const label = d.toLocaleString("en-US", {
+          month: "short",
+          year: "numeric"
+        });
+
+        options.push({ value, label });
+      }
+
+      select.innerHTML = options.map(opt => `
+        <option value="${opt.value}">${opt.label}</option>
+      `).join("");
+
+      select.value = selectedMonth;
+    }
+
+    function changeSelectedMonth(value) {
+      selectedMonth = value || currentMonth();
+      render();
     }
 
     function showScreen(id) {
@@ -897,82 +942,80 @@
         : card.name;
     }
 
-   // Card balance = starting_balance + entries (expenses - payments)
-  // Card balance = starting_balance + entries (expenses - payments)
-function cardBalance(cardId) {
-  const card = cardById(cardId);
-  const starting = card ? Number(card.starting_balance || 0) : 0;
+    // Card balance = starting_balance + entries (expenses - payments)
+    function cardBalance(cardId) {
+      const card = cardById(cardId);
+      const starting = card ? Number(card.starting_balance || 0) : 0;
 
-  let total = starting;
+      let total = starting;
 
-  entries
-    .filter(entry => entry.card_id === cardId)
-    .forEach(entry => {
-      if (entry.entry_type === "payment") {
-        total -= Number(entry.amount);
-      } else {
-        total += Number(entry.amount);
-      }
-    });
+      entries
+        .filter(entry => entry.card_id === cardId)
+        .forEach(entry => {
+          if (entry.entry_type === "payment") {
+            total -= Number(entry.amount);
+          } else {
+            total += Number(entry.amount);
+          }
+        });
 
-  return Math.max(0, total);
-}
-// Amount that was unpaid from last cycle for this card
-function cardUnpaidFromLastCycle(card) {
-  return Number(card.starting_balance || 0);
-}
+      return Math.max(0, total);
+    }
 
-// New cycle spend for this card (expenses this calendar month)
-function cardNewCycleSpend(card) {
-  const cardId = card.id;
-  const month = currentMonth();
+    // Amount that was unpaid from last cycle for this card
+    function cardUnpaidFromLastCycle(card) {
+      return Number(card.starting_balance || 0);
+    }
 
-  return entries
-    .filter(entry =>
-      entry.card_id === cardId &&
-      entry.entry_type === "expense" &&
-      String(entry.entry_date).slice(0, 7) === month
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-}
+    function cardNewCycleSpend(card) {
+      const cardId = card.id;
+      const month = selectedMonth;
 
-// Payments made this cycle for this card
-function cardPaymentsThisCycle(card) {
-  const cardId = card.id;
-  const month = currentMonth();
+      return entries
+        .filter(entry =>
+          entry.card_id === cardId &&
+          entry.entry_type === "expense" &&
+          String(entry.entry_date).slice(0, 7) === month
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
 
-  return entries
-    .filter(entry =>
-      entry.card_id === cardId &&
-      entry.entry_type === "payment" &&
-      String(entry.entry_date).slice(0, 7) === month
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-}
+    function cardPaymentsThisCycle(card) {
+      const cardId = card.id;
+      const month = selectedMonth;
 
-// Cash moved toward this card this cycle (based on cash_moved flag on expenses)
-function cardCashMovedThisCycle(card) {
-  const cardId = card.id;
-  const month = currentMonth();
+      return entries
+        .filter(entry =>
+          entry.card_id === cardId &&
+          entry.entry_type === "payment" &&
+          String(entry.entry_date).slice(0, 7) === month
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
 
-  return entries
-    .filter(entry =>
-      entry.card_id === cardId &&
-      entry.entry_type === "expense" &&
-      entry.cash_moved &&
-      String(entry.entry_date).slice(0, 7) === month
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-}
+    function cardCashMovedThisCycle(card) {
+      const cardId = card.id;
+      const month = selectedMonth;
 
-// How much cash still needs to be moved to fully fund this card's NEW cycle spend
-// (does not attempt to "cash move" last-cycle unpaid; that is normally already in checking)
-function cardCashStillToMoveThisCycle(card) {
-  const newSpend = cardNewCycleSpend(card);
-  const moved = cardCashMovedThisCycle(card);
-  const remaining = newSpend - moved;
-  return remaining > 0 ? remaining : 0;
-}
+      return entries
+        .filter(entry =>
+          entry.card_id === cardId &&
+          entry.entry_type === "expense" &&
+          entry.cash_moved &&
+          String(entry.entry_date).slice(0, 7) === month
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
+    // How much cash still needs to be moved to fully fund this card's NEW cycle spend
+    // (does not attempt to "cash move" last-cycle unpaid; that is normally already in checking)
+    function cardCashStillToMoveThisCycle(card) {
+      const newSpend = cardNewCycleSpend(card);
+      const moved = cardCashMovedThisCycle(card);
+      const remaining = newSpend - moved;
+      return remaining > 0 ? remaining : 0;
+    }
+
     function totalSpending() {
       return entries
         .filter(entry => entry.entry_type === "expense")
@@ -1019,32 +1062,46 @@ function cardCashStillToMoveThisCycle(card) {
       );
     }
 
-   function cardInfoHTML(card) {
-  const unpaidLastCycle = cardUnpaidFromLastCycle(card);
-  const newSpend = cardNewCycleSpend(card);
-  const paymentsCycle = cardPaymentsThisCycle(card);
-  const current = cardBalance(card.id); // includes starting_balance + entries
-  const cashMoved = cardCashMovedThisCycle(card);
-  const cashStillToMove = cardCashStillToMoveThisCycle(card);
-  const estInterest = estimatedInterest(card);
+    function cardProjectedNextCycleStart(card) {
+      const unpaidLastCycle = cardUnpaidFromLastCycle(card);
+      const newSpend = cardNewCycleSpend(card);
+      const paymentsCycle = cardPaymentsThisCycle(card);
 
-  return `
-    <div class="interest">
-      Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
-      Due Day: ${card.due_day || "Not set"}<br>
-      <br>
-      Unpaid from last cycle: ${cash(unpaidLastCycle)}<br>
-      New cycle spend (this month): ${cash(newSpend)}<br>
-      Payments this month: ${cash(paymentsCycle)}<br>
-      <b>Total current balance: ${cash(current)}</b><br>
-      <br>
-      Cash moved this month (to cover this card): ${cash(cashMoved)}<br>
-      Cash still to move this month (for new spend): ${cash(cashStillToMove)}<br>
-      <br>
-      Estimated 30-Day Interest if Unpaid: ${cash(estInterest)}
-    </div>
-  `;
-}
+      const projected = unpaidLastCycle + newSpend - paymentsCycle;
+      return projected > 0 ? projected : 0;
+    }
+
+    function cardInfoHTML(card) {
+      const unpaidLastCycle = cardUnpaidFromLastCycle(card);
+      const newSpend = cardNewCycleSpend(card);
+      const paymentsCycle = cardPaymentsThisCycle(card);
+      const current = cardBalance(card.id);
+      const cashMoved = cardCashMovedThisCycle(card);
+      const cashStillToMove = cardCashStillToMoveThisCycle(card);
+      const estInterest = estimatedInterest(card);
+
+      return `
+        <div class="interest">
+          <b>Cycle details</b><br>
+          Cycle end day: ${card.cycle_end_day || "Not set"} ·
+          Due day: ${card.due_day || "Not set"}<br>
+          <br>
+          <b>Balance</b><br>
+          Prior cycle balance: ${cash(unpaidLastCycle)}<br>
+          New cycle spending: ${cash(newSpend)}<br>
+          Payments this cycle: ${cash(paymentsCycle)}<br>
+          <b>Current balance: ${cash(current)}</b><br>
+          <b>Projected starting balance next cycle (if no more changes): ${cash(cardProjectedNextCycleStart(card))}</b><br>
+          <br>
+          <b>Cash coverage</b><br>
+          Cash already moved this cycle: ${cash(cashMoved)}<br>
+          Cash still to move for this cycle: ${cash(cashStillToMove)}<br>
+          <br>
+          <b>Interest risk</b><br>
+          Est. 30-day interest if unpaid: ${cash(estInterest)}
+        </div>
+      `;
+    }
 
     function entryHTML(entry) {
       const payment = entry.entry_type === "payment";
@@ -1635,7 +1692,6 @@ function cardCashStillToMoveThisCycle(card) {
       $("budgetInput").value = currentTracker.monthly_budget || 0;
       setMessage("settingsMessage", "");
 
-      // Load linked accounts each time Settings is opened
       loadLinkedAccountsForCurrentTracker();
 
       openModal("settingsModal");
@@ -1715,7 +1771,7 @@ function cardCashStillToMoveThisCycle(card) {
       setMessage("settingsMessage", "Budget saved.", "good");
     }
 
-    // NEW: Link Bank Account (Plaid)
+    // Link Bank Account (Plaid)
     async function linkBankAccount() {
       if (!currentTracker) {
         setMessage("settingsMessage", "Open a tracker before linking a bank.", "error");
@@ -1736,7 +1792,6 @@ function cardCashStillToMoveThisCycle(card) {
 
         const jwt = session.access_token;
 
-        // 1) Ask backend for Plaid Link token
         const resp = await fetch(
           "https://deadbeat-plaid-server.onrender.com/plaid-create-link-token",
           {
@@ -1762,7 +1817,6 @@ function cardCashStillToMoveThisCycle(card) {
 
         const linkToken = data.link_token;
 
-        // 2) Initialize Plaid Link UI
         const handler = Plaid.create({
           token: linkToken,
           onSuccess: async function(public_token, metadata) {
@@ -1773,7 +1827,6 @@ function cardCashStillToMoveThisCycle(card) {
                 ""
               );
 
-              // 3) Send public_token to backend to exchange and save accounts
               const exchangeResp = await fetch(
                 "https://deadbeat-plaid-server.onrender.com/plaid-exchange-public-token",
                 {
@@ -1836,7 +1889,6 @@ function cardCashStillToMoveThisCycle(card) {
           }
         });
 
-        // 4) Open Plaid Link modal
         handler.open();
       } catch (e) {
         console.error("linkBankAccount error", e);
@@ -1987,6 +2039,7 @@ function cardCashStillToMoveThisCycle(card) {
       }
     });
 
+    buildMonthOptions();
     initialize();
   </script>
 </body>
