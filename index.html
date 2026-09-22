@@ -995,7 +995,6 @@
         : card.name;
     }
 
-    // Card balance = starting_balance + entries (expenses - payments)
     function cardBalance(cardId) {
       const card = cardById(cardId);
       const starting = card ? Number(card.starting_balance || 0) : 0;
@@ -1015,7 +1014,6 @@
       return Math.max(0, total);
     }
 
-    // Amount that was unpaid from last cycle for this card
     function cardUnpaidFromLastCycle(card) {
       return Number(card.starting_balance || 0);
     }
@@ -1060,7 +1058,6 @@
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
-    // How much cash still needs to be moved to fully fund this card's NEW cycle spend
     function cardCashStillToMoveThisCycle(card) {
       const newSpend = cardNewCycleSpend(card);
       const moved = cardCashMovedThisCycle(card);
@@ -1074,7 +1071,7 @@
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
-    // === MONTHLY PERIOD CALCS (calendar) ===
+    // calendar month
     function monthSpending() {
       const ym = currentMonth();
       return entries
@@ -1107,7 +1104,7 @@
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
-    // === PAY PERIOD (2-WEEK) CALCS ===
+    // PAY PERIOD
     function getCurrentPayPeriod(firstPayDateStr) {
       const firstPayDate = parseISODate(firstPayDateStr);
       if (!firstPayDate) return null;
@@ -1115,12 +1112,10 @@
       const todayDate = parseISODate(today());
       if (!todayDate) return null;
 
-      // Normalize time to midnight
       firstPayDate.setHours(0,0,0,0);
       todayDate.setHours(0,0,0,0);
 
       if (todayDate < firstPayDate) {
-        // If today is before first pay date of the year, treat the first pay period as the one starting on firstPayDate
         return {
           start: firstPayDate,
           end: new Date(firstPayDate.getTime() + 13 * 24 * 60 * 60 * 1000)
@@ -1271,7 +1266,7 @@
       return linkedAccountsList
         .filter(acct =>
           acct.available_balance != null &&
-          acct.plaid_account_subtype === "checking" // adjust rule as needed
+          acct.plaid_account_subtype === "checking"
         )
         .reduce((sum, acct) => sum + Number(acct.available_balance || 0), 0);
     }
@@ -1344,7 +1339,6 @@
       let spent, moved, stillToMove, budgetUsed, periodLabel;
 
       if (budgetType === "pay_period" && firstPayDateStr) {
-        // Pay Period (2 weeks)
         const range = getCurrentPayPeriod(firstPayDateStr);
         spent = payPeriodSpending(firstPayDateStr);
         moved = payPeriodCashMoved(firstPayDateStr);
@@ -1356,12 +1350,11 @@
           const endStr = range.end.toLocaleDateString("en-US");
           periodLabel = `Period: Pay Period (${startStr} – ${endStr})`;
         } else {
-          periodLabel = "Period: Pay Period (set a first pay date)";
+          periodLabel = "Period: Pay Period (set a valid first pay date)";
         }
 
         $("budgetTitle").textContent = "Pay Period Budget (2 weeks)";
       } else {
-        // Monthly
         spent = monthSpending();
         moved = cashMovedThisMonth();
         stillToMove = cashStillToMoveThisMonth();
@@ -1382,7 +1375,6 @@
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
 
-      // Spending accounts (linked bank accounts)
       const totalSpendingCash = totalSpendingAccountsCash();
       const spendingHtml = spendingAccountsHTML();
 
@@ -1898,7 +1890,6 @@
     function openSettings() {
       $("inviteCodeDisplay").textContent = currentTracker.invite_code || "";
 
-      // Fill budget fields from tracker
       const budgetType = currentTracker.budget_type || "monthly";
       const monthlyBudget = currentTracker.monthly_budget || 0;
       const payPeriodBudget = currentTracker.pay_period_budget || 0;
@@ -2000,7 +1991,6 @@
       setMessage("settingsMessage", "Budget settings saved.", "good");
     }
 
-    // Link Bank Account (Plaid)
     async function linkBankAccount() {
       if (!currentTracker) {
         setMessage("settingsMessage", "Open a tracker before linking a bank.", "error");
