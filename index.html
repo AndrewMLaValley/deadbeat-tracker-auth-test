@@ -385,7 +385,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.23 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.24 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -541,7 +541,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.23 — Shared Supabase Version
+              BUILD 9.24 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -582,7 +582,7 @@
               Cash Still To Move This Period: <b id="cashStillToMove">$0.00</b>
             </p>
 
-            <!-- Fancy ahead/behind sliding indicator -->
+            <!-- Budget indicator -->
             <div class="budget-slider-wrap">
               <div class="budget-slider-bar">
                 <div id="budgetSliderFill" class="budget-slider-fill"></div>
@@ -907,8 +907,27 @@
         </div>
       </div>
 
+      <!-- NEW: unlink bank account controls -->
+      <div class="group">
+        <label for="unlinkAccountSelect">Unlink a Bank Account</label>
+        <select id="unlinkAccountSelect">
+          <option value="">Select an account to unlink</option>
+        </select>
+        <button class="danger wide" type="button" onclick="unlinkSelectedBankAccount()">
+          Unlink Selected Account
+        </button>
+        <p class="sub">
+          This will unlink the account from this tracker (Plaid sandbox) and remove it from the app. It will not affect your actual bank.
+        </p>
+      </div>
+
       <button class="danger wide" type="button" onclick="signOut()">
         Sign Out
+      </button>
+
+      <!-- NEW: delete account button -->
+      <button class="danger wide" type="button" onclick="deleteAccount()">
+        Delete My Account
       </button>
 
       <div id="settingsMessage" class="message"></div>
@@ -942,7 +961,6 @@
       }).format(Number(value || 0));
     }
 
-    // FIXED: proper HTML escaping, valid JS
     function esc(value) {
       return String(value || "")
         .replace(/&/g, "&amp;")
@@ -1148,7 +1166,6 @@
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
-    // calendar month
     function monthSpending() {
       const ym = currentMonth();
       return entries
@@ -1371,14 +1388,19 @@
       }).join("<br>");
     }
 
+    // UPDATED: render linked accounts and populate unlink dropdown
     function renderLinkedAccounts(accounts) {
       const container = $("linkedAccounts");
+      const select = $("unlinkAccountSelect");
       if (!container) return;
 
       linkedAccountsList = accounts || [];
 
       if (!linkedAccountsList.length) {
         container.textContent = "No bank accounts linked yet.";
+        if (select) {
+          select.innerHTML = `<option value="">Select an account to unlink</option>`;
+        }
         return;
       }
 
@@ -1403,6 +1425,27 @@
 
         return `<div>${esc(parts.join(" ").replace(/\s+/g, " ").trim())}</div>`;
       }).join("");
+
+      if (select) {
+        const optionsHtml = [
+          `<option value="">Select an account to unlink</option>`,
+          ...linkedAccountsList.map(acct => {
+            const id = acct.id; // assumes 'id' is the primary key of linked account
+            const institution = acct.institution_name || "Bank";
+            const name = acct.plaid_account_name || "Account";
+            const last4 = acct.plaid_account_mask || "";
+            const labelParts = [
+              institution + ":",
+              name,
+              last4 ? "•••• " + last4 : ""
+            ];
+            const label = esc(labelParts.join(" ").replace(/\s+/g, " ").trim());
+            return `<option value="${id}">${label}</option>`;
+          })
+        ].join("");
+
+        select.innerHTML = optionsHtml;
+      }
     }
 
     function renderBudgetSlider(spent, budget) {
@@ -1415,21 +1458,17 @@
 
       const safeBudget = budget > 0 ? budget : 0;
       const ratio = safeBudget > 0 ? spent / safeBudget : 0;
-      const ratioClamped = Math.min(Math.max(ratio, 0), 2); // clamp 0–200% visually
+      const ratioClamped = Math.min(Math.max(ratio, 0), 2);
 
-      // Fill: up to 100% is green; above 100% is red style
-      const fillScale = Math.min(ratioClamped, 1); // 0–1 portion of the bar
+      const fillScale = Math.min(ratioClamped, 1);
       fillEl.style.transform = "scaleX(" + fillScale.toFixed(3) + ")";
       fillEl.classList.toggle("over", ratio > 1);
 
-      // Marker: slide along the bar; max 200% width
-      const markerPercent = ratioClamped * 100; // 0–200
+      const markerPercent = ratioClamped * 100;
       markerEl.style.left = markerPercent + "%";
 
-      // Summary text
       summaryEl.textContent = "Budget: " + cash(budget) + " · Spent: " + cash(spent);
 
-      // Ahead/behind label
       const difference = budget - spent;
 
       if (budget <= 0) {
@@ -1494,7 +1533,6 @@
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
 
-      // New fancy slider
       renderBudgetSlider(spent, budgetUsed);
 
       const totalSpendingCash = totalSpendingAccountsCash();
@@ -2234,6 +2272,151 @@
       } catch (e) {
         console.error("linkBankAccount error", e);
         setMessage("settingsMessage", "Error requesting Plaid link token.", "error");
+      }
+    }
+
+    // NEW: unlink selected bank account
+    async function unlinkSelectedBankAccount() {
+      if (!currentTracker) {
+        setMessage("settingsMessage", "Open a tracker before unlinking an account.", "error");
+        return;
+      }
+
+      const select = $("unlinkAccountSelect");
+      if (!select) {
+        setMessage("settingsMessage", "Unlink selector not found.", "error");
+        return;
+      }
+
+      const accountId = select.value;
+      if (!accountId) {
+        setMessage("settingsMessage", "Select an account to unlink.", "error");
+        return;
+      }
+
+      const acct = linkedAccountsList.find(a => String(a.id) === String(accountId));
+      if (!acct) {
+        setMessage("settingsMessage", "Selected account not found.", "error");
+        return;
+      }
+
+      if (!confirm("Unlink this bank account from this tracker? This will remove it from the app (Plaid sandbox only).")) {
+        return;
+      }
+
+      try {
+        const {
+          data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session?.access_token) {
+          setMessage("settingsMessage", "Not signed in.", "error");
+          return;
+        }
+
+        const jwt = session.access_token;
+
+        const resp = await fetch(
+          "https://deadbeat-plaid-server.onrender.com/plaid-unlink-account",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + jwt
+            },
+            body: JSON.stringify({
+              tracker_id: currentTracker.id,
+              linked_account_id: acct.id
+            })
+          }
+        );
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          console.error("unlinkSelectedBankAccount error", data);
+          setMessage(
+            "settingsMessage",
+            data.error || "Failed to unlink bank account.",
+            "error"
+          );
+          return;
+        }
+
+        setMessage(
+          "settingsMessage",
+          "Bank account unlinked from this tracker.",
+          "good"
+        );
+
+        await loadLinkedAccountsForCurrentTracker();
+      } catch (e) {
+        console.error("unlinkSelectedBankAccount error", e);
+        setMessage("settingsMessage", "Error unlinking bank account.", "error");
+      }
+    }
+
+    // NEW: delete account (requires backend/Edge Function)
+    async function deleteAccount() {
+      try {
+        const {
+          data: { session },
+          error: sessionError
+        } = await supabaseClient.auth.getSession();
+
+        if (sessionError) {
+          console.error("getSession error", sessionError);
+        }
+
+        if (!session?.access_token || !currentUser) {
+          setMessage("settingsMessage", "Not signed in.", "error");
+          return;
+        }
+
+        if (!confirm("Delete your account and sign out? This cannot be undone.")) {
+          return;
+        }
+
+        // This endpoint must be implemented on your backend or Supabase Edge Function.
+        const resp = await fetch(
+          "https://your-backend-host/delete-user",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + session.access_token
+            },
+            body: JSON.stringify({
+              user_id: currentUser.id
+            })
+          }
+        );
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          console.error("deleteAccount error", data);
+          setMessage(
+            "settingsMessage",
+            data.error || "Failed to delete account.",
+            "error"
+          );
+          return;
+        }
+
+        await supabaseClient.auth.signOut();
+
+        currentUser = null;
+        currentTracker = null;
+        cards = [];
+        entries = [];
+
+        showScreen("authScreen");
+        showAuthPanel("signInPanel");
+        setMessage("authMessage", "Your account has been deleted.", "good");
+      } catch (e) {
+        console.error("deleteAccount error", e);
+        setMessage("settingsMessage", "Error deleting account.", "error");
       }
     }
 
