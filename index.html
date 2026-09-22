@@ -321,7 +321,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.15 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.16 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.15 — Shared Supabase Version
+              BUILD 9.16 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -898,25 +898,81 @@
     }
 
    // Card balance = starting_balance + entries (expenses - payments)
-    function cardBalance(cardId) {
-      const card = cardById(cardId);
-      const starting = card ? Number(card.starting_balance || 0) : 0;
+  // Card balance = starting_balance + entries (expenses - payments)
+function cardBalance(cardId) {
+  const card = cardById(cardId);
+  const starting = card ? Number(card.starting_balance || 0) : 0;
 
-      let total = starting;
+  let total = starting;
 
-      entries
-        .filter(entry => entry.card_id === cardId)
-        .forEach(entry => {
-          if (entry.entry_type === "payment") {
-            total -= Number(entry.amount);
-          } else {
-            total += Number(entry.amount);
-          }
-        });
+  entries
+    .filter(entry => entry.card_id === cardId)
+    .forEach(entry => {
+      if (entry.entry_type === "payment") {
+        total -= Number(entry.amount);
+      } else {
+        total += Number(entry.amount);
+      }
+    });
 
-      return Math.max(0, total);
-    }
+  return Math.max(0, total);
+}
+// Amount that was unpaid from last cycle for this card
+function cardUnpaidFromLastCycle(card) {
+  return Number(card.starting_balance || 0);
+}
 
+// New cycle spend for this card (expenses this calendar month)
+function cardNewCycleSpend(card) {
+  const cardId = card.id;
+  const month = currentMonth();
+
+  return entries
+    .filter(entry =>
+      entry.card_id === cardId &&
+      entry.entry_type === "expense" &&
+      String(entry.entry_date).slice(0, 7) === month
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
+}
+
+// Payments made this cycle for this card
+function cardPaymentsThisCycle(card) {
+  const cardId = card.id;
+  const month = currentMonth();
+
+  return entries
+    .filter(entry =>
+      entry.card_id === cardId &&
+      entry.entry_type === "payment" &&
+      String(entry.entry_date).slice(0, 7) === month
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
+}
+
+// Cash moved toward this card this cycle (based on cash_moved flag on expenses)
+function cardCashMovedThisCycle(card) {
+  const cardId = card.id;
+  const month = currentMonth();
+
+  return entries
+    .filter(entry =>
+      entry.card_id === cardId &&
+      entry.entry_type === "expense" &&
+      entry.cash_moved &&
+      String(entry.entry_date).slice(0, 7) === month
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
+}
+
+// How much cash still needs to be moved to fully fund this card's NEW cycle spend
+// (does not attempt to "cash move" last-cycle unpaid; that is normally already in checking)
+function cardCashStillToMoveThisCycle(card) {
+  const newSpend = cardNewCycleSpend(card);
+  const moved = cardCashMovedThisCycle(card);
+  const remaining = newSpend - moved;
+  return remaining > 0 ? remaining : 0;
+}
     function totalSpending() {
       return entries
         .filter(entry => entry.entry_type === "expense")
@@ -963,17 +1019,32 @@
       );
     }
 
-    function cardInfoHTML(card) {
-      return `
-        <div class="interest">
-          Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
-          Due Day: ${card.due_day || "Not set"}<br>
-          Current Balance: ${cash(cardBalance(card.id))}<br>
-          Estimated 30-Day Interest if Unpaid:
-          ${cash(estimatedInterest(card))}
-        </div>
-      `;
-    }
+   function cardInfoHTML(card) {
+  const unpaidLastCycle = cardUnpaidFromLastCycle(card);
+  const newSpend = cardNewCycleSpend(card);
+  const paymentsCycle = cardPaymentsThisCycle(card);
+  const current = cardBalance(card.id); // includes starting_balance + entries
+  const cashMoved = cardCashMovedThisCycle(card);
+  const cashStillToMove = cardCashStillToMoveThisCycle(card);
+  const estInterest = estimatedInterest(card);
+
+  return `
+    <div class="interest">
+      Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
+      Due Day: ${card.due_day || "Not set"}<br>
+      <br>
+      Unpaid from last cycle: ${cash(unpaidLastCycle)}<br>
+      New cycle spend (this month): ${cash(newSpend)}<br>
+      Payments this month: ${cash(paymentsCycle)}<br>
+      <b>Total current balance: ${cash(current)}</b><br>
+      <br>
+      Cash moved this month (to cover this card): ${cash(cashMoved)}<br>
+      Cash still to move this month (for new spend): ${cash(cashStillToMove)}<br>
+      <br>
+      Estimated 30-Day Interest if Unpaid: ${cash(estInterest)}
+    </div>
+  `;
+}
 
     function entryHTML(entry) {
       const payment = entry.entry_type === "payment";
