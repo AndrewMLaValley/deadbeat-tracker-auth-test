@@ -321,7 +321,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.18 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.19 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.18 — Shared Supabase Version
+              BUILD 9.19 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -497,15 +497,26 @@
 
           <div class="card" style="margin-top:14px">
             <div class="row">
-              <h2>Monthly Budget</h2>
+              <h2 id="budgetTitle">Monthly Budget</h2>
               <button class="secondary" type="button" onclick="openSettings()">
                 Edit Budget
               </button>
             </div>
-            <p class="sub">Spent This Calendar Month: <b id="monthSpent">$0.00</b></p>
-            <p class="sub">Still Allotted to Spend: <b id="monthRemaining">$0.00</b></p>
-            <p class="sub">Cash Moved This Month: <b id="cashMovedThisMonth">$0.00</b></p>
-            <p class="sub">Cash Still To Move This Month: <b id="cashStillToMove">$0.00</b></p>
+            <p class="sub" id="budgetPeriodLabel">
+              Period: This Calendar Month
+            </p>
+            <p class="sub">
+              Spent This Period: <b id="monthSpent">$0.00</b>
+            </p>
+            <p class="sub">
+              Still Allotted to Spend: <b id="monthRemaining">$0.00</b>
+            </p>
+            <p class="sub">
+              Cash Moved This Period: <b id="cashMovedThisMonth">$0.00</b>
+            </p>
+            <p class="sub">
+              Cash Still To Move This Period: <b id="cashStillToMove">$0.00</b>
+            </p>
           </div>
 
           <div class="card" style="margin-top:14px">
@@ -771,12 +782,36 @@
       <p style="margin:6px 0 0"><b id="inviteCodeDisplay"></b></p>
 
       <div class="group">
+        <label for="budgetType">Budget Type</label>
+        <select id="budgetType">
+          <option value="monthly" selected>Monthly (calendar month)</option>
+          <option value="pay_period">Pay Period (every 2 weeks)</option>
+        </select>
+        <p class="sub">
+          Monthly: uses the calendar month. Pay Period: uses 14‑day periods starting from the first pay date of the year.
+        </p>
+      </div>
+
+      <div class="group">
         <label for="budgetInput">Monthly Budget</label>
         <input id="budgetInput" type="number" min="0" step=".01">
       </div>
 
+      <div class="group">
+        <label for="payPeriodBudgetInput">Pay Period Budget (2 weeks)</label>
+        <input id="payPeriodBudgetInput" type="number" min="0" step=".01">
+      </div>
+
+      <div class="group">
+        <label for="payPeriodFirstDateInput">First Pay Date of the Year</label>
+        <input id="payPeriodFirstDateInput" type="date">
+        <p class="sub">
+          All 2‑week pay periods will be calculated forward from this date.
+        </p>
+      </div>
+
       <button class="primary wide" type="button" onclick="saveBudget()">
-        Save Budget
+        Save Budget Settings
       </button>
 
       <button class="secondary wide" type="button" onclick="refreshData()">
@@ -795,10 +830,6 @@
           No bank accounts linked yet.
         </div>
       </div>
-
-      <button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
-        Switch Tracker
-      </button>
 
       <button class="danger wide" type="button" onclick="signOut()">
         Sign Out
@@ -853,6 +884,13 @@
 
     function currentMonth() {
       return today().slice(0, 7);
+    }
+
+    function parseISODate(str) {
+      if (!str) return null;
+      const [y, m, d] = str.split("-").map(Number);
+      if (!y || !m || !d) return null;
+      return new Date(y, m - 1, d);
     }
 
     let selectedMonth = currentMonth();
@@ -1023,7 +1061,6 @@
     }
 
     // How much cash still needs to be moved to fully fund this card's NEW cycle spend
-    // (does not attempt to "cash move" last-cycle unpaid; that is normally already in checking)
     function cardCashStillToMoveThisCycle(card) {
       const newSpend = cardNewCycleSpend(card);
       const moved = cardCashMovedThisCycle(card);
@@ -1037,31 +1074,107 @@
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
+    // === MONTHLY PERIOD CALCS (calendar) ===
     function monthSpending() {
+      const ym = currentMonth();
       return entries
         .filter(entry =>
           entry.entry_type === "expense" &&
-          String(entry.entry_date).slice(0, 7) === currentMonth()
+          String(entry.entry_date).slice(0, 7) === ym
         )
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
     function cashMovedThisMonth() {
+      const ym = currentMonth();
       return entries
         .filter(entry =>
           entry.entry_type === "expense" &&
           entry.cash_moved &&
-          String(entry.entry_date).slice(0, 7) === currentMonth()
+          String(entry.entry_date).slice(0, 7) === ym
         )
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
 
     function cashStillToMoveThisMonth() {
+      const ym = currentMonth();
       return entries
         .filter(entry =>
           entry.entry_type === "expense" &&
           !entry.cash_moved &&
-          String(entry.entry_date).slice(0, 7) === currentMonth()
+          String(entry.entry_date).slice(0, 7) === ym
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
+    // === PAY PERIOD (2-WEEK) CALCS ===
+    function getCurrentPayPeriod(firstPayDateStr) {
+      const firstPayDate = parseISODate(firstPayDateStr);
+      if (!firstPayDate) return null;
+
+      const todayDate = parseISODate(today());
+      if (!todayDate) return null;
+
+      // Normalize time to midnight
+      firstPayDate.setHours(0,0,0,0);
+      todayDate.setHours(0,0,0,0);
+
+      if (todayDate < firstPayDate) {
+        // If today is before first pay date of the year, treat the first pay period as the one starting on firstPayDate
+        return {
+          start: firstPayDate,
+          end: new Date(firstPayDate.getTime() + 13 * 24 * 60 * 60 * 1000)
+        };
+      }
+
+      const diffMs = todayDate.getTime() - firstPayDate.getTime();
+      const daysDiff = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+      const periodsSince = Math.floor(daysDiff / 14);
+      const periodStart = new Date(firstPayDate.getTime() + periodsSince * 14 * 24 * 60 * 60 * 1000);
+      const periodEnd = new Date(periodStart.getTime() + 13 * 24 * 60 * 60 * 1000);
+
+      return { start: periodStart, end: periodEnd };
+    }
+
+    function isDateInRange(dateStr, range) {
+      if (!range) return false;
+      const d = parseISODate(dateStr);
+      if (!d) return false;
+      d.setHours(0,0,0,0);
+      return d >= range.start && d <= range.end;
+    }
+
+    function payPeriodSpending(firstPayDateStr) {
+      const range = getCurrentPayPeriod(firstPayDateStr);
+      if (!range) return 0;
+      return entries
+        .filter(entry =>
+          entry.entry_type === "expense" &&
+          isDateInRange(entry.entry_date, range)
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
+    function payPeriodCashMoved(firstPayDateStr) {
+      const range = getCurrentPayPeriod(firstPayDateStr);
+      if (!range) return 0;
+      return entries
+        .filter(entry =>
+          entry.entry_type === "expense" &&
+          entry.cash_moved &&
+          isDateInRange(entry.entry_date, range)
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+    }
+
+    function payPeriodCashStillToMove(firstPayDateStr) {
+      const range = getCurrentPayPeriod(firstPayDateStr);
+      if (!range) return 0;
+      return entries
+        .filter(entry =>
+          entry.entry_type === "expense" &&
+          !entry.cash_moved &&
+          isDateInRange(entry.entry_date, range)
         )
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
@@ -1223,12 +1336,43 @@
     function render() {
       if (!currentTracker) return;
 
-      const spent = monthSpending();
-      const budget = Number(currentTracker.monthly_budget || 0);
-      const remaining = budget - spent;
-      const moved = cashMovedThisMonth();
-      const stillToMove = cashStillToMoveThisMonth();
+      const budgetType = currentTracker.budget_type || "monthly";
+      const monthlyBudget = Number(currentTracker.monthly_budget || 0);
+      const payPeriodBudget = Number(currentTracker.pay_period_budget || 0);
+      const firstPayDateStr = currentTracker.pay_period_first_date || "";
 
+      let spent, moved, stillToMove, budgetUsed, periodLabel;
+
+      if (budgetType === "pay_period" && firstPayDateStr) {
+        // Pay Period (2 weeks)
+        const range = getCurrentPayPeriod(firstPayDateStr);
+        spent = payPeriodSpending(firstPayDateStr);
+        moved = payPeriodCashMoved(firstPayDateStr);
+        stillToMove = payPeriodCashStillToMove(firstPayDateStr);
+        budgetUsed = payPeriodBudget;
+
+        if (range) {
+          const startStr = range.start.toLocaleDateString("en-US");
+          const endStr = range.end.toLocaleDateString("en-US");
+          periodLabel = `Period: Pay Period (${startStr} – ${endStr})`;
+        } else {
+          periodLabel = "Period: Pay Period (set a first pay date)";
+        }
+
+        $("budgetTitle").textContent = "Pay Period Budget (2 weeks)";
+      } else {
+        // Monthly
+        spent = monthSpending();
+        moved = cashMovedThisMonth();
+        stillToMove = cashStillToMoveThisMonth();
+        budgetUsed = monthlyBudget;
+        periodLabel = "Period: This Calendar Month";
+        $("budgetTitle").textContent = "Monthly Budget";
+      }
+
+      const remaining = budgetUsed - spent;
+
+      $("budgetPeriodLabel").textContent = periodLabel;
       $("totalSpending").textContent = cash(totalSpending());
       $("monthSpent").textContent = cash(spent);
       $("monthRemaining").textContent = cash(remaining);
@@ -1752,8 +1896,19 @@
     }
 
     function openSettings() {
-      $("inviteCodeDisplay").textContent = currentTracker.invite_code;
-      $("budgetInput").value = currentTracker.monthly_budget || 0;
+      $("inviteCodeDisplay").textContent = currentTracker.invite_code || "";
+
+      // Fill budget fields from tracker
+      const budgetType = currentTracker.budget_type || "monthly";
+      const monthlyBudget = currentTracker.monthly_budget || 0;
+      const payPeriodBudget = currentTracker.pay_period_budget || 0;
+      const firstPayDate = currentTracker.pay_period_first_date || "";
+
+      $("budgetType").value = budgetType;
+      $("budgetInput").value = monthlyBudget;
+      $("payPeriodBudgetInput").value = payPeriodBudget;
+      $("payPeriodFirstDateInput").value = firstPayDate;
+
       setMessage("settingsMessage", "");
 
       loadLinkedAccountsForCurrentTracker();
@@ -1812,11 +1967,21 @@
     }
 
     async function saveBudget() {
-      const budget = Number($("budgetInput").value || 0);
+      const budgetType = $("budgetType").value || "monthly";
+      const monthlyBudget = Number($("budgetInput").value || 0);
+      const payPeriodBudget = Number($("payPeriodBudgetInput").value || 0);
+      const firstPayDate = $("payPeriodFirstDateInput").value || null;
+
+      const update = {
+        budget_type: budgetType,
+        monthly_budget: monthlyBudget,
+        pay_period_budget: payPeriodBudget,
+        pay_period_first_date: firstPayDate
+      };
 
       const { data, error } = await supabaseClient
         .from("trackers")
-        .update({ monthly_budget: budget })
+        .update(update)
         .eq("id", currentTracker.id)
         .select()
         .single();
@@ -1832,7 +1997,7 @@
 
       currentTracker = data;
       render();
-      setMessage("settingsMessage", "Budget saved.", "good");
+      setMessage("settingsMessage", "Budget settings saved.", "good");
     }
 
     // Link Bank Account (Plaid)
@@ -1958,14 +2123,6 @@
         console.error("linkBankAccount error", e);
         setMessage("settingsMessage", "Error requesting Plaid link token.", "error");
       }
-    }
-
-    async function returnToTrackerSelection() {
-      closeModal("settingsModal");
-      currentTracker = null;
-      cards = [];
-      entries = [];
-      await loadTrackers();
     }
 
     async function signIn(event) {
