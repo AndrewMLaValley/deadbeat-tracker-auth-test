@@ -306,6 +306,70 @@
       display:block;
     }
 
+    /* Budget slider styles */
+    .budget-slider-wrap{
+      margin-top:10px;
+    }
+
+    .budget-slider-bar{
+      position:relative;
+      width:100%;
+      height:18px;
+      border-radius:999px;
+      background:#e2e8f0;
+      overflow:hidden;
+    }
+
+    .budget-slider-fill{
+      position:absolute;
+      top:0;
+      bottom:0;
+      left:0;
+      background:linear-gradient(90deg,var(--green),#9ae6b4);
+      transform-origin:left center;
+      transform:scaleX(0);
+      transition:transform 0.4s ease-out;
+    }
+
+    .budget-slider-fill.over{
+      background:linear-gradient(90deg,#fed7d7,var(--red));
+    }
+
+    .budget-slider-marker{
+      position:absolute;
+      top:50%;
+      width:4px;
+      height:22px;
+      transform:translate(-50%,-50%);
+      border-radius:999px;
+      background:#1a202c;
+      box-shadow:0 0 6px rgba(0,0,0,0.4);
+      transition:left 0.4s ease-out;
+    }
+
+    .budget-slider-label{
+      margin-top:6px;
+      font-size:.8rem;
+      color:var(--muted);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .budget-slider-status{
+      font-weight:700;
+    }
+
+    .budget-slider-status.good{
+      color:var(--green);
+    }
+
+    .budget-slider-status.bad{
+      color:var(--red);
+    }
+
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
@@ -321,7 +385,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.20 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.21 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -477,7 +541,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.20 — Shared Supabase Version
+              BUILD 9.21 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -517,9 +581,18 @@
             <p class="sub">
               Cash Still To Move This Period: <b id="cashStillToMove">$0.00</b>
             </p>
-            <p class="sub" id="budgetAheadBehind">
-              <!-- Filled in by render() -->
-            </p>
+
+            <!-- Fancy ahead/behind sliding indicator -->
+            <div class="budget-slider-wrap">
+              <div class="budget-slider-bar">
+                <div id="budgetSliderFill" class="budget-slider-fill"></div>
+                <div id="budgetSliderMarker" class="budget-slider-marker"></div>
+              </div>
+              <div class="budget-slider-label">
+                <span id="budgetSliderSummary">Budget: $0.00 · Spent: $0.00</span>
+                <span id="budgetSliderStatus" class="budget-slider-status">On track</span>
+              </div>
+            </div>
           </div>
 
           <div class="card" style="margin-top:14px">
@@ -871,10 +944,10 @@
 
     function esc(value) {
       return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, """)
         .replace(/'/g, "&#039;");
     }
 
@@ -1331,6 +1404,48 @@
       }).join("");
     }
 
+    function renderBudgetSlider(spent, budget) {
+      const fillEl = $("budgetSliderFill");
+      const markerEl = $("budgetSliderMarker");
+      const summaryEl = $("budgetSliderSummary");
+      const statusEl = $("budgetSliderStatus");
+
+      if (!fillEl || !markerEl || !summaryEl || !statusEl) return;
+
+      const safeBudget = budget > 0 ? budget : 0;
+      const ratio = safeBudget > 0 ? spent / safeBudget : 0;
+      const ratioClamped = Math.min(Math.max(ratio, 0), 2); // clamp 0–200% visually
+
+      // Fill: up to 100% is green; above 100% is red style
+      const fillScale = Math.min(ratioClamped, 1); // 0–1 portion of the bar
+      fillEl.style.transform = "scaleX(" + fillScale.toFixed(3) + ")";
+      fillEl.classList.toggle("over", ratio > 1);
+
+      // Marker: slide along the bar; max 200% width
+      const markerPercent = ratioClamped * 100; // 0–200
+      markerEl.style.left = markerPercent + "%";
+
+      // Summary text
+      summaryEl.textContent = "Budget: " + cash(budget) + " · Spent: " + cash(spent);
+
+      // Ahead/behind label
+      const difference = budget - spent;
+
+      if (budget <= 0) {
+        statusEl.textContent = "No budget set";
+        statusEl.className = "budget-slider-status";
+      } else if (difference > 0.01) {
+        statusEl.textContent = "Ahead by " + cash(difference);
+        statusEl.className = "budget-slider-status good";
+      } else if (difference < -0.01) {
+        statusEl.textContent = "Behind by " + cash(-difference);
+        statusEl.className = "budget-slider-status bad";
+      } else {
+        statusEl.textContent = "Exactly on budget";
+        statusEl.className = "budget-slider-status";
+      }
+    }
+
     function render() {
       if (!currentTracker) return;
 
@@ -1339,7 +1454,7 @@
       const payPeriodBudget = Number(currentTracker.pay_period_budget || 0);
       const firstPayDateStr = currentTracker.pay_period_first_date || "";
 
-      let spent, moved, stillToMove, budgetUsed, periodLabel, aheadBehindText, aheadBehindColor;
+      let spent, moved, stillToMove, budgetUsed, periodLabel;
 
       if (budgetType === "pay_period" && firstPayDateStr) {
         const range = getCurrentPayPeriod(firstPayDateStr);
@@ -1357,16 +1472,7 @@
         }
 
         $("budgetTitle").textContent = "Pay Period Budget (2 weeks)";
-      } else if (budgetType === "pay_period" && !firstPayDateStr) {
-        // Pay period selected but no first pay date; fall back to month
-        spent = monthSpending();
-        moved = cashMovedThisMonth();
-        stillToMove = cashStillToMoveThisMonth();
-        budgetUsed = monthlyBudget;
-        periodLabel = "Pay Period mode needs a first pay date. Showing calendar month instead.";
-        $("budgetTitle").textContent = "Monthly Budget";
       } else {
-        // Monthly
         spent = monthSpending();
         moved = cashMovedThisMonth();
         stillToMove = cashStillToMoveThisMonth();
@@ -1376,21 +1482,6 @@
       }
 
       const remaining = budgetUsed - spent;
-
-      // Ahead/behind indicator
-      if (!budgetUsed || budgetUsed <= 0) {
-        aheadBehindText = "No budget set for this period.";
-        aheadBehindColor = "var(--muted)";
-      } else if (remaining > 0) {
-        aheadBehindText = `You are ${cash(remaining)} under budget this period.`;
-        aheadBehindColor = "var(--green)";
-      } else if (remaining < 0) {
-        aheadBehindText = `You are ${cash(-remaining)} over budget this period.`;
-        aheadBehindColor = "var(--red)";
-      } else {
-        aheadBehindText = "You are exactly on your budget for this period.";
-        aheadBehindColor = "var(--muted)";
-      }
 
       $("budgetPeriodLabel").textContent = periodLabel;
       $("totalSpending").textContent = cash(totalSpending());
@@ -1402,12 +1493,8 @@
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
 
-      const aheadBehindEl = $("budgetAheadBehind");
-      if (aheadBehindEl) {
-        aheadBehindEl.textContent = aheadBehindText;
-        aheadBehindEl.style.color = aheadBehindColor;
-        aheadBehindEl.style.fontWeight = "600";
-      }
+      // New fancy slider
+      renderBudgetSlider(spent, budgetUsed);
 
       const totalSpendingCash = totalSpendingAccountsCash();
       const spendingHtml = spendingAccountsHTML();
