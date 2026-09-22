@@ -310,10 +310,10 @@
       .grid{grid-template-columns:1fr}
     }
   </style>
-    <!-- Plaid Link JS -->
+  <!-- Plaid Link JS -->
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 </head>
-  
+
 <body>
 
   <!-- AUTHENTICATION -->
@@ -321,7 +321,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.13 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.14 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -451,13 +451,6 @@
           Open Built‑in Tracker
         </button>
 
-        <!--
-        DEBUG button kept here for later; just remove the comment markers to show it again.
-        <button class="secondary wide" type="button" onclick="openTracker('58e8ba40-f09c-4683-be70-081f8bbb505d')">
-          DEBUG: Open Tracker by ID
-        </button>
-        -->
-
         <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
 
         <h2>Join a Shared Tracker</h2>
@@ -484,7 +477,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.13 — Shared Supabase Version
+              BUILD 9.14 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -765,7 +758,7 @@
         Refresh Shared Data
       </button>
 
-    <!-- NEW: Plaid link button -->
+      <!-- NEW: Plaid link button -->
       <button class="secondary wide" type="button" onclick="linkBankAccount()">
         Link Bank Account (Plaid)
       </button>
@@ -792,7 +785,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  
+  <script>
     const SUPABASE_URL = "https://ljifsttsohryyuobmjnq.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
     const DEFAULT_TRACKER_ID = "58e8ba40-f09c-4683-be70-081f8bbb505d";
@@ -1085,7 +1078,8 @@
         `).join("")
         : `<div class="card empty">No credit cards saved.</div>`;
     }
-function renderLinkedAccounts(accounts) {
+
+    function renderLinkedAccounts(accounts) {
       const container = $("linkedAccounts");
       if (!container) return;
 
@@ -1112,7 +1106,7 @@ function renderLinkedAccounts(accounts) {
         return `<div>${esc(parts.join(" ").replace(/\s+/g, " ").trim())}</div>`;
       }).join("");
     }
-          
+
     async function loadTrackers() {
       $("signedInName").textContent =
         currentUser.user_metadata?.display_name ||
@@ -1562,7 +1556,7 @@ function renderLinkedAccounts(accounts) {
       await refreshData();
     }
 
-   function openSettings() {
+    function openSettings() {
       $("inviteCodeDisplay").textContent = currentTracker.invite_code;
       $("budgetInput").value = currentTracker.monthly_budget || 0;
       setMessage("settingsMessage", "");
@@ -1572,8 +1566,8 @@ function renderLinkedAccounts(accounts) {
 
       openModal("settingsModal");
     }
-          
-async function loadLinkedAccountsForCurrentTracker() {
+
+    async function loadLinkedAccountsForCurrentTracker() {
       if (!currentTracker) {
         renderLinkedAccounts([]);
         return;
@@ -1622,7 +1616,7 @@ async function loadLinkedAccountsForCurrentTracker() {
         setMessage("settingsMessage", "Error loading linked accounts.", "error");
       }
     }
-          
+
     async function saveBudget() {
       const budget = Number($("budgetInput").value || 0);
 
@@ -1647,7 +1641,7 @@ async function loadLinkedAccountsForCurrentTracker() {
       setMessage("settingsMessage", "Budget saved.", "good");
     }
 
-  // NEW: Link Bank Account (Plaid)
+    // NEW: Link Bank Account (Plaid)
     async function linkBankAccount() {
       if (!currentTracker) {
         setMessage("settingsMessage", "Open a tracker before linking a bank.", "error");
