@@ -422,7 +422,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.32 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.33 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -645,7 +645,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.32 — Shared Supabase Version
+              BUILD 9.33 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1099,6 +1099,8 @@
       SUPABASE_PUBLISHABLE_KEY
     );
 
+    console.log("Deadbeat Tracker script loaded");
+
     const $ = id => document.getElementById(id);
 
     let currentUser = null;
@@ -1197,10 +1199,10 @@
 
     function esc(value) {
       return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, "\"")
         .replace(/'/g, "&#039;");
     }
 
@@ -1522,7 +1524,8 @@
       const projected = unpaidLastCycle + newSpend - paymentsCycle;
       return projected > 0 ? projected : 0;
     }
-// ---- RECURRING CHARGES + CARD INFO ----
+
+    // ---- RECURRING CHARGES + CARD INFO ----
 
     function recurringForCard(cardId) {
       // Return all recurring charges for this card so we can show Active/Inactive.
@@ -1607,6 +1610,41 @@
       `;
     }
 
+    function entryHTML(entry) {
+      const payment = entry.entry_type === "payment";
+      const isCashMoved = !!entry.cash_moved;
+
+      const statusLabel = isCashMoved ? "Cash moved" : "Cash not moved";
+      const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
+      const toggleText = isCashMoved ? "Mark as not moved" : "Mark as moved";
+
+      return `
+        <div class="card" style="margin-bottom:6px;padding:10px">
+          <button class="list" type="button"
+            onclick="openEntry('${entry.id}')"
+            style="border-bottom:0;border-radius:9px 9px 0 0">
+            <div class="row">
+              <b>${esc(entry.merchant)}</b>
+              <b>${payment ? "−" : ""}${cash(entry.amount)}</b>
+            </div>
+            <div class="sub">
+              ${payment ? "Payment" : "Expense"} ·
+              ${entry.entry_date} ·
+              ${esc(cardName(entry.card_id))}
+            </div>
+          </button>
+          <div class="row" style="margin-top:6px;justify-content:space-between">
+            <span class="sub" style="color:${statusColor}">
+              ${statusLabel}
+            </span>
+            <button type="button" class="secondary"
+              onclick="toggleCashMoved('${entry.id}')">
+              ${toggleText}
+            </button>
+          </div>
+        </div>
+      `;
+    }
 
     function totalSpendingAccountsCash() {
       return linkedAccountsList
@@ -2022,8 +2060,13 @@
       setMessage("inviteStatus", instructions, "good");
     }
 
-   async function refreshData() {
-      if (!currentTracker) return;
+    async function refreshData() {
+      if (!currentTracker) {
+        console.warn("refreshData called with no currentTracker");
+        return;
+      }
+
+      console.log("refreshData: loading data for tracker", currentTracker.id);
 
       const [cardsResult, entriesResult, trackerResult, recurringResult] = await Promise.all([
         supabaseClient
@@ -2053,7 +2096,17 @@
 
       console.log("refreshData cardsResult", cardsResult);
       console.log("refreshData entriesResult", entriesResult);
+      console.log("refreshData trackerResult", trackerResult);
       console.log("refreshData recurringResult", recurringResult);
+
+      if (cardsResult.error || entriesResult.error || trackerResult.error || recurringResult.error) {
+        console.error("refreshData errors", {
+          cardsError: cardsResult.error,
+          entriesError: entriesResult.error,
+          trackerError: trackerResult.error,
+          recurringError: recurringResult.error
+        });
+      }
 
       if (cardsResult.error) {
         setMessage("settingsMessage", cardsResult.error.message, "error");
@@ -2071,7 +2124,7 @@
       }
 
       if (recurringResult.error) {
-        console.error("recurring charges load error", recurringResult.error);
+        setMessage("settingsMessage", "Could not load recurring charges: " + recurringResult.error.message, "error");
       }
 
       cards = cardsResult.data || [];
@@ -2087,7 +2140,11 @@
       $("trackerSubtitle").textContent =
         `Invite Code: ${currentTracker.invite_code}`;
 
-      render();
+      try {
+        render();
+      } catch (e) {
+        console.error("render() threw an error", e);
+      }
     }
 
     function fillCardSelect(selectedId = "") {
@@ -2142,6 +2199,12 @@
     async function saveEntry(event) {
       event.preventDefault();
 
+      if (!currentTracker) {
+        console.error("saveEntry called with no currentTracker");
+        setMessage("settingsMessage", "Open a tracker first.", "error");
+        return;
+      }
+
       const id = $("entryId").value;
 
       const record = {
@@ -2155,6 +2218,8 @@
         notes: $("entryNotes").value.trim(),
         cash_moved: $("entryCashMoved") ? $("entryCashMoved").checked : false
       };
+
+      console.log("saveEntry about to", id ? "update" : "insert", "record", record);
 
       let result;
 
@@ -2743,11 +2808,17 @@
     async function saveRecurringCharge(event) {
       event.preventDefault();
 
+      if (!currentTracker) {
+        console.error("saveRecurringCharge called with no currentTracker");
+        setMessage("settingsMessage", "Open a tracker first.", "error");
+        return;
+      }
+
       const id = $("recurringId").value;
       const cardId = $("recurringCardId").value;
 
-      if (!currentTracker || !cardId) {
-        setMessage("settingsMessage", "Open a tracker and select a card first.", "error");
+      if (!cardId) {
+        setMessage("settingsMessage", "No card selected for this recurring charge.", "error");
         return;
       }
 
@@ -2760,6 +2831,8 @@
         notes: $("recurringNotes").value.trim(),
         active: $("recurringActive").checked
       };
+
+      console.log("saveRecurringCharge about to", id ? "update" : "insert", "record", record);
 
       let result;
       if (id) {
