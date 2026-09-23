@@ -250,15 +250,27 @@
     }
 
     .password-row{
-      display:grid;
-      grid-template-columns:1fr 45px;
-      gap:8px;
+      position:relative;
     }
 
-    .eye{
+    .password-row input{
+      padding-right:40px; /* room for eye */
+    }
+
+    .eye-inline{
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      border:none;
+      background:transparent;
+      color:var(--muted);
+      font-size:1rem;
+      cursor:pointer;
       padding:0;
-      background:var(--light);
-      color:var(--navy);
     }
 
     .message{
@@ -304,6 +316,19 @@
 
     .password-panel.active{
       display:block;
+    }
+
+    .remember-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-top:10px;
+      font-size:.85rem;
+    }
+
+    .remember-row input[type="checkbox"]{
+      width:auto;
+      margin:0;
     }
 
     /* Budget slider styles */
@@ -385,7 +410,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.25 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.26 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -395,7 +420,7 @@
 
           <form id="signInForm">
             <div class="group">
-              <label for="signInEmail">Email</label>
+              <label for="signInEmail">Email (Username)</label>
               <input id="signInEmail" type="email" autocomplete="email" required>
             </div>
 
@@ -403,9 +428,14 @@
               <label for="signInPassword">Password</label>
               <div class="password-row">
                 <input id="signInPassword" type="password" autocomplete="current-password" required>
-                <button id="signInEye" class="eye" type="button"
+                <button id="signInEye" class="eye-inline" type="button"
                   onclick="togglePassword('signInPassword','signInEye')">👁</button>
               </div>
+            </div>
+
+            <div class="remember-row">
+              <input id="rememberLogin" type="checkbox">
+              <span>Remember my email and password on this device</span>
             </div>
 
             <button class="primary wide" type="submit">Sign In</button>
@@ -419,6 +449,11 @@
           <button class="secondary wide" type="button"
             onclick="showAuthPanel('resetPanel')">
             Forgot Password
+          </button>
+
+          <button class="secondary wide" type="button"
+            onclick="showAuthPanel('forgotUsernamePanel')">
+            Forgot Username
           </button>
         </div>
 
@@ -435,7 +470,7 @@
             </div>
 
             <div class="group">
-              <label for="createEmail">Email</label>
+              <label for="createEmail">Email (Your Username)</label>
               <input id="createEmail" type="email" autocomplete="email" required>
             </div>
 
@@ -443,7 +478,7 @@
               <label for="createPassword">Password</label>
               <div class="password-row">
                 <input id="createPassword" type="password" autocomplete="new-password" required>
-                <button id="createEye" class="eye" type="button"
+                <button id="createEye" class="eye-inline" type="button"
                   onclick="togglePassword('createPassword','createEye')">👁</button>
               </div>
             </div>
@@ -452,7 +487,7 @@
               <label for="confirmPassword">Confirm Password</label>
               <div class="password-row">
                 <input id="confirmPassword" type="password" autocomplete="new-password" required>
-                <button id="confirmEye" class="eye" type="button"
+                <button id="confirmEye" class="eye-inline" type="button"
                   onclick="togglePassword('confirmPassword','confirmEye')">👁</button>
               </div>
             </div>
@@ -465,7 +500,7 @@
           </form>
         </div>
 
-        <!-- PASSWORD RESET -->
+        <!-- PASSWORD RESET REQUEST -->
         <div id="resetPanel" class="password-panel">
           <div class="heading">
             <h2>Reset Password</h2>
@@ -473,14 +508,71 @@
 
           <form id="resetForm">
             <div class="group">
-              <label for="resetEmail">Email</label>
+              <label for="resetEmail">Email (Username)</label>
               <input id="resetEmail" type="email" autocomplete="email" required>
             </div>
 
             <div class="actions">
               <button class="secondary" type="button"
                 onclick="showAuthPanel('signInPanel')">Back</button>
-              <button class="primary" type="submit">Send Email</button>
+              <button class="primary" type="submit">Send Reset Link</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- NEW PASSWORD PANEL (after email link) -->
+        <div id="resetConfirmPanel" class="password-panel">
+          <div class="heading">
+            <h2>Set New Password</h2>
+          </div>
+
+          <form id="resetConfirmForm">
+            <div class="group">
+              <label for="newPassword">New Password</label>
+              <div class="password-row">
+                <input id="newPassword" type="password" autocomplete="new-password" required>
+                <button id="newPasswordEye" class="eye-inline" type="button"
+                  onclick="togglePassword('newPassword','newPasswordEye')">👁</button>
+              </div>
+            </div>
+
+            <div class="group">
+              <label for="newPasswordConfirm">Confirm New Password</label>
+              <div class="password-row">
+                <input id="newPasswordConfirm" type="password" autocomplete="new-password" required>
+                <button id="newPasswordConfirmEye" class="eye-inline" type="button"
+                  onclick="togglePassword('newPasswordConfirm','newPasswordConfirmEye')">👁</button>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="secondary" type="button"
+                onclick="showAuthPanel('signInPanel')">Cancel</button>
+              <button class="primary" type="submit">Update Password</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- FORGOT USERNAME PANEL -->
+        <div id="forgotUsernamePanel" class="password-panel">
+          <div class="heading">
+            <h2>Forgot Username</h2>
+          </div>
+          <p class="sub">
+            Your username for this app is the email you used when creating the account.
+            Enter your recovery email below and we’ll remind you of that.
+          </p>
+
+          <form id="forgotUsernameForm">
+            <div class="group">
+              <label for="forgotUsernameEmail">Recovery Email</label>
+              <input id="forgotUsernameEmail" type="email" autocomplete="email" required>
+            </div>
+
+            <div class="actions">
+              <button class="secondary" type="button"
+                onclick="showAuthPanel('signInPanel')">Back</button>
+              <button class="primary" type="submit">Send Username Reminder</button>
             </div>
           </form>
         </div>
@@ -541,13 +633,19 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.25 — Shared Supabase Version
+              BUILD 9.26 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
-          <button class="secondary" type="button" onclick="openSettings()">
-            Settings
-          </button>
+          <div class="row" style="gap:6px">
+            <button class="secondary" type="button" onclick="openSettings()">
+              Settings
+            </button>
+            <!-- Sign out on dashboard -->
+            <button class="secondary" type="button" onclick="signOut()">
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -846,6 +944,60 @@
     </div>
   </div>
 
+  <!-- RECURRING CHARGE MODAL -->
+  <div id="recurringModal" class="modal-bg">
+    <div class="modal">
+      <div class="row">
+        <h2 id="recurringTitle">Recurring Charge</h2>
+        <button class="close" type="button" onclick="closeModal('recurringModal')">×</button>
+      </div>
+
+      <form id="recurringForm">
+        <input id="recurringId" type="hidden">
+        <input id="recurringCardId" type="hidden">
+
+        <div class="group">
+          <label for="recurringName">Name</label>
+          <input id="recurringName" type="text" required placeholder="e.g. Netflix, Gym membership">
+        </div>
+
+        <div class="group">
+          <label for="recurringAmount">Amount</label>
+          <input id="recurringAmount" type="number" min="0" step=".01" required>
+        </div>
+
+        <div class="group">
+          <label for="recurringDay">Day of Month</label>
+          <input id="recurringDay" type="number" min="1" max="31" placeholder="e.g. 1 for the 1st of the month">
+        </div>
+
+        <div class="group">
+          <label for="recurringNotes">Notes</label>
+          <textarea id="recurringNotes" placeholder="Any extra info"></textarea>
+        </div>
+
+        <div class="group">
+          <label>
+            <input id="recurringActive" type="checkbox" style="width:auto;margin-right:8px" checked>
+            Active (will be considered in planning)
+          </label>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" type="button" onclick="closeModal('recurringModal')">
+            Cancel
+          </button>
+          <button class="primary" type="submit">Save Recurring Charge</button>
+        </div>
+
+        <button id="deleteRecurringButton" class="danger wide hidden" type="button"
+          onclick="deleteRecurringCharge()">
+          Delete Recurring Charge
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
   <div id="settingsModal" class="modal-bg">
     <div class="modal">
@@ -925,7 +1077,6 @@
         Sign Out
       </button>
 
-      <!-- delete account button -->
       <button class="danger wide" type="button" onclick="deleteAccount()">
         Delete My Account
       </button>
@@ -939,8 +1090,6 @@
   <script>
     const SUPABASE_URL = "https://ljifsttsohryyuobmjnq.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
-    const DEFAULT_TRACKER_ID = "58e8ba40-f09c-4683-be70-081f8bbb505d";
-
     const supabaseClient = window.supabase.createClient(
       SUPABASE_URL,
       SUPABASE_PUBLISHABLE_KEY
@@ -953,6 +1102,7 @@
     let cards = [];
     let entries = [];
     let linkedAccountsList = [];
+    let recurringCharges = [];
 
     // --- Helpers: personal tracker per user ---
 
@@ -968,7 +1118,6 @@
     async function ensureUserHasHomeTracker() {
       if (!currentUser) return null;
 
-      // 1. Find trackers where this user is a member
       const { data: memberships, error: memError } = await supabaseClient
         .from("tracker_members")
         .select("tracker_id, role")
@@ -980,7 +1129,6 @@
       }
 
       if (memberships && memberships.length) {
-        // Use the first tracker as "home"
         const homeTrackerId = memberships[0].tracker_id;
         const { data: trackerRows, error: trError } = await supabaseClient
           .from("trackers")
@@ -996,7 +1144,6 @@
         return currentTracker;
       }
 
-      // 2. No tracker yet: create one
       const displayName =
         currentUser.user_metadata?.display_name ||
         (currentUser.email ? currentUser.email.split("@")[0] : "My");
@@ -1023,7 +1170,6 @@
 
       const trackerId = trackerInsert.id;
 
-      // 3. Create membership row for this user
       const { error: memberInsertError } = await supabaseClient
         .from("tracker_members")
         .insert({
@@ -1039,6 +1185,8 @@
       currentTracker = trackerInsert;
       return currentTracker;
     }
+
+    // --- Utility helpers ---
 
     function cash(value) {
       return new Intl.NumberFormat("en-US", {
@@ -1130,7 +1278,7 @@
     }
 
     function showAuthPanel(id) {
-      ["signInPanel", "createAccountPanel", "resetPanel"].forEach(panel => {
+      ["signInPanel", "createAccountPanel", "resetPanel", "resetConfirmPanel", "forgotUsernamePanel"].forEach(panel => {
         const el = $(panel);
         if (!el) return;
         el.classList.toggle("active", panel === id);
@@ -1164,6 +1312,8 @@
         $(page + "Nav").classList.toggle("active", page === pageName);
       });
     }
+
+    // --- Card helpers and recurring charges ---
 
     function cardById(id) {
       return cards.find(card => card.id === id);
@@ -1351,7 +1501,7 @@
         .filter(entry =>
           entry.entry_type === "expense" &&
           !entry.cash_moved &&
-          isDateInRange(entry.entry_date, range)
+          isByRange(entry.entry_date, range)
         )
         .reduce((sum, entry) => sum + Number(entry.amount), 0);
     }
@@ -1374,6 +1524,26 @@
 
       const projected = unpaidLastCycle + newSpend - paymentsCycle;
       return projected > 0 ? projected : 0;
+    }
+
+    function recurringForCard(cardId) {
+      return recurringCharges.filter(rc => rc.card_id === cardId && rc.active !== false);
+    }
+
+    function recurringListHTML(cardId) {
+      const list = recurringForCard(cardId);
+      if (!list.length) {
+        return `<div class="sub">No recurring charges saved.</div>`;
+      }
+
+      return list.map(rc => {
+        const day = rc.charge_day ? `Day ${rc.charge_day}` : "Day not set";
+        return `
+          <div class="sub" style="margin-top:4px">
+            <b>${esc(rc.name)}</b> — ${cash(rc.amount)} · ${day}
+          </div>
+        `;
+      }).join("");
     }
 
     function cardInfoHTML(card) {
@@ -1476,7 +1646,6 @@
       }).join("<br>");
     }
 
-    // Render linked accounts and populate unlink dropdown
     function renderLinkedAccounts(accounts) {
       const container = $("linkedAccounts");
       const select = $("unlinkAccountSelect");
@@ -1514,12 +1683,11 @@
         return `<div>${esc(parts.join(" ").replace(/\s+/g, " ").trim())}</div>`;
       }).join("");
 
-      // Dropdown uses Supabase row id
       if (select) {
         const optionsHtml = [
           `<option value="">Select an account to unlink</option>`,
           ...linkedAccountsList.map(acct => {
-            const rowId = acct.id; // Supabase primary key for linked_accounts row
+            const rowId = acct.id;
             const institution = acct.institution_name || "Bank";
             const name = acct.plaid_account_name || "Account";
             const last4 = acct.plaid_account_mask || "";
@@ -1637,7 +1805,7 @@
       const cardsWithBalance = cards.filter(card => cardBalance(card.id) > 0.01);
       $("dashboardCards").innerHTML = cardsWithBalance.length
         ? cardsWithBalance.map(card => `
-          <div class="card">
+          <div class="card" onclick="openCardDetail('${card.id}')" style="cursor:pointer">
             <div class="row">
               <b>${esc(card.name)}</b>
               <span>💳</span>
@@ -1646,8 +1814,12 @@
               ${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
             </div>
             <strong>${cash(cardBalance(card.id))}</strong>
-            <div class="sub">Current calculated balance</div>
+            <div class="sub">Tap to view transactions & recurring charges</div>
             ${cardInfoHTML(card)}
+            <div style="margin-top:10px">
+              <b class="sub">Recurring Charges</b>
+              ${recurringListHTML(card.id)}
+            </div>
           </div>
         `).join("")
         : `<div class="card empty">No cards with a balance. View All to see all cards.</div>`;
@@ -1675,6 +1847,10 @@
                   onclick="clearCardEntries('${card.id}')">
                   Clear Entries
                 </button>
+                <button class="secondary" type="button"
+                  onclick="openRecurringModal('${card.id}')">
+                  Recurring
+                </button>
               </div>
             </div>
             <div class="sub">
@@ -1682,6 +1858,10 @@
             </div>
             <strong>${cash(cardBalance(card.id))}</strong>
             ${cardInfoHTML(card)}
+            <div style="margin-top:10px">
+              <b class="sub">Recurring Charges</b>
+              ${recurringListHTML(card.id)}
+            </div>
           </div>
         `).join("")
         : `<div class="card empty">No credit cards saved.</div>`;
@@ -1851,7 +2031,7 @@
     async function refreshData() {
       if (!currentTracker) return;
 
-      const [cardsResult, entriesResult, trackerResult] = await Promise.all([
+      const [cardsResult, entriesResult, trackerResult, recurringResult] = await Promise.all([
         supabaseClient
           .from("cards")
           .select("*")
@@ -1868,7 +2048,13 @@
           .from("trackers")
           .select("*")
           .eq("id", currentTracker.id)
-          .single()
+          .single(),
+
+        supabaseClient
+          .from("card_recurring_charges")
+          .select("*")
+          .eq("tracker_id", currentTracker.id)
+          .order("charge_day", { ascending: true })
       ]);
 
       if (cardsResult.error) {
@@ -1886,9 +2072,14 @@
         return;
       }
 
+      if (recurringResult.error) {
+        console.error("recurring charges load error", recurringResult.error);
+      }
+
       cards = cardsResult.data || [];
       entries = entriesResult.data || [];
       currentTracker = trackerResult.data;
+      recurringCharges = recurringResult.data || [];
 
       $("trackerTitle").textContent = currentTracker.name;
       $("trackerSubtitle").textContent =
@@ -2374,7 +2565,6 @@
       }
     }
 
-    // Unlink selected bank account
     async function unlinkSelectedBankAccount() {
       if (!currentTracker) {
         setMessage("settingsMessage", "Open a tracker before unlinking an account.", "error");
@@ -2425,7 +2615,7 @@
             },
             body: JSON.stringify({
               tracker_id: currentTracker.id,
-              linked_account_row_id: rowId // <- adjust your server to expect this
+              linked_account_row_id: rowId
             })
           }
         );
@@ -2455,7 +2645,6 @@
       }
     }
 
-    // delete account (requires backend/Edge Function)
     async function deleteAccount() {
       try {
         const {
@@ -2476,7 +2665,6 @@
           return;
         }
 
-        // This endpoint must be implemented on your backend or Supabase Edge Function.
         const resp = await fetch(
           "https://your-backend-host/delete-user",
           {
@@ -2519,6 +2707,169 @@
       }
     }
 
+    // --- Recurring charges modal ---
+
+    function openRecurringModal(cardId, recurringId = "") {
+      $("recurringForm").reset();
+      $("recurringId").value = "";
+      $("recurringCardId").value = cardId;
+      $("recurringActive").checked = true;
+      $("recurringTitle").textContent = "Add Recurring Charge";
+      $("deleteRecurringButton").classList.add("hidden");
+
+      if (recurringId) {
+        const rc = recurringCharges.find(r => r.id === recurringId);
+        if (rc) {
+          $("recurringId").value = rc.id;
+          $("recurringCardId").value = rc.card_id;
+          $("recurringName").value = rc.name || "";
+          $("recurringAmount").value = rc.amount || 0;
+          $("recurringDay").value = rc.charge_day || "";
+          $("recurringNotes").value = rc.notes || "";
+          $("recurringActive").checked = rc.active !== false;
+
+          $("recurringTitle").textContent = "Edit Recurring Charge";
+          $("deleteRecurringButton").classList.remove("hidden");
+        }
+      }
+
+      openModal("recurringModal");
+    }
+
+    async function saveRecurringCharge(event) {
+      event.preventDefault();
+
+      const id = $("recurringId").value;
+      const cardId = $("recurringCardId").value;
+
+      if (!currentTracker || !cardId) {
+        setMessage("settingsMessage", "Open a tracker and select a card first.", "error");
+        return;
+      }
+
+      const record = {
+        tracker_id: currentTracker.id,
+        card_id: cardId,
+        name: $("recurringName").value.trim(),
+        amount: Number($("recurringAmount").value || 0),
+        charge_day: Number($("recurringDay").value || 0) || null,
+        notes: $("recurringNotes").value.trim(),
+        active: $("recurringActive").checked
+      };
+
+      let result;
+      if (id) {
+        result = await supabaseClient
+          .from("card_recurring_charges")
+          .update(record)
+          .eq("id", id)
+          .select()
+          .single();
+      } else {
+        result = await supabaseClient
+          .from("card_recurring_charges")
+          .insert(record)
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        setMessage("settingsMessage", result.error.message, "error");
+        return;
+      }
+
+      closeModal("recurringModal");
+      await refreshData();
+    }
+
+    async function deleteRecurringCharge() {
+      const id = $("recurringId").value;
+      if (!id || !confirm("Delete this recurring charge?")) return;
+
+      const { error } = await supabaseClient
+        .from("card_recurring_charges")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        setMessage("settingsMessage", error.message, "error");
+        return;
+      }
+
+      closeModal("recurringModal");
+      await refreshData();
+    }
+
+    function openCardDetail(cardId) {
+      const card = cardById(cardId);
+      if (!card) return;
+
+      showPage("entries");
+
+      const cardEntries = entries.filter(e => e.card_id === cardId);
+
+      $("entriesList").innerHTML = `
+        <div class="card" style="margin-bottom:12px">
+          <div class="row">
+            <h2>${esc(card.name)} — Transactions</h2>
+            <button class="secondary" type="button" onclick="showPage('dash')">
+              Back to Dashboard
+            </button>
+          </div>
+          <div class="sub">
+            ${card.last_four ? `•••• ${card.last_four}` : "No last four saved"}
+          </div>
+          <strong>${cash(cardBalance(card.id))}</strong>
+        </div>
+        ${
+          cardEntries.length
+            ? cardEntries.map(entryHTML).join("")
+            : `<div class="card empty">No transactions for this card yet.</div>`
+        }
+        <div class="card" style="margin-top:12px">
+          <div class="row">
+            <h2>Recurring Charges</h2>
+            <button class="secondary" type="button"
+              onclick="openRecurringModal('${card.id}')">
+              Add / Edit Recurring
+            </button>
+          </div>
+          ${recurringListHTML(cardId)}
+        </div>
+      `;
+    }
+
+    // --- Authentication: remember login & flows ---
+
+    function loadRememberedLogin() {
+      try {
+        const savedEmail = localStorage.getItem("deadbeat_email") || "";
+        const savedPassword = localStorage.getItem("deadbeat_password") || "";
+        if (savedEmail) $("signInEmail").value = savedEmail;
+        if (savedPassword) $("signInPassword").value = savedPassword;
+        if (savedEmail || savedPassword) $("rememberLogin").checked = true;
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    function saveRememberedLoginIfNeeded() {
+      try {
+        const remember = $("rememberLogin").checked;
+        if (!remember) {
+          localStorage.removeItem("deadbeat_email");
+          localStorage.removeItem("deadbeat_password");
+          return;
+        }
+        const email = $("signInEmail").value.trim();
+        const password = $("signInPassword").value;
+        localStorage.setItem("deadbeat_email", email);
+        localStorage.setItem("deadbeat_password", password);
+      } catch (e) {
+        // ignore
+      }
+    }
+
     async function signIn(event) {
       event.preventDefault();
 
@@ -2536,6 +2887,7 @@
       }
 
       currentUser = data.user;
+      saveRememberedLoginIfNeeded();
       await loadTrackers();
     }
 
@@ -2557,11 +2909,13 @@
         return;
       }
 
+      const appUrl = window.location.origin + window.location.pathname;
+
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin + window.location.pathname,
+          emailRedirectTo: appUrl,
           data: { display_name: displayName }
         }
       });
@@ -2572,14 +2926,12 @@
       }
 
       if (data.session?.user) {
-        // Some providers immediately sign in; use home tracker logic
         currentUser = data.session.user;
         const home = await ensureUserHasHomeTracker();
         if (home) {
           await openTracker(home.id);
           return;
         }
-
         await loadTrackers();
         return;
       }
@@ -2596,9 +2948,11 @@
       event.preventDefault();
 
       const email = $("resetEmail").value.trim();
+      const appUrl = window.location.origin + window.location.pathname;
+      const redirectUrl = appUrl + "?mode=reset";
 
       const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + window.location.pathname
+        redirectTo: redirectUrl
       });
 
       if (error) {
@@ -2606,7 +2960,69 @@
         return;
       }
 
-      setMessage("authMessage", "Password reset email sent.", "good");
+      setMessage(
+        "authMessage",
+        "Password reset email sent. Click the link in your email, then set a new password.",
+        "good"
+      );
+    }
+
+    async function completePasswordReset(event) {
+      event.preventDefault();
+
+      const newPassword = $("newPassword").value;
+      const newPasswordConfirm = $("newPasswordConfirm").value;
+
+      if (newPassword !== newPasswordConfirm) {
+        setMessage("authMessage", "Passwords do not match.", "error");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        setMessage("authMessage", "Password must have at least 6 characters.", "error");
+        return;
+      }
+
+      const { data: updateData, error: updateError } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) {
+        setMessage("authMessage", updateError.message, "error");
+        return;
+      }
+
+      setMessage("authMessage", "Password updated. Please sign in with your new password.", "good");
+      showAuthPanel("signInPanel");
+    }
+
+    async function forgotUsername(event) {
+      event.preventDefault();
+
+      const email = $("forgotUsernameEmail").value.trim();
+      if (!email) {
+        setMessage("authMessage", "Enter your recovery email.", "error");
+        return;
+      }
+
+      try {
+        await supabaseClient
+          .from("username_recovery_requests")
+          .insert({ email });
+
+        setMessage(
+          "authMessage",
+          "If this email matches an account, your username (email) will be sent to you. For this app, your username is the email you used when creating the account.",
+          "good"
+        );
+        showAuthPanel("signInPanel");
+      } catch (e) {
+        setMessage(
+          "authMessage",
+          "Could not record username recovery request. Please contact support.",
+          "error"
+        );
+      }
     }
 
     async function signOut() {
@@ -2616,6 +3032,7 @@
       currentTracker = null;
       cards = [];
       entries = [];
+      recurringCharges = [];
 
       showScreen("authScreen");
       showAuthPanel("signInPanel");
@@ -2623,6 +3040,8 @@
     }
 
     async function initialize() {
+      loadRememberedLogin();
+
       const {
         data: { session }
       } = await supabaseClient.auth.getSession();
@@ -2633,20 +3052,17 @@
       if (session?.user) {
         currentUser = session.user;
 
-        // If later we wire full password-reset UI, this is where we detect it
         if (modeParam === "reset") {
           showScreen("authScreen");
-          // showAuthPanel("resetConfirmPanel"); // to be added in a later step
-          showAuthPanel("signInPanel");
+          showAuthPanel("resetConfirmPanel");
           return;
         }
 
-        // Normal flow: ensure this user has a personal tracker
         const home = await ensureUserHasHomeTracker();
         if (home) {
           await openTracker(home.id);
         } else {
-          await loadTrackers(); // fallback: show tracker selection screen
+          await loadTrackers();
         }
       } else {
         showScreen("authScreen");
@@ -2656,8 +3072,11 @@
     $("signInForm").addEventListener("submit", signIn);
     $("createAccountForm").addEventListener("submit", createAccount);
     $("resetForm").addEventListener("submit", resetPassword);
+    $("resetConfirmForm").addEventListener("submit", completePasswordReset);
+    $("forgotUsernameForm").addEventListener("submit", forgotUsername);
     $("entryForm").addEventListener("submit", saveEntry);
     $("cardForm").addEventListener("submit", saveCard);
+    $("recurringForm").addEventListener("submit", saveRecurringCharge);
 
     document.querySelectorAll(".modal-bg").forEach(modal => {
       modal.addEventListener("click", event => {
@@ -2670,6 +3089,7 @@
         closeModal("entryModal");
         closeModal("cardModal");
         closeModal("settingsModal");
+        closeModal("recurringModal");
       }
     });
 
