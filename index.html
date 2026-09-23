@@ -381,7 +381,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.38 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.39 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +600,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.38 — Shared Supabase Version
+              BUILD 9.39 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1461,15 +1461,20 @@ function recurringListHTML(cardId){
       }).join("");
     }
 
-    function entryHTML(entry){
+  function entryHTML(entry){
       const isPayment = entry.entry_type === "payment";
       const isCashMoved = !!entry.cash_moved;
+
       const statusLabel = isCashMoved ? "Cash moved" : "Cash not moved";
       const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
       const toggleText = isCashMoved ? "Mark as not moved" : "Mark as moved";
+      const buttonClass = isCashMoved ? "success" : "secondary";
+
+      // NEW: green background & stronger border when cash moved
+      const containerBg = isCashMoved ? "background:#e5f6ee;border-color:#13795b;" : "";
 
       return `
-        <div class="card" style="margin-bottom:6px;padding:10px">
+        <div class="card" style="margin-bottom:6px;padding:10px;${containerBg}">
           <button class="list" type="button"
             onclick="openEntry('${entry.id}')"
             style="border-bottom:0;border-radius:9px 9px 0 0">
@@ -1487,7 +1492,7 @@ function recurringListHTML(cardId){
             <span class="sub" style="color:${statusColor}">
               ${statusLabel}
             </span>
-            <button type="button" class="secondary"
+            <button type="button" class="${buttonClass}"
               onclick="toggleCashMoved('${entry.id}')">
               ${toggleText}
             </button>
