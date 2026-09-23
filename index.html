@@ -1527,7 +1527,7 @@
       return recurringCharges.filter(rc => rc.card_id === cardId && rc.active !== false);
     }
 
-   function recurringListHTML(cardId) {
+  function recurringListHTML(cardId) {
   const list = recurringForCard(cardId);
 
   if (!list.length) {
@@ -1568,6 +1568,39 @@
   `;
 
   return itemsHtml + addButton;
+}  // <-- this was missing
+
+function cardInfoHTML(card) {
+  const unpaidLastCycle = cardUnpaidFromLastCycle(card);
+  const newSpend = cardNewCycleSpend(card);
+  const paymentsCycle = cardPaymentsThisCycle(card);
+  const current = cardBalance(card.id);
+  const cashMoved = cardCashMovedThisCycle(card);
+  const cashStillToMove = cardCashStillToMoveThisCycle(card);
+  const estInterest = estimatedInterest(card);
+
+  return `
+    <div class="interest">
+      <b>Cycle details</b><br>
+      Cycle end day: ${card.cycle_end_day || "Not set"} ·
+      Due day: ${card.due_day || "Not set"}<br>
+      <br>
+      <b>Balance</b><br>
+      Prior cycle balance: ${cash(unpaidLastCycle)}<br>
+      New cycle spending: ${cash(newSpend)}<br>
+      Payments this cycle: ${cash(paymentsCycle)}<br>
+      <b>Current balance: ${cash(current)}</b><br>
+      <b>Projected starting balance next cycle (if no more changes): ${cash(cardProjectedNextCycleStart(card))}</b><br>
+      <br>
+      <b>Cash coverage</b><br>
+      Cash already moved this cycle: ${cash(cashMoved)}<br>
+      Cash still to move for this cycle: ${cash(cashStillToMove)}<br>
+      <br>
+      <b>Interest risk</b><br>
+      Est. 30-day interest if unpaid: ${cash(estInterest)}
+    </div>
+  `;
+}
 
 
     function cardInfoHTML(card) {
