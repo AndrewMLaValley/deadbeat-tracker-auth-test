@@ -381,7 +381,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.36 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.37 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +600,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.36 — Shared Supabase Version
+              BUILD 9.37 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1252,10 +1252,11 @@
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
     }
-    function cardCashStillToMoveThisCycle(card){
-      const newSpend = cardNewCycleSpend(card);
+function cardCashStillToMoveThisCycle(card){
+      const newSpend = cardNewCycleSpend(card);            // actual expenses this cycle
+      const recurringPlanned = cardRecurringThisCycle(card); // planned recurring this cycle
       const moved = cardCashMovedThisCycle(card);
-      const rem = newSpend - moved;
+      const rem = (newSpend + recurringPlanned) - moved;
       return rem > 0 ? rem : 0;
     }
 
@@ -1341,8 +1342,9 @@
     function cardProjectedNextCycleStart(card){
       const unpaid = cardUnpaidFromLastCycle(card);
       const newSpend = cardNewCycleSpend(card);
+      const recurringPlanned = cardRecurringThisCycle(card);
       const pay = cardPaymentsThisCycle(card);
-      const proj = unpaid + newSpend - pay;
+      const proj = unpaid + newSpend + recurringPlanned - pay;
       return proj > 0 ? proj : 0;
     }
 
@@ -1350,7 +1352,7 @@
       return recurringCharges.filter(r => r.card_id === cardId);
     }
 
-    function cardInfoHTML(card){
+function cardInfoHTML(card){
       const unpaidLastCycle = cardUnpaidFromLastCycle(card);
       const newSpend = cardNewCycleSpend(card);
       const pays = cardPaymentsThisCycle(card);
@@ -1378,7 +1380,24 @@
         </div>
       `;
     }
+function recurringForCard(cardId){
+      return recurringCharges.filter(r => r.card_id === cardId);
+    }
 
+    // NEW: get total active recurring for this card in the selected cycle
+    function cardRecurringThisCycle(card){
+      const ym = selectedMonth; // "YYYY-MM"
+      return recurringCharges
+        .filter(r =>
+          r.card_id === card.id &&
+          r.active !== false &&             // only active
+          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31)) &&
+          // For now, assume every recurring row applies to every month (simple model).
+          // If you later add "start date" / "end date" columns, we can filter by ym.
+          true
+        )
+        .reduce((s,r)=>s+Number(r.amount||0),0);
+    }
     function recurringListHTML(cardId){
       const list = recurringForCard(cardId);
       if (!list.length) {
