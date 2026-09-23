@@ -422,7 +422,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.30 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.31 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -645,7 +645,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.30 — Shared Supabase Version
+              BUILD 9.31 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1601,8 +1601,89 @@ function cardInfoHTML(card) {
     </div>
   `;
 }
+function recurringForCard(cardId) {
+      // Return all recurring charges for this card, regardless of active flag.
+      // (We’ll show inactive ones in the list but visually label them.)
+      return recurringCharges.filter(rc => rc.card_id === cardId);
+    }
 
+    function recurringListHTML(cardId) {
+      const list = recurringForCard(cardId);
 
+      // If no recurring charges exist for this card, show a message and an Add button
+      if (!list.length) {
+        return `
+          <div class="sub" style="margin-top:4px">
+            No recurring charges saved.
+          </div>
+          <button type="button" class="secondary wide" style="margin-top:8px"
+            onclick="openRecurringModal('${cardId}')">
+            + Add Recurring Charge
+          </button>
+        `;
+      }
+
+      // Render each recurring charge as a clickable row that opens the modal for editing
+      const itemsHtml = list.map(rc => {
+        const day = rc.charge_day ? `Day ${rc.charge_day}` : "Day not set";
+        const statusLabel = rc.active === false ? "Inactive" : "Active";
+
+        return `
+          <button type="button" class="list"
+            style="display:block;padding:8px 10px;border-radius:9px;margin-top:4px"
+            onclick="openRecurringModal('${cardId}','${rc.id}')">
+            <div class="row">
+              <b>${esc(rc.name)}</b>
+              <span>${cash(rc.amount)}</span>
+            </div>
+            <div class="sub">
+              ${day} · ${statusLabel}
+            </div>
+          </button>
+        `;
+      }).join("");
+
+      const addButton = `
+        <button type="button" class="secondary wide" style="margin-top:8px"
+          onclick="openRecurringModal('${cardId}')">
+          + Add Recurring Charge
+        </button>
+      `;
+
+      return itemsHtml + addButton;
+    }
+
+    function cardInfoHTML(card) {
+      const unpaidLastCycle = cardUnpaidFromLastCycle(card);
+      const newSpend = cardNewCycleSpend(card);
+      const paymentsCycle = cardPaymentsThisCycle(card);
+      const current = cardBalance(card.id);
+      const cashMoved = cardCashMovedThisCycle(card);
+      const cashStillToMove = cardCashStillToMoveThisCycle(card);
+      const estInterest = estimatedInterest(card);
+
+      return `
+        <div class="interest">
+          <b>Cycle details</b><br>
+          Cycle end day: ${card.cycle_end_day || "Not set"} ·
+          Due day: ${card.due_day || "Not set"}<br>
+          <br>
+          <b>Balance</b><br>
+          Prior cycle balance: ${cash(unpaidLastCycle)}<br>
+          New cycle spending: ${cash(newSpend)}<br>
+          Payments this cycle: ${cash(paymentsCycle)}<br>
+          <b>Current balance: ${cash(current)}</b><br>
+          <b>Projected starting balance next cycle (if no more changes): ${cash(cardProjectedNextCycleStart(card))}</b><br>
+          <br>
+          <b>Cash coverage</b><br>
+          Cash already moved this cycle: ${cash(cashMoved)}<br>
+          Cash still to move for this cycle: ${cash(cashStillToMove)}<br>
+          <br>
+          <b>Interest risk</b><br>
+          Est. 30-day interest if unpaid: ${cash(estInterest)}
+        </div>
+      `;
+    }
     function cardInfoHTML(card) {
       const unpaidLastCycle = cardUnpaidFromLastCycle(card);
       const newSpend = cardNewCycleSpend(card);
@@ -2085,7 +2166,7 @@ function cardInfoHTML(card) {
       setMessage("inviteStatus", instructions, "good");
     }
 
-    async function refreshData() {
+   async function refreshData() {
       if (!currentTracker) return;
 
       const [cardsResult, entriesResult, trackerResult, recurringResult] = await Promise.all([
@@ -2116,6 +2197,7 @@ function cardInfoHTML(card) {
 
       console.log("refreshData cardsResult", cardsResult);
       console.log("refreshData entriesResult", entriesResult);
+      console.log("refreshData recurringResult", recurringResult);
 
       if (cardsResult.error) {
         setMessage("settingsMessage", cardsResult.error.message, "error");
@@ -2143,6 +2225,7 @@ function cardInfoHTML(card) {
 
       console.log("cards array after refreshData", cards);
       console.log("entries array after refreshData", entries);
+      console.log("recurringCharges array after refreshData", recurringCharges);
 
       $("trackerTitle").textContent = currentTracker.name;
       $("trackerSubtitle").textContent =
