@@ -410,7 +410,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.26 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.27 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -633,7 +633,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.26 — Shared Supabase Version
+              BUILD 9.27 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1086,6 +1086,2033 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  const SUPABASE_URL = "https://ljifsttsohryyuobmjnq.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+  );
+
+  const $ = id => document.getElementById(id);
+
+  let currentUser = null;
+  let currentTracker = null;
+  let cards = [];
+  let entries = [];
+  let linkedAccountsList = [];
+  let recurringCharges = [];
+
+  // --- Helpers: personal tracker per user ---
+
+  function makeInviteCode(length = 8) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let out = "";
+    for (let i = 0; i < length; i++) {
+      out += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return out;
+  }
+
+  async function ensureUserHasHomeTracker() {
+    if (!currentUser) return null;
+
+    const { data: memberships, error: memError } = await supabaseClient
+      .from("tracker_members")
+      .select("tracker_id, role")
+      .eq("user_id", currentUser.id);
+
+    if (memError) {
+      console.error("ensureUserHasHomeTracker memberships error", memError);
+      return null;
+    }
+
+    if (memberships && memberships.length) {
+      const homeTrackerId = memberships[0].tracker_id;
+      const { data: trackerRows, error: trError } = await supabaseClient
+        .from("trackers")
+        .select("*")
+        .eq("id", homeTrackerId);
+
+      if (trError || !trackerRows || !trackerRows.length) {
+        console.error("ensureUserHasHomeTracker tracker error", trError);
+        return null;
+      }
+
+      currentTracker = trackerRows[0];
+      return currentTracker;
+    }
+
+    const displayName =
+      currentUser.user_metadata?.display_name ||
+      (currentUser.email ? currentUser.email.split("@")[0] : "My");
+
+    const trackerName = displayName + "’s Deadbeat Tracker";
+    const inviteCode = makeInviteCode();
+
+    const { data: trackerInsert, error: trackerInsertError } = await supabaseClient
+      .from("trackers")
+      .insert({
+        name: trackerName,
+        invite_code: inviteCode,
+        owner_id: currentUser.id,
+        budget_type: "monthly",
+        monthly_budget: 0
+      })
+      .select()
+      .single();
+
+    if (trackerInsertError) {
+      console.error("ensureUserHasHomeTracker trackerInsertError", trackerInsertError);
+      return null;
+    }
+
+    const trackerId = trackerInsert.id;
+
+    const { error: memberInsertError } = await supabaseClient
+      .from("tracker_members")
+      .insert({
+        tracker_id: trackerId,
+        user_id: currentUser.id,
+        role: "owner"
+      });
+
+    if (memberInsertError) {
+      console.error("ensureUserHasHomeTracker memberInsertError", memberInsertError);
+    }
+
+    currentTracker = trackerInsert;
+    return currentTracker;
+  }
+
+  // --- Utility helpers ---
+
+  function cash(value) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD"
+    }).format(Number(value || 0));
+  }
+
+  function esc(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function today() {
+    const date = new Date();
+    return `${date.getFullYear()}-${
+      String(date.getMonth() + 1).padStart(2, "0")
+    }-${String(date.getDate()).padStart(2, "0")}`;
+  }
+
+  function currentMonth() {
+    return today().slice(0, 7);
+  }
+
+  function parseISODate(str) {
+    if (!str) return null;
+    const [y, m, d] = str.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+
+  let selectedMonth = currentMonth();
+
+  function setMessage(id, text = "", type = "") {
+    const message = $(id);
+    if (!message) return;
+
+    message.textContent = text;
+    message.className = "message";
+
+    if (!text) return;
+
+    message.classList.add("show");
+
+    if (type === "error") message.classList.add("error");
+    if (type === "good") message.classList.add("good");
+  }
+
+  function buildMonthOptions() {
+    const select = $("monthSelect");
+    if (!select) return;
+
+    const options = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const value = `${year}-${month}`;
+
+      const label = d.toLocaleString("en-US", {
+        month: "short",
+        year: "numeric"
+      });
+
+      options.push({ value, label });
+    }
+
+    select.innerHTML = options.map(opt => `
+      <option value="${opt.value}">${opt.label}</option>
+    `).join("");
+
+    select.value = selectedMonth;
+  }
+
+  function changeSelectedMonth(value) {
+    selectedMonth = value || currentMonth();
+    render();
+  }
+
+  function showScreen(id) {
+    ["authScreen", "trackerScreen", "appScreen"].forEach(screen => {
+      $(screen).classList.toggle("active", screen === id);
+    });
+  }
+
+  function showAuthPanel(id) {
+    ["signInPanel", "createAccountPanel", "resetPanel", "resetConfirmPanel", "forgotUsernamePanel"].forEach(panel => {
+      const el = $(panel);
+      if (!el) return;
+      el.classList.toggle("active", panel === id);
+    });
+
+    setMessage("authMessage", "");
+  }
+
+  function togglePassword(inputId, buttonId) {
+    const input = $(inputId);
+    const button = $(buttonId);
+    if (!input || !button) return;
+
+    const hidden = input.type === "password";
+
+    input.type = hidden ? "text" : "password";
+    button.textContent = hidden ? "🙈" : "👁";
+  }
+
+  function openModal(id) {
+    $(id).classList.add("show");
+  }
+
+  function closeModal(id) {
+    $(id).classList.remove("show");
+  }
+
+  function showPage(pageName) {
+    ["dash", "entries", "cards"].forEach(page => {
+      $(page + "Page").classList.toggle("active", page === pageName);
+      $(page + "Nav").classList.toggle("active", page === pageName);
+    });
+  }
+
+  // --- Card helpers and recurring charges ---
+
+  function cardById(id) {
+    return cards.find(card => card.id === id);
+  }
+
+  function cardName(id) {
+    const card = cardById(id);
+    if (!card) return "Unknown Card";
+
+    return card.last_four
+      ? `${card.name} •••• ${card.last_four}`
+      : card.name;
+  }
+
+  function cardBalance(cardId) {
+    const card = cardById(cardId);
+    const starting = card ? Number(card.starting_balance || 0) : 0;
+
+    let total = starting;
+
+    entries
+      .filter(entry => entry.card_id === cardId)
+      .forEach(entry => {
+        if (entry.entry_type === "payment") {
+          total -= Number(entry.amount);
+        } else {
+          total += Number(entry.amount);
+        }
+      });
+
+    return Math.max(0, total);
+  }
+
+  function cardUnpaidFromLastCycle(card) {
+    return Number(card.starting_balance || 0);
+  }
+
+  function cardNewCycleSpend(card) {
+    const cardId = card.id;
+    const month = selectedMonth;
+
+    return entries
+      .filter(entry =>
+        entry.card_id === cardId &&
+        entry.entry_type === "expense" &&
+        String(entry.entry_date).slice(0, 7) === month
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function cardPaymentsThisCycle(card) {
+    const cardId = card.id;
+    const month = selectedMonth;
+
+    return entries
+      .filter(entry =>
+        entry.card_id === cardId &&
+        entry.entry_type === "payment" &&
+        String(entry.entry_date).slice(0, 7) === month
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function cardCashMovedThisCycle(card) {
+    const cardId = card.id;
+    const month = selectedMonth;
+
+    return entries
+      .filter(entry =>
+        entry.card_id === cardId &&
+        entry.entry_type === "expense" &&
+        entry.cash_moved &&
+        String(entry.entry_date).slice(0, 7) === month
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function cardCashStillToMoveThisCycle(card) {
+    const newSpend = cardNewCycleSpend(card);
+    const moved = cardCashMovedThisCycle(card);
+    const remaining = newSpend - moved;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  function totalSpending() {
+    return entries
+      .filter(entry => entry.entry_type === "expense")
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function monthSpending() {
+    const ym = currentMonth();
+    return entries
+      .filter(entry =>
+        entry.entry_type === "expense" &&
+        String(entry.entry_date).slice(0, 7) === ym
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function cashMovedThisMonth() {
+    const ym = currentMonth();
+    return entries
+      .filter(entry =>
+        entry.entry_type === "expense" &&
+        entry.cash_moved &&
+        String(entry.entry_date).slice(0, 7) === ym
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function cashStillToMoveThisMonth() {
+    const ym = currentMonth();
+    return entries
+      .filter(entry =>
+        entry.entry_type === "expense" &&
+        !entry.cash_moved &&
+        String(entry.entry_date).slice(0, 7) === ym
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  // PAY PERIOD
+  function getCurrentPayPeriod(firstPayDateStr) {
+    const firstPayDate = parseISODate(firstPayDateStr);
+    if (!firstPayDate) return null;
+
+    const todayDate = parseISODate(today());
+    if (!todayDate) return null;
+
+    firstPayDate.setHours(0,0,0,0);
+    todayDate.setHours(0,0,0,0);
+
+    if (todayDate < firstPayDate) {
+      return {
+        start: firstPayDate,
+        end: new Date(firstPayDate.getTime() + 13 * 24 * 60 * 60 * 1000)
+      };
+    }
+
+    const diffMs = todayDate.getTime() - firstPayDate.getTime();
+    const daysDiff = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    const periodsSince = Math.floor(daysDiff / 14);
+    const periodStart = new Date(firstPayDate.getTime() + periodsSince * 14 * 24 * 60 * 60 * 1000);
+    const periodEnd = new Date(periodStart.getTime() + 13 * 24 * 60 * 60 * 1000);
+
+    return { start: periodStart, end: periodEnd };
+  }
+
+  function isDateInRange(dateStr, range) {
+    if (!range) return false;
+    const d = parseISODate(dateStr);
+    if (!d) return false;
+    d.setHours(0,0,0,0);
+    return d >= range.start && d <= range.end;
+  }
+
+  function payPeriodSpending(firstPayDateStr) {
+    const range = getCurrentPayPeriod(firstPayDateStr);
+    if (!range) return 0;
+    return entries
+      .filter(entry =>
+        entry.entry_type === "expense" &&
+        isDateInRange(entry.entry_date, range)
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function payPeriodCashMoved(firstPayDateStr) {
+    const range = getCurrentPayPeriod(firstPayDateStr);
+    if (!range) return 0;
+    return entries
+      .filter(entry =>
+        entry.entry_type === "expense" &&
+        entry.cash_moved &&
+        isDateInRange(entry.entry_date, range)
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  // FIXED: use isDateInRange instead of nonexistent isByRange
+  function payPeriodCashStillToMove(firstPayDateStr) {
+    const range = getCurrentPayPeriod(firstPayDateStr);
+    if (!range) return 0;
+    return entries
+      .filter(entry =>
+        entry.entry_type === "expense" &&
+        !entry.cash_moved &&
+        isDateInRange(entry.entry_date, range)
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  }
+
+  function estimatedInterest(card) {
+    const balance = cardBalance(card.id);
+    const apr = Number(card.apr || 0);
+
+    if (balance <= 0 || apr <= 0) return 0;
+
+    return balance * (
+      Math.pow(1 + (apr / 100) / 365, 30) - 1
+    );
+  }
+
+  function cardProjectedNextCycleStart(card) {
+    const unpaidLastCycle = cardUnpaidFromLastCycle(card);
+    const newSpend = cardNewCycleSpend(card);
+    const paymentsCycle = cardPaymentsThisCycle(card);
+
+    const projected = unpaidLastCycle + newSpend - paymentsCycle;
+    return projected > 0 ? projected : 0;
+  }
+
+  function recurringForCard(cardId) {
+    return recurringCharges.filter(rc => rc.card_id === cardId && rc.active !== false);
+  }
+
+  function recurringListHTML(cardId) {
+    const list = recurringForCard(cardId);
+    if (!list.length) {
+      return `<div class="sub">No recurring charges saved.</div>`;
+    }
+
+    return list.map(rc => {
+      const day = rc.charge_day ? `Day ${rc.charge_day}` : "Day not set";
+      return `
+        <div class="sub" style="margin-top:4px">
+          <b>${esc(rc.name)}</b> — ${cash(rc.amount)} · ${day}
+        </div>
+      `;
+    }).join("");
+  }
+
+  function cardInfoHTML(card) {
+    const unpaidLastCycle = cardUnpaidFromLastCycle(card);
+    const newSpend = cardNewCycleSpend(card);
+    const paymentsCycle = cardPaymentsThisCycle(card);
+    const current = cardBalance(card.id);
+    const cashMoved = cardCashMovedThisCycle(card);
+    const cashStillToMove = cardCashStillToMoveThisCycle(card);
+    const estInterest = estimatedInterest(card);
+
+    return `
+      <div class="interest">
+        <b>Cycle details</b><br>
+        Cycle end day: ${card.cycle_end_day || "Not set"} ·
+        Due day: ${card.due_day || "Not set"}<br>
+        <br>
+        <b>Balance</b><br>
+        Prior cycle balance: ${cash(unpaidLastCycle)}<br>
+        New cycle spending: ${cash(newSpend)}<br>
+        Payments this cycle: ${cash(paymentsCycle)}<br>
+        <b>Current balance: ${cash(current)}</b><br>
+        <b>Projected starting balance next cycle (if no more changes): ${cash(cardProjectedNextCycleStart(card))}</b><br>
+        <br>
+        <b>Cash coverage</b><br>
+        Cash already moved this cycle: ${cash(cashMoved)}<br>
+        Cash still to move for this cycle: ${cash(cashStillToMove)}<br>
+        <br>
+        <b>Interest risk</b><br>
+        Est. 30-day interest if unpaid: ${cash(estInterest)}
+      </div>
+    `;
+  }
+
+  function entryHTML(entry) {
+    const payment = entry.entry_type === "payment";
+    const isCashMoved = !!entry.cash_moved;
+
+    const statusLabel = isCashMoved ? "Cash moved" : "Cash not moved";
+    const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
+    const toggleText = isCashMoved ? "Mark as not moved" : "Mark as moved";
+
+    return `
+      <div class="card" style="margin-bottom:6px;padding:10px">
+        <button class="list" type="button"
+          onclick="openEntry('${entry.id}')"
+          style="border-bottom:0;border-radius:9px 9px 0 0">
+          <div class="row">
+            <b>${esc(entry.merchant)}</b>
+            <b>${payment ? "−" : ""}${cash(entry.amount)}</b>
+          </div>
+          <div class="sub">
+            ${payment ? "Payment" : "Expense"} ·
+            ${entry.entry_date} ·
+            ${esc(cardName(entry.card_id))}
+          </div>
+        </button>
+        <div class="row" style="margin-top:6px;justify-content:space-between">
+          <span class="sub" style="color:${statusColor}">
+            ${statusLabel}
+          </span>
+          <button type="button" class="secondary"
+            onclick="toggleCashMoved('${entry.id}')">
+            ${toggleText}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function totalSpendingAccountsCash() {
+    return linkedAccountsList
+      .filter(acct =>
+        acct.available_balance != null &&
+        acct.plaid_account_subtype === "checking"
+      )
+      .reduce((sum, acct) => sum + Number(acct.available_balance || 0), 0);
+  }
+
+  function spendingAccountsHTML() {
+    if (!linkedAccountsList.length) {
+      return "No spending accounts linked yet.";
+    }
+
+    return linkedAccountsList.map(acct => {
+      const institution = acct.institution_name || "Bank";
+      const name = acct.plaid_account_name || "Account";
+      const last4 = acct.plaid_account_mask || "";
+      const available = acct.available_balance != null
+        ? cash(acct.available_balance)
+        : "";
+
+      const label = [
+        institution + ":",
+        name,
+        last4 ? "•••• " + last4 : "",
+      ].join(" ");
+
+      return `${esc(label.replace(/\s+/g, " ").trim())} — Available: ${available}`;
+    }).join("<br>");
+  }
+
+  function renderLinkedAccounts(accounts) {
+    const container = $("linkedAccounts");
+    const select = $("unlinkAccountSelect");
+    if (!container) return;
+
+    linkedAccountsList = accounts || [];
+
+    if (!linkedAccountsList.length) {
+      container.textContent = "No bank accounts linked yet.";
+      if (select) {
+        select.innerHTML = `<option value="">Select an account to unlink</option>`;
+      }
+      return;
+    }
+
+    container.innerHTML = linkedAccountsList.map(acct => {
+      const institution = acct.institution_name || "Bank";
+      const name = acct.plaid_account_name || "Account";
+      const last4 = acct.plaid_account_mask || "";
+      const typeLabel = acct.plaid_account_type || "";
+      const subtypeLabel = acct.plaid_account_subtype || "";
+      const available = acct.available_balance != null
+        ? cash(acct.available_balance)
+        : "";
+
+      const parts = [
+        institution + ":",
+        name,
+        last4 ? "•••• " + last4 : "",
+        typeLabel || "",
+        subtypeLabel ? "(" + subtypeLabel + ")" : "",
+        available ? "Available: " + available : ""
+      ];
+
+      return `<div>${esc(parts.join(" ").replace(/\s+/g, " ").trim())}</div>`;
+    }).join("");
+
+    if (select) {
+      const optionsHtml = [
+        `<option value="">Select an account to unlink</option>`,
+        ...linkedAccountsList.map(acct => {
+          const rowId = acct.id;
+          const institution = acct.institution_name || "Bank";
+          const name = acct.plaid_account_name || "Account";
+          const last4 = acct.plaid_account_mask || "";
+          const labelParts = [
+            institution + ":",
+            name,
+            last4 ? "•••• " + last4 : ""
+          ];
+          const label = esc(labelParts.join(" ").replace(/\s+/g, " ").trim());
+          return `<option value="${rowId}">${label}</option>`;
+        })
+      ].join("");
+
+      select.innerHTML = optionsHtml;
+    }
+  }
+
+  function renderBudgetSlider(spent, budget) {
+    const fillEl = $("budgetSliderFill");
+    const markerEl = $("budgetSliderMarker");
+    const summaryEl = $("budgetSliderSummary");
+    const statusEl = $("budgetSliderStatus");
+
+    if (!fillEl || !markerEl || !summaryEl || !statusEl) return;
+
+    const safeBudget = budget > 0 ? budget : 0;
+    const ratio = safeBudget > 0 ? spent / safeBudget : 0;
+    const ratioClamped = Math.min(Math.max(ratio, 0), 2);
+
+    const fillScale = Math.min(ratioClamped, 1);
+    fillEl.style.transform = "scaleX(" + fillScale.toFixed(3) + ")";
+    fillEl.classList.toggle("over", ratio > 1);
+
+    const markerPercent = ratioClamped * 100;
+    markerEl.style.left = markerPercent + "%";
+
+    summaryEl.textContent = "Budget: " + cash(budget) + " · Spent: " + cash(spent);
+
+    const difference = budget - spent;
+
+    if (budget <= 0) {
+      statusEl.textContent = "No budget set";
+      statusEl.className = "budget-slider-status";
+    } else if (difference > 0.01) {
+      statusEl.textContent = "Ahead by " + cash(difference);
+      statusEl.className = "budget-slider-status good";
+    } else if (difference < -0.01) {
+      statusEl.textContent = "Behind by " + cash(-difference);
+      statusEl.className = "budget-slider-status bad";
+    } else {
+      statusEl.textContent = "Exactly on budget";
+      statusEl.className = "budget-slider-status";
+    }
+  }
+
+  function render() {
+    if (!currentTracker) return;
+
+    const budgetType = currentTracker.budget_type || "monthly";
+    const monthlyBudget = Number(currentTracker.monthly_budget || 0);
+    const payPeriodBudget = Number(currentTracker.pay_period_budget || 0);
+    const firstPayDateStr = currentTracker.pay_period_first_date || "";
+
+    let spent, moved, stillToMove, budgetUsed, periodLabel;
+
+    if (budgetType === "pay_period" && firstPayDateStr) {
+      const range = getCurrentPayPeriod(firstPayDateStr);
+      spent = payPeriodSpending(firstPayDateStr);
+      moved = payPeriodCashMoved(firstPayDateStr);
+      stillToMove = payPeriodCashStillToMove(firstPayDateStr);
+      budgetUsed = payPeriodBudget;
+
+      if (range) {
+        const startStr = range.start.toLocaleDateString("en-US");
+        const endStr = range.end.toLocaleDateString("en-US");
+        periodLabel = `Period: Pay Period (${startStr} – ${endStr})`;
+      } else {
+        periodLabel = "Period: Pay Period (set a valid first pay date)";
+      }
+
+      $("budgetTitle").textContent = "Pay Period Budget (2 weeks)";
+    } else {
+      spent = monthSpending();
+      moved = cashMovedThisMonth();
+      stillToMove = cashStillToMoveThisMonth();
+      budgetUsed = monthlyBudget;
+      periodLabel = "Period: This Calendar Month";
+      $("budgetTitle").textContent = "Monthly Budget";
+    }
+
+    const remaining = budgetUsed - spent;
+
+    $("budgetPeriodLabel").textContent = periodLabel;
+    $("totalSpending").textContent = cash(totalSpending());
+    $("monthSpent").textContent = cash(spent);
+    $("monthRemaining").textContent = cash(remaining);
+    $("cashMovedThisMonth").textContent = cash(moved);
+    $("cashStillToMove").textContent = cash(stillToMove);
+
+    $("monthRemaining").style.color =
+      remaining < 0 ? "var(--red)" : "var(--green)";
+
+    renderBudgetSlider(spent, budgetUsed);
+
+    const totalSpendingCash = totalSpendingAccountsCash();
+    const spendingHtml = spendingAccountsHTML();
+
+    if ($("spendingAccountsList")) {
+      $("spendingAccountsList").innerHTML = spendingHtml;
+    }
+    if ($("totalSpendingAccountsCash")) {
+      $("totalSpendingAccountsCash").textContent = cash(totalSpendingCash);
+    }
+
+    const cardsWithBalance = cards.filter(card => cardBalance(card.id) > 0.01);
+    $("dashboardCards").innerHTML = cardsWithBalance.length
+      ? cardsWithBalance.map(card => `
+        <div class="card" onclick="openCardDetail('${card.id}')" style="cursor:pointer">
+          <div class="row">
+            <b>${esc(card.name)}</b>
+            <span>💳</span>
+          </div>
+          <div class="sub">
+            ${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
+          </div>
+          <strong>${cash(cardBalance(card.id))}</strong>
+          <div class="sub">Tap to view transactions & recurring charges</div>
+          ${cardInfoHTML(card)}
+          <div style="margin-top:10px">
+            <b class="sub">Recurring Charges</b>
+            ${recurringListHTML(card.id)}
+          </div>
+        </div>
+      `).join("")
+      : `<div class="card empty">No cards with a balance. View All to see all cards.</div>`;
+
+    const recent = entries.slice(0, 10);
+    $("recentEntries").innerHTML = recent.length
+      ? recent.map(entryHTML).join("")
+      : `<div class="empty">No recent expenses or payments.</div>`;
+
+    $("entriesList").innerHTML = entries.length
+      ? entries.map(entryHTML).join("")
+      : `<div class="empty">No expenses or payments yet.</div>`;
+
+    $("cardsList").innerHTML = cards.length
+      ? cards.map(card => `
+        <div class="card">
+          <div class="row">
+            <b>${esc(card.name)}</b>
+            <div class="row" style="gap:6px">
+              <button class="secondary" type="button"
+                onclick="openCard('${card.id}')">
+                Edit
+              </button>
+              <button class="secondary" type="button"
+                onclick="clearCardEntries('${card.id}')">
+                Clear Entries
+              </button>
+              <button class="secondary" type="button"
+                onclick="openRecurringModal('${card.id}')">
+                Recurring
+              </button>
+            </div>
+          </div>
+          <div class="sub">
+            ${card.last_four ? `•••• ${card.last_four}` : "No last four saved"}
+          </div>
+          <strong>${cash(cardBalance(card.id))}</strong>
+          ${cardInfoHTML(card)}
+          <div style="margin-top:10px">
+            <b class="sub">Recurring Charges</b>
+            ${recurringListHTML(card.id)}
+          </div>
+        </div>
+      `).join("")
+      : `<div class="card empty">No credit cards saved.</div>`;
+  }
+
+  async function loadTrackers() {
+    $("signedInName").textContent =
+      currentUser.user_metadata?.display_name ||
+      currentUser.email;
+
+    showScreen("trackerScreen");
+  }
+
+  async function joinTracker() {
+    const code = $("inviteCode").value.trim();
+
+    if (!code) {
+      setMessage("trackerMessage", "Enter an invite code.", "error");
+      return;
+    }
+
+    const { data, error } = await supabaseClient.rpc(
+      "join_tracker_by_invite",
+      { supplied_invite_code: code }
+    );
+
+    if (error) {
+      setMessage("trackerMessage", error.message || "Failed to join tracker.", "error");
+      return;
+    }
+
+    if (!data) {
+      setMessage("trackerMessage", "No tracker ID returned for that invite code.", "error");
+      return;
+    }
+
+    $("inviteCode").value = "";
+
+    await openTracker(data);
+  }
+
+  async function useDefaultTracker() {
+    if (!currentUser) {
+      setMessage("trackerMessage", "Sign in first.", "error");
+      return;
+    }
+
+    const home = await ensureUserHasHomeTracker();
+    if (!home) {
+      setMessage("trackerMessage", "Could not create or find your personal tracker.", "error");
+      return;
+    }
+
+    await openTracker(home.id);
+  }
+
+  async function openTracker(trackerId) {
+    const { data, error } = await supabaseClient
+      .from("trackers")
+      .select("*")
+      .eq("id", trackerId);
+
+    if (error) {
+      setMessage("trackerMessage", error.message || "Error loading tracker.", "error");
+      return;
+    }
+
+    if (!data || !data.length) {
+      setMessage("trackerMessage", "No tracker found with that ID.", "error");
+      return;
+    }
+
+    currentTracker = data[0];
+
+    $("trackerTitle").textContent = currentTracker.name;
+    $("trackerSubtitle").textContent =
+      `Invite Code: ${currentTracker.invite_code}`;
+
+    if ($("currentInviteCode")) {
+      $("currentInviteCode").value = currentTracker.invite_code || "";
+    }
+
+    showScreen("appScreen");
+    showPage("dash");
+
+    await refreshData();
+  }
+
+  function copyInviteCode() {
+    const input = $("currentInviteCode");
+    if (!input || !input.value) {
+      setMessage("inviteStatus", "No invite code available.", "error");
+      return;
+    }
+
+    input.select();
+    input.setSelectionRange(0, 99999);
+
+    try {
+      document.execCommand("copy");
+      setMessage("inviteStatus", "Invite code copied to clipboard. Paste it into an email or text.", "good");
+    } catch (e) {
+      setMessage("inviteStatus", "Could not copy automatically. Please copy the code manually.", "error");
+    }
+  }
+
+  async function prepareInvite() {
+    if (!currentTracker) {
+      setMessage("inviteStatus", "Open a tracker first.", "error");
+      return;
+    }
+
+    const contact = $("inviteContact").value.trim();
+    const message = $("inviteMessage").value.trim();
+    const inviteCode = currentTracker.invite_code;
+
+    if (!contact) {
+      setMessage("inviteStatus", "Enter an email or phone number.", "error");
+      return;
+    }
+
+    if (!inviteCode) {
+      setMessage("inviteStatus", "This tracker does not have an invite code.", "error");
+      return;
+    }
+
+    const contactType = contact.includes("@") ? "email" : "phone";
+
+    try {
+      await supabaseClient
+        .from("tracker_invites")
+        .insert({
+          tracker_id: currentTracker.id,
+          contact,
+          contact_type: contactType,
+          invite_code: inviteCode,
+          created_by: currentUser ? currentUser.id : null
+        });
+    } catch (e) {
+      // non-fatal
+    }
+
+    const appUrl = window.location.origin + window.location.pathname;
+
+    const baseMsg =
+      message ||
+      (
+        "I\u2019m sharing my Deadbeat Tracker with you.\n\n" +
+        "App link: " + appUrl + "\n" +
+        "Invite code: " + inviteCode + "\n\n" +
+        "Sign in or create an account, then use this invite code under 'Join a Shared Tracker' to join this specific tracker."
+      );
+
+    let instructions = "";
+
+    if (contactType === "email") {
+      instructions =
+        "Copy this text and paste it into an email to " + contact + ":\n\n" + baseMsg;
+    } else {
+      instructions =
+        "Copy this text and paste it into a text message to " + contact + ":\n\n" + baseMsg;
+    }
+
+    setMessage("inviteStatus", instructions, "good");
+  }
+
+  async function refreshData() {
+    if (!currentTracker) return;
+
+    const [cardsResult, entriesResult, trackerResult, recurringResult] = await Promise.all([
+      supabaseClient
+        .from("cards")
+        .select("*")
+        .eq("tracker_id", currentTracker.id)
+        .order("created_at", { ascending: true }),
+
+      supabaseClient
+        .from("entries")
+        .select("*")
+        .eq("tracker_id", currentTracker.id)
+        .order("entry_date", { ascending: false }),
+
+      supabaseClient
+        .from("trackers")
+        .select("*")
+        .eq("id", currentTracker.id)
+        .single(),
+
+      supabaseClient
+        .from("card_recurring_charges")
+        .select("*")
+        .eq("tracker_id", currentTracker.id)
+        .order("charge_day", { ascending: true })
+    ]);
+
+    console.log("refreshData cardsResult", cardsResult);
+    console.log("refreshData entriesResult", entriesResult);
+
+    if (cardsResult.error) {
+      setMessage("settingsMessage", cardsResult.error.message, "error");
+      return;
+    }
+
+    if (entriesResult.error) {
+      setMessage("settingsMessage", entriesResult.error.message, "error");
+      return;
+    }
+
+    if (trackerResult.error) {
+      setMessage("settingsMessage", trackerResult.error.message, "error");
+      return;
+    }
+
+    if (recurringResult.error) {
+      console.error("recurring charges load error", recurringResult.error);
+    }
+
+    cards = cardsResult.data || [];
+    entries = entriesResult.data || [];
+    currentTracker = trackerResult.data;
+    recurringCharges = recurringResult.data || [];
+
+    console.log("cards array after refreshData", cards);
+    console.log("entries array after refreshData", entries);
+
+    $("trackerTitle").textContent = currentTracker.name;
+    $("trackerSubtitle").textContent =
+      `Invite Code: ${currentTracker.invite_code}`;
+
+    render();
+  }
+
+  function fillCardSelect(selectedId = "") {
+    $("entryCard").innerHTML = cards.map(card => `
+      <option value="${card.id}">
+        ${esc(cardName(card.id))}
+      </option>
+    `).join("");
+
+    if (selectedId) $("entryCard").value = selectedId;
+  }
+
+  function openEntry(id = "") {
+    if (!cards.length) {
+      setMessage(
+        "trackerMessage",
+        "Add a credit card before adding an expense or payment.",
+        "error"
+      );
+      openCard();
+      return;
+    }
+
+    $("entryForm").reset();
+    $("entryId").value = "";
+    $("entryDate").value = today();
+    $("entryTitle").textContent = "Add Entry";
+    if ($("entryCashMoved")) $("entryCashMoved").checked = false;
+    $("deleteEntryButton").classList.add("hidden");
+    fillCardSelect();
+
+    if (id) {
+      const entry = entries.find(item => item.id === id);
+      if (!entry) return;
+
+      $("entryId").value = entry.id;
+      $("entryTitle").textContent = "Edit Entry";
+      $("entryType").value = entry.entry_type;
+      $("entryMerchant").value = entry.merchant;
+      $("entryAmount").value = entry.amount;
+      $("entryDate").value = entry.entry_date;
+      $("entryCategory").value = entry.category || "Other";
+      $("entryNotes").value = entry.notes || "";
+      if ($("entryCashMoved")) $("entryCashMoved").checked = !!entry.cash_moved;
+      fillCardSelect(entry.card_id);
+      $("deleteEntryButton").classList.remove("hidden");
+    }
+
+    openModal("entryModal");
+  }
+
+  async function saveEntry(event) {
+    event.preventDefault();
+
+    const id = $("entryId").value;
+
+    const record = {
+      tracker_id: currentTracker.id,
+      card_id: $("entryCard").value,
+      entry_type: $("entryType").value,
+      merchant: $("entryMerchant").value.trim(),
+      amount: Number($("entryAmount").value),
+      entry_date: $("entryDate").value,
+      category: $("entryCategory").value,
+      notes: $("entryNotes").value.trim(),
+      cash_moved: $("entryCashMoved") ? $("entryCashMoved").checked : false
+    };
+
+    let result;
+
+    if (id) {
+      result = await supabaseClient
+        .from("entries")
+        .update(record)
+        .eq("id", id)
+        .select()
+        .single();
+    } else {
+      record.created_by = currentUser.id;
+
+      result = await supabaseClient
+        .from("entries")
+        .insert(record)
+        .select()
+        .single();
+    }
+
+    console.log("saveEntry result", result);
+
+    if (result.error) {
+      setMessage("settingsMessage", result.error.message, "error");
+      return;
+    }
+
+    closeModal("entryModal");
+    await refreshData();
+  }
+
+  async function deleteEntry() {
+    const id = $("entryId").value;
+
+    if (!id || !confirm("Delete this entry?")) return;
+
+    const { error } = await supabaseClient
+      .from("entries")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      setMessage("settingsMessage", error.message, "error");
+      return;
+    }
+
+    closeModal("entryModal");
+    await refreshData();
+  }
+
+  async function toggleCashMoved(entryId) {
+    const entry = entries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    const newValue = !entry.cash_moved;
+
+    const { data, error } = await supabaseClient
+      .from("entries")
+      .update({ cash_moved: newValue })
+      .eq("id", entryId)
+      .select()
+      .single();
+
+    if (error) {
+      setMessage("settingsMessage", error.message, "error");
+      return;
+    }
+
+    const idx = entries.findIndex(e => e.id === entryId);
+    if (idx !== -1) {
+      entries[idx] = data;
+    }
+
+    render();
+  }
+
+  async function clearCardEntries(cardId) {
+    const card = cardById(cardId);
+    if (!card) return;
+
+    if (!confirm("Clear all entries for this card? This will delete all expenses and payments tied to this card, but keep the card itself.")) {
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from("entries")
+      .delete()
+      .eq("tracker_id", currentTracker.id)
+      .eq("card_id", cardId);
+
+    if (error) {
+      setMessage("settingsMessage", error.message, "error");
+      return;
+    }
+
+    await refreshData();
+  }
+
+  function openCard(id = "") {
+    $("cardForm").reset();
+    $("cardId").value = "";
+    $("cardTitle").textContent = "Add Card";
+    $("deleteCardButton").classList.add("hidden");
+
+    if (id) {
+      const card = cardById(id);
+      if (!card) return;
+
+      $("cardId").value = card.id;
+      $("cardName").value = card.name;
+      $("cardLastFour").value = card.last_four || "";
+      $("cardCycleDay").value = card.cycle_end_day || "";
+      $("cardDueDay").value = card.due_day || "";
+      $("cardApr").value = card.apr || "";
+      $("cardBalance").value = card.starting_balance || "";
+
+      $("cardTitle").textContent = "Edit Card";
+      $("deleteCardButton").classList.remove("hidden");
+    }
+
+    openModal("cardModal");
+  }
+
+  async function saveCard(event) {
+    event.preventDefault();
+
+    const id = $("cardId").value;
+
+    const record = {
+      tracker_id: currentTracker.id,
+      name: $("cardName").value.trim(),
+      last_four: $("cardLastFour").value.replace(/\D/g, "").slice(0, 4),
+      cycle_end_day: Number($("cardCycleDay").value || 0) || null,
+      due_day: Number($("cardDueDay").value || 0) || null,
+      apr: Number($("cardApr").value || 0),
+      starting_balance: Number($("cardBalance").value || 0)
+    };
+
+    let result;
+
+    if (id) {
+      result = await supabaseClient
+        .from("cards")
+        .update(record)
+        .eq("id", id)
+        .select()
+        .single();
+    } else {
+      result = await supabaseClient
+        .from("cards")
+        .insert(record)
+        .select()
+        .single();
+    }
+
+    console.log("saveCard result", result);
+
+    if (result.error) {
+      setMessage("settingsMessage", result.error.message, "error");
+      return;
+    }
+
+    closeModal("cardModal");
+    await refreshData();
+  }
+
+  async function deleteCard() {
+    const id = $("cardId").value;
+
+    if (!id || !confirm("Delete this card and all entries associated with it?")) {
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from("cards")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      setMessage("settingsMessage", error.message, "error");
+      return;
+    }
+
+    closeModal("cardModal");
+    await refreshData();
+  }
+
+  function openSettings() {
+    $("inviteCodeDisplay").textContent = currentTracker.invite_code || "";
+
+    const budgetType = currentTracker.budget_type || "monthly";
+    const monthlyBudget = currentTracker.monthly_budget || 0;
+    const payPeriodBudget = currentTracker.pay_period_budget || 0;
+    const firstPayDate = currentTracker.pay_period_first_date || "";
+
+    $("budgetType").value = budgetType;
+    $("budgetInput").value = monthlyBudget;
+    $("payPeriodBudgetInput").value = payPeriodBudget;
+    $("payPeriodFirstDateInput").value = firstPayDate;
+
+    setMessage("settingsMessage", "");
+
+    loadLinkedAccountsForCurrentTracker();
+
+    openModal("settingsModal");
+  }
+
+  async function loadLinkedAccountsForCurrentTracker() {
+    if (!currentTracker) {
+      renderLinkedAccounts([]);
+      return;
+    }
+
+    try {
+      const {
+        data: { session }
+      } = await supabaseClient.auth.getSession();
+
+      if (!session?.access_token) {
+        renderLinkedAccounts([]);
+        return;
+      }
+
+      const jwt = session.access_token;
+
+      const url =
+        "https://deadbeat-plaid-server.onrender.com/linked-accounts" +
+        "?tracker_id=" + encodeURIComponent(currentTracker.id);
+
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + jwt
+        }
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        console.error("loadLinkedAccounts error", data);
+        renderLinkedAccounts([]);
+        setMessage(
+          "settingsMessage",
+          data.error || "Could not load linked accounts.",
+          "error"
+        );
+        return;
+      }
+
+      renderLinkedAccounts(data.accounts || []);
+    } catch (e) {
+      console.error("loadLinkedAccountsForCurrentTracker error", e);
+      renderLinkedAccounts([]);
+      setMessage("settingsMessage", "Error loading linked accounts.", "error");
+    }
+  }
+
+  async function saveBudget() {
+    const budgetType = $("budgetType").value || "monthly";
+    const monthlyBudget = Number($("budgetInput").value || 0);
+    const payPeriodBudget = Number($("payPeriodBudgetInput").value || 0);
+    const firstPayDate = $("payPeriodFirstDateInput").value || null;
+
+    const update = {
+      budget_type: budgetType,
+      monthly_budget: monthlyBudget,
+      pay_period_budget: payPeriodBudget,
+      pay_period_first_date: firstPayDate
+    };
+
+    const { data, error } = await supabaseClient
+      .from("trackers")
+      .update(update)
+      .eq("id", currentTracker.id)
+      .select()
+      .single();
+
+    if (error) {
+      setMessage(
+        "settingsMessage",
+        "Only the tracker owner can update the budget. " + error.message,
+        "error"
+      );
+      return;
+    }
+
+    currentTracker = data;
+    render();
+    setMessage("settingsMessage", "Budget settings saved.", "good");
+  }
+
+  async function linkBankAccount() {
+    if (!currentTracker) {
+      setMessage("settingsMessage", "Open a tracker before linking a bank.", "error");
+      return;
+    }
+
+    try {
+      setMessage("settingsMessage", "Requesting Plaid link token...", "");
+
+      const {
+        data: { session }
+      } = await supabaseClient.auth.getSession();
+
+      if (!session?.access_token) {
+        setMessage("settingsMessage", "Not signed in.", "error");
+        return;
+      }
+
+      const jwt = session.access_token;
+
+      const resp = await fetch(
+        "https://deadbeat-plaid-server.onrender.com/plaid-create-link-token",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + jwt
+          },
+          body: JSON.stringify({ tracker_id: currentTracker.id })
+        }
+      );
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        setMessage(
+          "settingsMessage",
+          data.error || "Failed to get Plaid link token.",
+          "error"
+        );
+        return;
+      }
+
+      const linkToken = data.link_token;
+
+      const handler = Plaid.create({
+        token: linkToken,
+        onSuccess: async function(public_token, metadata) {
+          try {
+            setMessage(
+              "settingsMessage",
+              "Exchanging public token and saving linked accounts...",
+              ""
+            );
+
+            const exchangeResp = await fetch(
+              "https://deadbeat-plaid-server.onrender.com/plaid-exchange-public-token",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + jwt
+                },
+                body: JSON.stringify({
+                  public_token,
+                  tracker_id: currentTracker.id
+                })
+              }
+            );
+
+            const exchangeData = await exchangeResp.json();
+
+            if (!exchangeResp.ok) {
+              setMessage(
+                "settingsMessage",
+                exchangeData.error || "Failed to save linked accounts.",
+                "error"
+              );
+              return;
+            }
+
+            setMessage(
+              "settingsMessage",
+              "Bank account linked (Plaid sandbox) and saved to Supabase.",
+              "good"
+            );
+            await loadLinkedAccountsForCurrentTracker();
+          } catch (e) {
+            console.error("exchange public_token error", e);
+            setMessage(
+              "settingsMessage",
+              "Error exchanging public token.",
+              "error"
+            );
+          }
+        },
+        onExit: function(err, metadata) {
+          if (err) {
+            console.error("Plaid Link exit with error", err);
+            setMessage(
+              "settingsMessage",
+              "Plaid Link closed with an error: " +
+                (err.display_message || err.error_message || "See console"),
+              "error"
+            );
+          } else {
+            setMessage(
+              "settingsMessage",
+              "Plaid Link closed before linking an account.",
+              "error"
+            );
+          }
+        },
+        onEvent: function(eventName, metadata) {
+          console.log("Plaid Link event", eventName, metadata);
+        }
+      });
+
+      handler.open();
+    } catch (e) {
+      console.error("linkBankAccount error", e);
+      setMessage("settingsMessage", "Error requesting Plaid link token.", "error");
+    }
+  }
+
+  async function unlinkSelectedBankAccount() {
+    if (!currentTracker) {
+      setMessage("settingsMessage", "Open a tracker before unlinking an account.", "error");
+      return;
+    }
+
+    const select = $("unlinkAccountSelect");
+    if (!select) {
+      setMessage("settingsMessage", "Unlink selector not found.", "error");
+      return;
+    }
+
+    const rowId = select.value;
+    if (!rowId) {
+      setMessage("settingsMessage", "Select an account to unlink.", "error");
+      return;
+    }
+
+    const acct = linkedAccountsList.find(a => String(a.id) === String(rowId));
+    if (!acct) {
+      setMessage("settingsMessage", "Selected account not found.", "error");
+      return;
+    }
+
+    if (!confirm("Unlink this bank account from this tracker? This will remove it from the app (Plaid sandbox only).")) {
+      return;
+    }
+
+    try {
+      const {
+        data: { session }
+      } = await supabaseClient.auth.getSession();
+
+      if (!session?.access_token) {
+        setMessage("settingsMessage", "Not signed in.", "error");
+        return;
+      }
+
+      const jwt = session.access_token;
+
+      const resp = await fetch(
+        "https://deadbeat-plaid-server.onrender.com/plaid-unlink-account",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + jwt
+          },
+          body: JSON.stringify({
+            tracker_id: currentTracker.id,
+            linked_account_row_id: rowId
+          })
+        }
+      );
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        console.error("unlinkSelectedBankAccount error", data);
+        setMessage(
+          "settingsMessage",
+          data.error || "Failed to unlink bank account.",
+          "error"
+        );
+        return;
+      }
+
+      setMessage(
+        "settingsMessage",
+        "Bank account unlinked from this tracker.",
+        "good"
+      );
+
+      await loadLinkedAccountsForCurrentTracker();
+    } catch (e) {
+      console.error("unlinkSelectedBankAccount error", e);
+      setMessage("settingsMessage", "Error unlinking bank account.", "error");
+    }
+  }
+
+  async function deleteAccount() {
+    try {
+      const {
+        data: { session },
+        error: sessionError
+      } = await supabaseClient.auth.getSession();
+
+      if (sessionError) {
+        console.error("getSession error", sessionError);
+      }
+
+      if (!session?.access_token || !currentUser) {
+        setMessage("settingsMessage", "Not signed in.", "error");
+        return;
+      }
+
+      if (!confirm("Delete your account and sign out? This cannot be undone.")) {
+        return;
+      }
+
+      const resp = await fetch(
+        "https://your-backend-host/delete-user",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + session.access_token
+          },
+          body: JSON.stringify({
+            user_id: currentUser.id
+          })
+        }
+      );
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        console.error("deleteAccount error", data);
+        setMessage(
+          "settingsMessage",
+          data.error || "Failed to delete account.",
+          "error"
+        );
+        return;
+      }
+
+      await supabaseClient.auth.signOut();
+
+      currentUser = null;
+      currentTracker = null;
+      cards = [];
+      entries = [];
+
+      showScreen("authScreen");
+      showAuthPanel("signInPanel");
+      setMessage("authMessage", "Your account has been deleted.", "good");
+    } catch (e) {
+      console.error("deleteAccount error", e);
+      setMessage("settingsMessage", "Error deleting account.", "error");
+    }
+  }
+
+  // --- Recurring charges modal ---
+
+  function openRecurringModal(cardId, recurringId = "") {
+    $("recurringForm").reset();
+    $("recurringId").value = "";
+    $("recurringCardId").value = cardId;
+    $("recurringActive").checked = true;
+    $("recurringTitle").textContent = "Add Recurring Charge";
+    $("deleteRecurringButton").classList.add("hidden");
+
+    if (recurringId) {
+      const rc = recurringCharges.find(r => r.id === recurringId);
+      if (rc) {
+        $("recurringId").value = rc.id;
+        $("recurringCardId").value = rc.card_id;
+        $("recurringName").value = rc.name || "";
+        $("recurringAmount").value = rc.amount || 0;
+        $("recurringDay").value = rc.charge_day || "";
+        $("recurringNotes").value = rc.notes || "";
+        $("recurringActive").checked = rc.active !== false;
+
+        $("recurringTitle").textContent = "Edit Recurring Charge";
+        $("deleteRecurringButton").classList.remove("hidden");
+      }
+    }
+
+    openModal("recurringModal");
+  }
+
+  async function saveRecurringCharge(event) {
+    event.preventDefault();
+
+    const id = $("recurringId").value;
+    const cardId = $("recurringCardId").value;
+
+    if (!currentTracker || !cardId) {
+      setMessage("settingsMessage", "Open a tracker and select a card first.", "error");
+      return;
+    }
+
+    const record = {
+      tracker_id: currentTracker.id,
+      card_id: cardId,
+      name: $("recurringName").value.trim(),
+      amount: Number($("recurringAmount").value || 0),
+      charge_day: Number($("recurringDay").value || 0) || null,
+      notes: $("recurringNotes").value.trim(),
+      active: $("recurringActive").checked
+    };
+
+    let result;
+    if (id) {
+      result = await supabaseClient
+        .from("card_recurring_charges")
+        .update(record)
+        .eq("id", id)
+        .select()
+        .single();
+    } else {
+      result = await supabaseClient
+        .from("card_recurring_charges")
+        .insert(record)
+        .select()
+        .single();
+    }
+
+    if (result.error) {
+      setMessage("settingsMessage", result.error.message, "error");
+      return;
+    }
+
+    closeModal("recurringModal");
+    await refreshData();
+  }
+
+  async function deleteRecurringCharge() {
+    const id = $("recurringId").value;
+    if (!id || !confirm("Delete this recurring charge?")) return;
+
+    const { error } = await supabaseClient
+      .from("card_recurring_charges")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      setMessage("settingsMessage", error.message, "error");
+      return;
+    }
+
+    closeModal("recurringModal");
+    await refreshData();
+  }
+
+  function openCardDetail(cardId) {
+    const card = cardById(cardId);
+    if (!card) return;
+
+    showPage("entries");
+
+    const cardEntries = entries.filter(e => e.card_id === cardId);
+
+    $("entriesList").innerHTML = `
+      <div class="card" style="margin-bottom:12px">
+        <div class="row">
+          <h2>${esc(card.name)} — Transactions</h2>
+          <button class="secondary" type="button" onclick="showPage('dash')">
+            Back to Dashboard
+          </button>
+        </div>
+        <div class="sub">
+          ${card.last_four ? `•••• ${card.last_four}` : "No last four saved"}
+        </div>
+        <strong>${cash(cardBalance(card.id))}</strong>
+      </div>
+      ${
+        cardEntries.length
+          ? cardEntries.map(entryHTML).join("")
+          : `<div class="card empty">No transactions for this card yet.</div>`
+      }
+      <div class="card" style="margin-top:12px">
+        <div class="row">
+          <h2>Recurring Charges</h2>
+          <button class="secondary" type="button"
+            onclick="openRecurringModal('${card.id}')">
+            Add / Edit Recurring
+          </button>
+        </div>
+        ${recurringListHTML(cardId)}
+      </div>
+    `;
+  }
+
+  // --- Authentication: remember login & flows ---
+
+  function loadRememberedLogin() {
+    try {
+      const savedEmail = localStorage.getItem("deadbeat_email") || "";
+      const savedPassword = localStorage.getItem("deadbeat_password") || "";
+      if (savedEmail) $("signInEmail").value = savedEmail;
+      if (savedPassword) $("signInPassword").value = savedPassword;
+      if (savedEmail || savedPassword) $("rememberLogin").checked = true;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function saveRememberedLoginIfNeeded() {
+    try {
+      const remember = $("rememberLogin").checked;
+      if (!remember) {
+        localStorage.removeItem("deadbeat_email");
+        localStorage.removeItem("deadbeat_password");
+        return;
+      }
+      const email = $("signInEmail").value.trim();
+      const password = $("signInPassword").value;
+      localStorage.setItem("deadbeat_email", email);
+      localStorage.setItem("deadbeat_password", password);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async function signIn(event) {
+    event.preventDefault();
+
+    const email = $("signInEmail").value.trim();
+    const password = $("signInPassword").value;
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      setMessage("authMessage", error.message, "error");
+      return;
+    }
+
+    currentUser = data.user;
+    saveRememberedLoginIfNeeded();
+    await loadTrackers();
+  }
+
+  async function createAccount(event) {
+    event.preventDefault();
+
+    const displayName = $("displayName").value.trim();
+    const email = $("createEmail").value.trim();
+    const password = $("createPassword").value;
+    const confirmPassword = $("confirmPassword").value;
+
+    if (password !== confirmPassword) {
+      setMessage("authMessage", "Passwords do not match.", "error");
+      return;
+    }
+
+    if (password.length < 6) {
+      setMessage("authMessage", "Password must have at least 6 characters.", "error");
+      return;
+    }
+
+    const appUrl = window.location.origin + window.location.pathname;
+
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: appUrl,
+        data: { display_name: displayName }
+      }
+    });
+
+    if (error) {
+      setMessage("authMessage", error.message, "error");
+      return;
+    }
+
+    if (data.session?.user) {
+      currentUser = data.session.user;
+      const home = await ensureUserHasHomeTracker();
+      if (home) {
+        await openTracker(home.id);
+        return;
+      }
+      await loadTrackers();
+      return;
+    }
+
+    showAuthPanel("signInPanel");
+    setMessage(
+      "authMessage",
+      "Account created. Check your email, confirm your account, then sign in.",
+      "good"
+    );
+  }
+
+  async function resetPassword(event) {
+    event.preventDefault();
+
+    const email = $("resetEmail").value.trim();
+    const appUrl = window.location.origin + window.location.pathname;
+    const redirectUrl = appUrl + "?mode=reset";
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl
+    });
+
+    if (error) {
+      setMessage("authMessage", error.message, "error");
+      return;
+    }
+
+    setMessage(
+      "authMessage",
+      "Password reset email sent. Click the link in your email, then set a new password.",
+      "good"
+    );
+  }
+
+  async function completePasswordReset(event) {
+    event.preventDefault();
+
+    const newPassword = $("newPassword").value;
+    const newPasswordConfirm = $("newPasswordConfirm").value;
+
+    if (newPassword !== newPasswordConfirm) {
+      setMessage("authMessage", "Passwords do not match.", "error");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setMessage("authMessage", "Password must have at least 6 characters.", "error");
+      return;
+    }
+
+    const { data: updateData, error: updateError } = await supabaseClient.auth.updateUser({
+      password: newPassword
+    });
+
+    if (updateError) {
+      setMessage("authMessage", updateError.message, "error");
+      return;
+    }
+
+    setMessage("authMessage", "Password updated. Please sign in with your new password.", "good");
+    showAuthPanel("signInPanel");
+  }
+
+  async function forgotUsername(event) {
+    event.preventDefault();
+
+    const email = $("forgotUsernameEmail").value.trim();
+    if (!email) {
+      setMessage("authMessage", "Enter your recovery email.", "error");
+      return;
+    }
+
+    try {
+      await supabaseClient
+        .from("username_recovery_requests")
+        .insert({ email });
+
+      setMessage(
+        "authMessage",
+        "If this email matches an account, your username (email) will be sent to you. For this app, your username is the email you used when creating the account.",
+        "good"
+      );
+      showAuthPanel("signInPanel");
+    } catch (e) {
+      setMessage(
+        "authMessage",
+        "Could not record username recovery request. Please contact support.",
+        "error"
+      );
+    }
+  }
+
+  async function signOut() {
+    await supabaseClient.auth.signOut();
+
+    currentUser = null;
+    currentTracker = null;
+    cards = [];
+    entries = [];
+    recurringCharges = [];
+
+    showScreen("authScreen");
+    showAuthPanel("signInPanel");
+    setMessage("authMessage", "Signed out.", "good");
+  }
+
+  async function initialize() {
+    loadRememberedLogin();
+
+    const {
+      data: { session }
+    } = await supabaseClient.auth.getSession();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get("mode");
+
+    if (session?.user) {
+      currentUser = session.user;
+
+      if (modeParam === "reset") {
+        showScreen("authScreen");
+        showAuthPanel("resetConfirmPanel");
+        return;
+      }
+
+      const home = await ensureUserHasHomeTracker();
+      if (home) {
+        await openTracker(home.id);
+      } else {
+        await loadTrackers();
+      }
+    } else {
+      showScreen("authScreen");
+    }
+  }
+
+  $("signInForm").addEventListener("submit", signIn);
+  $("createAccountForm").addEventListener("submit", createAccount);
+  $("resetForm").addEventListener("submit", resetPassword);
+  $("resetConfirmForm").addEventListener("submit", completePasswordReset);
+  $("forgotUsernameForm").addEventListener("submit", forgotUsername);
+  $("entryForm").addEventListener("submit", saveEntry);
+  $("cardForm").addEventListener("submit", saveCard);
+  $("recurringForm").addEventListener("submit", saveRecurringCharge);
+
+  document.querySelectorAll(".modal-bg").forEach(modal => {
+    modal.addEventListener("click", event => {
+      if (event.target === modal) closeModal(modal.id);
+    });
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      closeModal("entryModal");
+      closeModal("cardModal");
+      closeModal("settingsModal");
+      closeModal("recurringModal");
+    }
+  });
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      currentUser = session.user;
+    }
+  });
+
+  buildMonthOptions();
+  initialize();
+</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     const SUPABASE_URL = "https://ljifsttsohryyuobmjnq.supabase.co";
