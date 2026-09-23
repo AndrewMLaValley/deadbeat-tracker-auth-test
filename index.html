@@ -381,7 +381,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.40 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.41 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +600,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.40 — Shared Supabase Version
+              BUILD 9.41 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1354,7 +1354,15 @@ function cardCashStillToMoveThisCycle(card){
       const proj = unpaid + newSpend + recurringPlanned - pay;
       return proj > 0 ? proj : 0;
     }
+function cardPaidOffThisCycle(card){
+      const unpaid = cardUnpaidFromLastCycle(card);           // prior cycle balance
+      const newSpend = cardNewCycleSpend(card);               // posted expenses this cycle
+      const recurringPlanned = cardRecurringThisCycle(card);  // planned recurring this cycle
+      const pay = cardPaymentsThisCycle(card);                // payments this cycle
 
+      const projected = unpaid + newSpend + recurringPlanned - pay;
+      return projected <= 0.01; // treat near-zero as paid off
+    }
     function recurringForCard(cardId){
       return recurringCharges.filter(r => r.card_id === cardId);
     }
@@ -1690,21 +1698,36 @@ function recurringListHTML(cardId){
       $("totalSpendingAccountsCash").textContent = cash(cashAvail);
 
       // DASHBOARD CARDS: compact view only (name, last 4, balance)
-      const dashCardsEl = $("dashboardCards");
+     const dashCardsEl = $("dashboardCards");
       if (cards.length){
-        dashCardsEl.innerHTML = cards.map(card => `
-          <div class="card" onclick="openCardDetail('${card.id}')" style="cursor:pointer">
-            <div class="row">
-              <b>${esc(card.name)}</b>
-              <span>💳</span>
+        dashCardsEl.innerHTML = cards.map(card => {
+          const balance = cardBalance(card.id);
+          const paidOff = cardPaidOffThisCycle(card);
+
+          // If not paid off, show a red background and white text as a warning
+          const warnStyle = paidOff
+            ? ""
+            : "background:#fee2e2;border-color:#b42318;color:#7f1d1d;";
+
+          const subColor = paidOff ? "" : "color:#7f1d1d;";
+
+          return `
+            <div class="card" onclick="openCardDetail('${card.id}')" style="cursor:pointer;${warnStyle}">
+              <div class="row">
+                <b>${esc(card.name)}</b>
+                <span>💳</span>
+              </div>
+              <div class="sub" style="${subColor}">
+                ${card.last_four ? "•••• " + card.last_four : "Manual card"}
+                ${paidOff ? "" : " · Not paid off this month"}
+              </div>
+              <strong>${cash(balance)}</strong>
+              <div class="sub" style="${subColor}">
+                Tap to view details & transactions on Entries page
+              </div>
             </div>
-            <div class="sub">
-              ${card.last_four ? "•••• " + card.last_four : "Manual card"}
-            </div>
-            <strong>${cash(cardBalance(card.id))}</strong>
-            <div class="sub">Tap to view details & transactions on Entries page</div>
-          </div>
-        `).join("");
+          `;
+        }).join("");
       } else {
         dashCardsEl.innerHTML = '<div class="card empty">No credit cards saved.</div>';
       }
