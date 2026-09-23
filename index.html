@@ -385,7 +385,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.24 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.25 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -541,7 +541,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.24 — Shared Supabase Version
+              BUILD 9.25 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -907,7 +907,7 @@
         </div>
       </div>
 
-      <!-- NEW: unlink bank account controls -->
+      <!-- Unlink bank account controls -->
       <div class="group">
         <label for="unlinkAccountSelect">Unlink a Bank Account</label>
         <select id="unlinkAccountSelect">
@@ -925,7 +925,7 @@
         Sign Out
       </button>
 
-      <!-- NEW: delete account button -->
+      <!-- delete account button -->
       <button class="danger wide" type="button" onclick="deleteAccount()">
         Delete My Account
       </button>
@@ -953,6 +953,92 @@
     let cards = [];
     let entries = [];
     let linkedAccountsList = [];
+
+    // --- Helpers: personal tracker per user ---
+
+    function makeInviteCode(length = 8) {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let out = "";
+      for (let i = 0; i < length; i++) {
+        out += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return out;
+    }
+
+    async function ensureUserHasHomeTracker() {
+      if (!currentUser) return null;
+
+      // 1. Find trackers where this user is a member
+      const { data: memberships, error: memError } = await supabaseClient
+        .from("tracker_members")
+        .select("tracker_id, role")
+        .eq("user_id", currentUser.id);
+
+      if (memError) {
+        console.error("ensureUserHasHomeTracker memberships error", memError);
+        return null;
+      }
+
+      if (memberships && memberships.length) {
+        // Use the first tracker as "home"
+        const homeTrackerId = memberships[0].tracker_id;
+        const { data: trackerRows, error: trError } = await supabaseClient
+          .from("trackers")
+          .select("*")
+          .eq("id", homeTrackerId);
+
+        if (trError || !trackerRows || !trackerRows.length) {
+          console.error("ensureUserHasHomeTracker tracker error", trError);
+          return null;
+        }
+
+        currentTracker = trackerRows[0];
+        return currentTracker;
+      }
+
+      // 2. No tracker yet: create one
+      const displayName =
+        currentUser.user_metadata?.display_name ||
+        (currentUser.email ? currentUser.email.split("@")[0] : "My");
+
+      const trackerName = displayName + "’s Deadbeat Tracker";
+      const inviteCode = makeInviteCode();
+
+      const { data: trackerInsert, error: trackerInsertError } = await supabaseClient
+        .from("trackers")
+        .insert({
+          name: trackerName,
+          invite_code: inviteCode,
+          owner_id: currentUser.id,
+          budget_type: "monthly",
+          monthly_budget: 0
+        })
+        .select()
+        .single();
+
+      if (trackerInsertError) {
+        console.error("ensureUserHasHomeTracker trackerInsertError", trackerInsertError);
+        return null;
+      }
+
+      const trackerId = trackerInsert.id;
+
+      // 3. Create membership row for this user
+      const { error: memberInsertError } = await supabaseClient
+        .from("tracker_members")
+        .insert({
+          tracker_id: trackerId,
+          user_id: currentUser.id,
+          role: "owner"
+        });
+
+      if (memberInsertError) {
+        console.error("ensureUserHasHomeTracker memberInsertError", memberInsertError);
+      }
+
+      currentTracker = trackerInsert;
+      return currentTracker;
+    }
 
     function cash(value) {
       return new Intl.NumberFormat("en-US", {
@@ -1045,7 +1131,9 @@
 
     function showAuthPanel(id) {
       ["signInPanel", "createAccountPanel", "resetPanel"].forEach(panel => {
-        $(panel).classList.toggle("active", panel === id);
+        const el = $(panel);
+        if (!el) return;
+        el.classList.toggle("active", panel === id);
       });
 
       setMessage("authMessage", "");
@@ -1388,7 +1476,7 @@
       }).join("<br>");
     }
 
-    // UPDATED: render linked accounts and populate unlink dropdown
+    // Render linked accounts and populate unlink dropdown
     function renderLinkedAccounts(accounts) {
       const container = $("linkedAccounts");
       const select = $("unlinkAccountSelect");
@@ -1426,11 +1514,12 @@
         return `<div>${esc(parts.join(" ").replace(/\s+/g, " ").trim())}</div>`;
       }).join("");
 
+      // Dropdown uses Supabase row id
       if (select) {
         const optionsHtml = [
           `<option value="">Select an account to unlink</option>`,
           ...linkedAccountsList.map(acct => {
-            const id = acct.id; // assumes 'id' is the primary key of linked account
+            const rowId = acct.id; // Supabase primary key for linked_accounts row
             const institution = acct.institution_name || "Bank";
             const name = acct.plaid_account_name || "Account";
             const last4 = acct.plaid_account_mask || "";
@@ -1440,7 +1529,7 @@
               last4 ? "•••• " + last4 : ""
             ];
             const label = esc(labelParts.join(" ").replace(/\s+/g, " ").trim());
-            return `<option value="${id}">${label}</option>`;
+            return `<option value="${rowId}">${label}</option>`;
           })
         ].join("");
 
@@ -1606,14 +1695,6 @@
       showScreen("trackerScreen");
     }
 
-    async function useDefaultTracker() {
-      if (!DEFAULT_TRACKER_ID) {
-        setMessage("trackerMessage", "Default tracker ID is not configured.", "error");
-        return;
-      }
-      await openTracker(DEFAULT_TRACKER_ID);
-    }
-
     async function joinTracker() {
       const code = $("inviteCode").value.trim();
 
@@ -1640,6 +1721,21 @@
       $("inviteCode").value = "";
 
       await openTracker(data);
+    }
+
+    async function useDefaultTracker() {
+      if (!currentUser) {
+        setMessage("trackerMessage", "Sign in first.", "error");
+        return;
+      }
+
+      const home = await ensureUserHasHomeTracker();
+      if (!home) {
+        setMessage("trackerMessage", "Could not create or find your personal tracker.", "error");
+        return;
+      }
+
+      await openTracker(home.id);
     }
 
     async function openTracker(trackerId) {
@@ -1724,7 +1820,9 @@
             invite_code: inviteCode,
             created_by: currentUser ? currentUser.id : null
           });
-      } catch (e) {}
+      } catch (e) {
+        // non-fatal
+      }
 
       const appUrl = window.location.origin + window.location.pathname;
 
@@ -2237,6 +2335,7 @@
                 "Bank account linked (Plaid sandbox) and saved to Supabase.",
                 "good"
               );
+              await loadLinkedAccountsForCurrentTracker();
             } catch (e) {
               console.error("exchange public_token error", e);
               setMessage(
@@ -2275,7 +2374,7 @@
       }
     }
 
-    // NEW: unlink selected bank account
+    // Unlink selected bank account
     async function unlinkSelectedBankAccount() {
       if (!currentTracker) {
         setMessage("settingsMessage", "Open a tracker before unlinking an account.", "error");
@@ -2288,13 +2387,13 @@
         return;
       }
 
-      const accountId = select.value;
-      if (!accountId) {
+      const rowId = select.value;
+      if (!rowId) {
         setMessage("settingsMessage", "Select an account to unlink.", "error");
         return;
       }
 
-      const acct = linkedAccountsList.find(a => String(a.id) === String(accountId));
+      const acct = linkedAccountsList.find(a => String(a.id) === String(rowId));
       if (!acct) {
         setMessage("settingsMessage", "Selected account not found.", "error");
         return;
@@ -2326,7 +2425,7 @@
             },
             body: JSON.stringify({
               tracker_id: currentTracker.id,
-              linked_account_id: acct.id
+              linked_account_row_id: rowId // <- adjust your server to expect this
             })
           }
         );
@@ -2356,7 +2455,7 @@
       }
     }
 
-    // NEW: delete account (requires backend/Edge Function)
+    // delete account (requires backend/Edge Function)
     async function deleteAccount() {
       try {
         const {
@@ -2473,7 +2572,14 @@
       }
 
       if (data.session?.user) {
+        // Some providers immediately sign in; use home tracker logic
         currentUser = data.session.user;
+        const home = await ensureUserHasHomeTracker();
+        if (home) {
+          await openTracker(home.id);
+          return;
+        }
+
         await loadTrackers();
         return;
       }
@@ -2521,9 +2627,27 @@
         data: { session }
       } = await supabaseClient.auth.getSession();
 
+      const urlParams = new URLSearchParams(window.location.search);
+      const modeParam = urlParams.get("mode");
+
       if (session?.user) {
         currentUser = session.user;
-        await loadTrackers();
+
+        // If later we wire full password-reset UI, this is where we detect it
+        if (modeParam === "reset") {
+          showScreen("authScreen");
+          // showAuthPanel("resetConfirmPanel"); // to be added in a later step
+          showAuthPanel("signInPanel");
+          return;
+        }
+
+        // Normal flow: ensure this user has a personal tracker
+        const home = await ensureUserHasHomeTracker();
+        if (home) {
+          await openTracker(home.id);
+        } else {
+          await loadTrackers(); // fallback: show tracker selection screen
+        }
       } else {
         showScreen("authScreen");
       }
