@@ -404,13 +404,21 @@
 </head>
 
 <body>
-
+  .card-header-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  justify-content:flex-end;
+}
+.card-header-actions button{
+  flex:0 0 auto;
+}
   <!-- AUTHENTICATION -->
   <section id="authScreen" class="screen active">
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.27 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.28 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -633,7 +641,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.27 — Shared Supabase Version
+              BUILD 9.28 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1834,26 +1842,26 @@
       ? entries.map(entryHTML).join("")
       : `<div class="empty">No expenses or payments yet.</div>`;
 
-    $("cardsList").innerHTML = cards.length
-      ? cards.map(card => `
-        <div class="card">
-          <div class="row">
-            <b>${esc(card.name)}</b>
-            <div class="row" style="gap:6px">
-              <button class="secondary" type="button"
-                onclick="openCard('${card.id}')">
-                Edit
-              </button>
-              <button class="secondary" type="button"
-                onclick="clearCardEntries('${card.id}')">
-                Clear Entries
-              </button>
-              <button class="secondary" type="button"
-                onclick="openRecurringModal('${card.id}')">
-                Recurring
-              </button>
-            </div>
-          </div>
+$("cardsList").innerHTML = cards.length
+  ? cards.map(card => `
+    <div class="card">
+      <div class="row">
+        <b>${esc(card.name)}</b>
+        <div class="card-header-actions">
+          <button class="secondary" type="button"
+            onclick="openCard('${card.id}')">
+            Edit
+          </button>
+          <button class="secondary" type="button"
+            onclick="clearCardEntries('${card.id}')">
+            Clear Entries
+          </button>
+          <button class="secondary" type="button"
+            onclick="openRecurringModal('${card.id}')">
+            Recurring
+          </button>
+        </div>
+      </div>
           <div class="sub">
             ${card.last_four ? `•••• ${card.last_four}` : "No last four saved"}
           </div>
@@ -2747,6 +2755,7 @@
     openModal("recurringModal");
   }
 
+  <script>
   async function saveRecurringCharge(event) {
     event.preventDefault();
 
@@ -2784,6 +2793,8 @@
         .single();
     }
 
+    console.log("saveRecurringCharge result", result);
+
     if (result.error) {
       setMessage("settingsMessage", result.error.message, "error");
       return;
@@ -2792,6 +2803,7 @@
     closeModal("recurringModal");
     await refreshData();
   }
+</script>
 
   async function deleteRecurringCharge() {
     const id = $("recurringId").value;
