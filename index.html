@@ -381,7 +381,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.37 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.38 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +600,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.37 — Shared Supabase Version
+              BUILD 9.38 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1240,10 +1240,12 @@
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
     }
-    function cardCashMovedThisCycle(card){
+   function cardCashMovedThisCycle(card){
       const id = card.id;
       const ym = selectedMonth;
-      return entries
+
+      // Cash moved for actual expense entries this cycle
+      const entriesMoved = entries
         .filter(e =>
           e.card_id === id &&
           e.entry_type === "expense" &&
@@ -1251,6 +1253,11 @@
           String(e.entry_date).slice(0,7) === ym
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
+
+      // Cash moved for recurring charges flagged as moved
+      const recurringMoved = cardRecurringCashMovedThisCycle(card);
+
+      return entriesMoved + recurringMoved;
     }
 function cardCashStillToMoveThisCycle(card){
       const newSpend = cardNewCycleSpend(card);            // actual expenses this cycle
@@ -1398,7 +1405,20 @@ function recurringForCard(cardId){
         )
         .reduce((s,r)=>s+Number(r.amount||0),0);
     }
-    function recurringListHTML(cardId){
+    // NEW: how much recurring cash has been moved for this card this cycle
+    function cardRecurringCashMovedThisCycle(card){
+      const ym = selectedMonth; // currently unused, here for future date logic
+      return recurringCharges
+        .filter(r =>
+          r.card_id === card.id &&
+          r.active !== false &&
+          r.cash_moved === true &&
+          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31))
+          // If you later add start/end dates or month scoping, filter by ym here.
+        )
+        .reduce((s,r)=>s+Number(r.amount||0),0);
+    }
+function recurringListHTML(cardId){
       const list = recurringForCard(cardId);
       if (!list.length) {
         return `<div class="sub" style="margin-top:4px">No recurring charges saved.</div>`;
@@ -1406,18 +1426,37 @@ function recurringForCard(cardId){
       return list.map(rc => {
         const dayLabel = rc.charge_day ? ("Day " + rc.charge_day) : "Day not set";
         const status = rc.active === false ? "Inactive" : "Active";
+
+        // NEW: use cash_moved on recurring (if present) to control style and button text
+        const isCashMoved = !!rc.cash_moved;
+        const containerBg = isCashMoved ? "background:#e5f6ee;border-color:#13795b;" : "";
+        const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
+        const moveButtonText = isCashMoved ? "Mark as not moved" : "Mark as moved";
+        const moveButtonClass = isCashMoved ? "success" : "secondary";
+
         return `
-          <button type="button" class="list"
-            style="display:block;padding:8px 10px;border-radius:9px;margin-top:4px"
-            onclick="openRecurringModal('${cardId}','${rc.id}')">
-            <div class="row">
-              <b>${esc(rc.name)}</b>
-              <span>${cash(rc.amount)}</span>
+          <div class="card" style="margin-top:4px;${containerBg}">
+            <button type="button" class="list"
+              style="display:block;padding:8px 10px;border-radius:9px 9px 0 0"
+              onclick="openRecurringModal('${cardId}','${rc.id}')">
+              <div class="row">
+                <b>${esc(rc.name)}</b>
+                <span>${cash(rc.amount)}</span>
+              </div>
+              <div class="sub" style="color:${statusColor}">
+                ${dayLabel} · ${status}${isCashMoved ? " · Cash moved" : ""}
+              </div>
+            </button>
+            <div class="row" style="margin-top:6px;justify-content:space-between">
+              <span class="sub" style="color:${statusColor}">
+                ${isCashMoved ? "Cash moved for this recurring charge" : "Cash not yet moved for this recurring charge"}
+              </span>
+              <button type="button" class="${moveButtonClass}"
+                onclick="toggleRecurringCashMoved('${rc.id}')">
+                ${moveButtonText}
+              </button>
             </div>
-            <div class="sub">
-              ${dayLabel} · ${status}
-            </div>
-          </button>
+          </div>
         `;
       }).join("");
     }
@@ -2097,7 +2136,33 @@ function recurringForCard(cardId){
       if (idx !== -1) entries[idx] = data;
       render();
     }
+async function toggleRecurringCashMoved(recurringId){
+      const rc = recurringCharges.find(r => r.id === recurringId);
+      if (!rc) return;
 
+      const newVal = !rc.cash_moved;
+
+      const { data, error } = await supabaseClient
+        .from("card_recurring_charges")
+        .update({ cash_moved: newVal })
+        .eq("id", recurringId)
+        .select()
+        .single();
+
+      if (error){
+        setMessage("settingsMessage", error.message, "error");
+        showDebug("Toggle recurring cash_moved error: " + error.message);
+        return;
+      }
+
+      // Update local array
+      const idx = recurringCharges.findIndex(r => r.id === recurringId);
+      if (idx !== -1) recurringCharges[idx] = data;
+
+      // Re-render just the entries page (which includes recurring panel)
+      renderEntriesPage();
+      showDebug("Recurring cash_moved toggled for id=" + recurringId + " to " + newVal);
+    }
     async function clearCardEntries(cardId){
       const card = cardById(cardId);
       if (!card) return;
