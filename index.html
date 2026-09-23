@@ -381,7 +381,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.34 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.35 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +600,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.34 — Shared Supabase Version
+              BUILD 9.35 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1896,62 +1896,75 @@
       setMessage("inviteStatus",instructions,"good");
     }
 
-    async function refreshData(){
-      if (!currentTracker){
-        showDebug("refreshData called with no currentTracker");
-        return;
-      }
-      const [cardsRes, entriesRes, trackerRes, recurringRes] = await Promise.all([
-        supabaseClient
-          .from("cards")
-          .select("*")
-          .eq("tracker_id", currentTracker.id)
-          .order("created_at",{ascending:true}),
-        supabaseClient
-          .from("entries")
-          .select("*")
-          .eq("tracker_id", currentTracker.id)
-          .order("entry_date",{ascending:false}),
-        supabaseClient
-          .from("trackers")
-          .select("*")
-          .eq("id", currentTracker.id)
-          .single(),
-        supabaseClient
-          .from("card_recurring_charges")
-          .select("*")
-          .eq("tracker_id", currentTracker.id)
-          .order("charge_day",{ascending:true})
-      ]);
-
-      if (cardsRes.error || entriesRes.error || trackerRes.error || recurringRes.error){
-        showDebug(
-          "Load error. Cards: " + (cardsRes.error?.message || "ok") +
-          "; Entries: " + (entriesRes.error?.message || "ok") +
-          "; Recurring: " + (recurringRes.error?.message || "ok")
-        );
-      }
-
-      if (cardsRes.error){ setMessage("settingsMessage",cardsRes.error.message,"error"); return; }
-      if (entriesRes.error){ setMessage("settingsMessage",entriesRes.error.message,"error"); return; }
-      if (trackerRes.error){ setMessage("settingsMessage",trackerRes.error.message,"error"); return; }
-      if (recurringRes.error){
-        setMessage("settingsMessage","Could not load recurring charges: " + recurringRes.error.message,"error");
-      }
-
-      cards = cardsRes.data || [];
-      entries = entriesRes.data || [];
-      currentTracker = trackerRes.data;
-      recurringCharges = recurringRes.data || [];
-
-      $("trackerTitle").textContent = currentTracker.name;
-      $("trackerSubtitle").textContent = "Invite Code: " + (currentTracker.invite_code || "");
-      $("currentInviteCode").value = currentTracker.invite_code || "";
-
-      try { render(); } catch(e) {
-        showDebug("Render error (entries/cards).");
-      }
+    <script>
+  async function refreshData(){
+    if (!currentTracker){
+      showDebug("refreshData called with no currentTracker");
+      return;
     }
+
+    const [cardsRes, entriesRes, trackerRes, recurringRes] = await Promise.all([
+      supabaseClient
+        .from("cards")
+        .select("*")
+        .eq("tracker_id", currentTracker.id)
+        .order("created_at",{ascending:true}),
+      supabaseClient
+        .from("entries")
+        .select("*")
+        .eq("tracker_id", currentTracker.id)
+        .order("entry_date",{ascending:false}),
+      supabaseClient
+        .from("trackers")
+        .select("*")
+        .eq("id", currentTracker.id)
+        .single(),
+      supabaseClient
+        .from("card_recurring_charges")
+        .select("*")
+        .eq("tracker_id", currentTracker.id)
+        .order("charge_day",{ascending:true})
+    ]);
+
+    if (cardsRes.error || entriesRes.error || trackerRes.error || recurringRes.error){
+      showDebug(
+        "Load error. Cards: " + (cardsRes.error?.message || "ok") +
+        "; Entries: " + (entriesRes.error?.message || "ok") +
+        "; Recurring: " + (recurringRes.error?.message || "ok")
+      );
+    }
+
+    if (cardsRes.error){ setMessage("settingsMessage",cardsRes.error.message,"error"); return; }
+    if (entriesRes.error){ setMessage("settingsMessage",entriesRes.error.message,"error"); return; }
+    if (trackerRes.error){ setMessage("settingsMessage",trackerRes.error.message,"error"); return; }
+
+    // If recurring fails, still allow cards & entries to work, but show the reason
+    if (recurringRes.error){
+      setMessage(
+        "settingsMessage",
+        "Could not load recurring charges: " + recurringRes.error.message,
+        "error"
+      );
+      recurringCharges = [];
+    } else {
+      recurringCharges = recurringRes.data || [];
+    }
+
+    cards = cardsRes.data || [];
+    entries = entriesRes.data || [];
+    currentTracker = trackerRes.data;
+
+    $("trackerTitle").textContent = currentTracker.name;
+    $("trackerSubtitle").textContent = "Invite Code: " + (currentTracker.invite_code || "");
+    if ($("currentInviteCode")) $("currentInviteCode").value = currentTracker.invite_code || "";
+
+    try {
+      render();
+    } catch(e) {
+      showDebug("Render error (entries/cards).");
+    }
+  }
+</script>
 
     function fillCardSelect(selectedId=""){
       $("entryCard").innerHTML = cards.map(c =>
@@ -2277,50 +2290,81 @@
       openModal("recurringModal");
     }
 
-    async function saveRecurringCharge(ev){
-      ev.preventDefault();
-      if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
-        return;
-      }
-      const id = $("recurringId").value;
-      const cardId = $("recurringCardId").value;
-      if (!cardId){
-        setMessage("settingsMessage","No card selected for this recurring charge.","error");
-        return;
-      }
-      const record = {
-        tracker_id: currentTracker.id,
-        card_id: cardId,
-        name: $("recurringName").value.trim(),
-        amount: Number($("recurringAmount").value || 0),
-        charge_day: Number($("recurringDay").value || 0) || null,
-        notes: $("recurringNotes").value.trim(),
-        active: $("recurringActive").checked
-      };
-      let res;
-      if (id){
-        res = await supabaseClient
-          .from("card_recurring_charges")
-          .update(record)
-          .eq("id",id)
-          .select()
-          .single();
-      } else {
-        res = await supabaseClient
-          .from("card_recurring_charges")
-          .insert(record)
-          .select()
-          .single();
-      }
-      if (res.error){
-        setMessage("settingsMessage",res.error.message,"error");
-        showDebug("Recurring save error: " + res.error.message);
-        return;
-      }
-      closeModal("recurringModal");
-      await refreshData();
+<script>
+  async function saveRecurringCharge(ev){
+    ev.preventDefault();
+
+    if (!currentTracker){
+      setMessage("settingsMessage","Open a tracker first.","error");
+      return;
     }
+
+    const id = $("recurringId").value;
+    const cardId = $("recurringCardId").value;
+
+    if (!cardId){
+      setMessage("settingsMessage","No card selected for this recurring charge.","error");
+      return;
+    }
+
+    const record = {
+      tracker_id: currentTracker.id,
+      card_id: cardId,
+      name: $("recurringName").value.trim(),
+      amount: Number($("recurringAmount").value || 0),
+      charge_day: Number($("recurringDay").value || 0) || null,
+      notes: $("recurringNotes").value.trim(),
+      active: $("recurringActive").checked
+    };
+
+    // Show what we are trying to send
+    showDebug(
+      "Saving recurring " +
+      JSON.stringify({
+        id: id || "(new)",
+        tracker_id: record.tracker_id,
+        card_id: record.card_id,
+        name: record.name,
+        amount: record.amount,
+        charge_day: record.charge_day,
+        active: record.active
+      })
+    );
+
+    let res;
+    if (id){
+      res = await supabaseClient
+        .from("card_recurring_charges")
+        .update(record)
+        .eq("id",id)
+        .select()
+        .single();
+    } else {
+      res = await supabaseClient
+        .from("card_recurring_charges")
+        .insert(record)
+        .select()
+        .single();
+    }
+
+    if (res.error){
+      const msg = "Recurring save error: " + res.error.message;
+      setMessage("settingsMessage",msg,"error");
+      showDebug(msg);
+      return;
+    }
+
+    if (!res.data){
+      const msg = "Recurring save returned no data. Check RLS policy.";
+      setMessage("settingsMessage",msg,"error");
+      showDebug(msg);
+      return;
+    }
+
+    closeModal("recurringModal");
+    await refreshData();
+  }
+</script>
 
     async function deleteRecurringCharge(){
       const id = $("recurringId").value;
