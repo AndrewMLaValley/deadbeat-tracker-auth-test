@@ -381,7 +381,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.35 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.36 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +600,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.35 — Shared Supabase Version
+              BUILD 9.36 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1181,22 +1181,19 @@
         });
       setMessage("authMessage","");
     }
-    function togglePassword(inputId, buttonId) {
-      const inp = $(inputId);
-      const btn = $(buttonId);
-      if (!inp || !btn) return;
-      const hide = inp.type === "password";
-      inp.type = hide ? "text" : "password";
-      btn.textContent = hide ? "🙈" : "👁";
-    }
-    function openModal(id){$(id).classList.add("show");}
-    function closeModal(id){$(id).classList.remove("show");}
 
-    function showPage(name){
-      ["dash","entries","cards"].forEach(p=>{
-        $(p+"Page").classList.toggle("active",p===name);
-        $(p+"Nav").classList.toggle("active",p===name);
-      });
+    // Eye toggle (password show/hide)
+    function togglePassword(inputId, buttonId) {
+      const input = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
+      if (!input || !button) return;
+      if (input.type === "password") {
+        input.type = "text";
+        button.textContent = "🙈";
+      } else {
+        input.type = "password";
+        button.textContent = "👁";
+      }
     }
 
     function cardById(id){return cards.find(c=>c.id===id);}
@@ -1896,75 +1893,73 @@
       setMessage("inviteStatus",instructions,"good");
     }
 
-    <script>
-  async function refreshData(){
-    if (!currentTracker){
-      showDebug("refreshData called with no currentTracker");
-      return;
+    async function refreshData(){
+      if (!currentTracker){
+        showDebug("refreshData called with no currentTracker");
+        return;
+      }
+
+      const [cardsRes, entriesRes, trackerRes, recurringRes] = await Promise.all([
+        supabaseClient
+          .from("cards")
+          .select("*")
+          .eq("tracker_id", currentTracker.id)
+          .order("created_at",{ascending:true}),
+        supabaseClient
+          .from("entries")
+          .select("*")
+          .eq("tracker_id", currentTracker.id)
+          .order("entry_date",{ascending:false}),
+        supabaseClient
+          .from("trackers")
+          .select("*")
+          .eq("id", currentTracker.id)
+          .single(),
+        supabaseClient
+          .from("card_recurring_charges")
+          .select("*")
+          .eq("tracker_id", currentTracker.id)
+          .order("charge_day",{ascending:true})
+      ]);
+
+      if (cardsRes.error || entriesRes.error || trackerRes.error || recurringRes.error){
+        showDebug(
+          "Load error. Cards: " + (cardsRes.error?.message || "ok") +
+          "; Entries: " + (entriesRes.error?.message || "ok") +
+          "; Recurring: " + (recurringRes.error?.message || "ok")
+        );
+      }
+
+      if (cardsRes.error){ setMessage("settingsMessage",cardsRes.error.message,"error"); return; }
+      if (entriesRes.error){ setMessage("settingsMessage",entriesRes.error.message,"error"); return; }
+      if (trackerRes.error){ setMessage("settingsMessage",trackerRes.error.message,"error"); return; }
+
+      // If recurring fails, still allow cards & entries to work, but show the reason
+      if (recurringRes.error){
+        setMessage(
+          "settingsMessage",
+          "Could not load recurring charges: " + recurringRes.error.message,
+          "error"
+        );
+        recurringCharges = [];
+      } else {
+        recurringCharges = recurringRes.data || [];
+      }
+
+      cards = cardsRes.data || [];
+      entries = entriesRes.data || [];
+      currentTracker = trackerRes.data;
+
+      $("trackerTitle").textContent = currentTracker.name;
+      $("trackerSubtitle").textContent = "Invite Code: " + (currentTracker.invite_code || "");
+      if ($("currentInviteCode")) $("currentInviteCode").value = currentTracker.invite_code || "";
+
+      try {
+        render();
+      } catch(e) {
+        showDebug("Render error (entries/cards).");
+      }
     }
-
-    const [cardsRes, entriesRes, trackerRes, recurringRes] = await Promise.all([
-      supabaseClient
-        .from("cards")
-        .select("*")
-        .eq("tracker_id", currentTracker.id)
-        .order("created_at",{ascending:true}),
-      supabaseClient
-        .from("entries")
-        .select("*")
-        .eq("tracker_id", currentTracker.id)
-        .order("entry_date",{ascending:false}),
-      supabaseClient
-        .from("trackers")
-        .select("*")
-        .eq("id", currentTracker.id)
-        .single(),
-      supabaseClient
-        .from("card_recurring_charges")
-        .select("*")
-        .eq("tracker_id", currentTracker.id)
-        .order("charge_day",{ascending:true})
-    ]);
-
-    if (cardsRes.error || entriesRes.error || trackerRes.error || recurringRes.error){
-      showDebug(
-        "Load error. Cards: " + (cardsRes.error?.message || "ok") +
-        "; Entries: " + (entriesRes.error?.message || "ok") +
-        "; Recurring: " + (recurringRes.error?.message || "ok")
-      );
-    }
-
-    if (cardsRes.error){ setMessage("settingsMessage",cardsRes.error.message,"error"); return; }
-    if (entriesRes.error){ setMessage("settingsMessage",entriesRes.error.message,"error"); return; }
-    if (trackerRes.error){ setMessage("settingsMessage",trackerRes.error.message,"error"); return; }
-
-    // If recurring fails, still allow cards & entries to work, but show the reason
-    if (recurringRes.error){
-      setMessage(
-        "settingsMessage",
-        "Could not load recurring charges: " + recurringRes.error.message,
-        "error"
-      );
-      recurringCharges = [];
-    } else {
-      recurringCharges = recurringRes.data || [];
-    }
-
-    cards = cardsRes.data || [];
-    entries = entriesRes.data || [];
-    currentTracker = trackerRes.data;
-
-    $("trackerTitle").textContent = currentTracker.name;
-    $("trackerSubtitle").textContent = "Invite Code: " + (currentTracker.invite_code || "");
-    if ($("currentInviteCode")) $("currentInviteCode").value = currentTracker.invite_code || "";
-
-    try {
-      render();
-    } catch(e) {
-      showDebug("Render error (entries/cards).");
-    }
-  }
-</script>
 
     function fillCardSelect(selectedId=""){
       $("entryCard").innerHTML = cards.map(c =>
@@ -2290,81 +2285,79 @@
       openModal("recurringModal");
     }
 
-<script>
-  async function saveRecurringCharge(ev){
-    ev.preventDefault();
+    async function saveRecurringCharge(ev){
+      ev.preventDefault();
 
-    if (!currentTracker){
-      setMessage("settingsMessage","Open a tracker first.","error");
-      return;
+      if (!currentTracker){
+        setMessage("settingsMessage","Open a tracker first.","error");
+        return;
+      }
+
+      const id = $("recurringId").value;
+      const cardId = $("recurringCardId").value;
+
+      if (!cardId){
+        setMessage("settingsMessage","No card selected for this recurring charge.","error");
+        return;
+      }
+
+      const record = {
+        tracker_id: currentTracker.id,
+        card_id: cardId,
+        name: $("recurringName").value.trim(),
+        amount: Number($("recurringAmount").value || 0),
+        charge_day: Number($("recurringDay").value || 0) || null,
+        notes: $("recurringNotes").value.trim(),
+        active: $("recurringActive").checked
+      };
+
+      // Show what we are trying to send
+      showDebug(
+        "Saving recurring " +
+        JSON.stringify({
+          id: id || "(new)",
+          tracker_id: record.tracker_id,
+          card_id: record.card_id,
+          name: record.name,
+          amount: record.amount,
+          charge_day: record.charge_day,
+          active: record.active
+        })
+      );
+
+      let res;
+      if (id){
+        res = await supabaseClient
+          .from("card_recurring_charges")
+          .update(record)
+          .eq("id",id)
+          .select()
+          .single();
+      } else {
+        res = await supabaseClient
+          .from("card_recurring_charges")
+          .insert(record)
+          .select()
+          .single();
+      }
+
+      if (res.error){
+        const msg = "Recurring save error: " + res.error.message;
+        setMessage("settingsMessage",msg,"error");
+        showDebug(msg);
+        return;
+      }
+
+      if (!res.data){
+        const msg = "Recurring save returned no data. Check RLS policy.";
+        setMessage("settingsMessage",msg,"error");
+        showDebug(msg);
+        return;
+      }
+
+      closeModal("recurringModal");
+      await refreshData();
     }
-
-    const id = $("recurringId").value;
-    const cardId = $("recurringCardId").value;
-
-    if (!cardId){
-      setMessage("settingsMessage","No card selected for this recurring charge.","error");
-      return;
-    }
-
-    const record = {
-      tracker_id: currentTracker.id,
-      card_id: cardId,
-      name: $("recurringName").value.trim(),
-      amount: Number($("recurringAmount").value || 0),
-      charge_day: Number($("recurringDay").value || 0) || null,
-      notes: $("recurringNotes").value.trim(),
-      active: $("recurringActive").checked
-    };
-
-    // Show what we are trying to send
-    showDebug(
-      "Saving recurring " +
-      JSON.stringify({
-        id: id || "(new)",
-        tracker_id: record.tracker_id,
-        card_id: record.card_id,
-        name: record.name,
-        amount: record.amount,
-        charge_day: record.charge_day,
-        active: record.active
-      })
-    );
-
-    let res;
-    if (id){
-      res = await supabaseClient
-        .from("card_recurring_charges")
-        .update(record)
-        .eq("id",id)
-        .select()
-        .single();
-    } else {
-      res = await supabaseClient
-        .from("card_recurring_charges")
-        .insert(record)
-        .select()
-        .single();
-    }
-
-    if (res.error){
-      const msg = "Recurring save error: " + res.error.message;
-      setMessage("settingsMessage",msg,"error");
-      showDebug(msg);
-      return;
-    }
-
-    if (!res.data){
-      const msg = "Recurring save returned no data. Check RLS policy.";
-      setMessage("settingsMessage",msg,"error");
-      showDebug(msg);
-      return;
-    }
-
-    closeModal("recurringModal");
-    await refreshData();
-  }
-</script>
 
     async function deleteRecurringCharge(){
       const id = $("recurringId").value;
@@ -2413,21 +2406,63 @@
       } catch(e){}
     }
 
-    async function signIn(ev){
-      ev.preventDefault();
-      const email = $("signInEmail").value.trim();
-      const password = $("signInPassword").value;
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-      });
-      if (error){
-        setMessage("authMessage",error.message,"error");
-        return;
+    // Robust auth message helper
+    function setAuthMessage(text, type){
+      const el = $("authMessage");
+      if (!el) return;
+      el.textContent = text || "";
+      el.className = "message";
+      if (!text) return;
+      el.classList.add("show");
+      if (type === "error") el.classList.add("error");
+      if (type === "good") el.classList.add("good");
+    }
+
+    // STEP 3: robust login handler
+    async function handleSignIn(event){
+      event.preventDefault();
+      try {
+        const emailInput = $("signInEmail");
+        const passwordInput = $("signInPassword");
+        if (!emailInput || !passwordInput){
+          setAuthMessage("Login inputs not found in the page.", "error");
+          return;
+        }
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        if (!email || !password){
+          setAuthMessage("Enter both email and password.", "error");
+          return;
+        }
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error){
+          setAuthMessage(error.message || "Unable to sign in.", "error");
+          return;
+        }
+        if (!data || !data.user){
+          setAuthMessage("Sign in succeeded but no user returned.", "error");
+          return;
+        }
+
+        currentUser = data.user;
+        saveRememberedLoginIfNeeded();
+        setAuthMessage("Signed in successfully.", "good");
+
+        const home = await ensureUserHasHomeTracker();
+        if (home){
+          await openTracker(home.id);
+        } else {
+          await loadTrackers();
+        }
+      } catch (e){
+        console.error("Sign-in error:", e);
+        setAuthMessage("Unexpected error during sign in. Check console.", "error");
       }
-      currentUser = data.user;
-      saveRememberedLoginIfNeeded();
-      await loadTrackers();
     }
 
     async function createAccount(ev){
@@ -2578,34 +2613,61 @@
       }
     }
 
-    // Event listeners
-    $("signInForm").addEventListener("submit",signIn);
-    $("createAccountForm").addEventListener("submit",createAccount);
-    $("resetForm").addEventListener("submit",resetPassword);
-    $("resetConfirmForm").addEventListener("submit",completePasswordReset);
-    $("forgotUsernameForm").addEventListener("submit",forgotUsername);
+    // Basic modal helpers
+    function openModal(id){$(id).classList.add("show");}
+    function closeModal(id){$(id).classList.remove("show");}
 
-    $("entryForm").addEventListener("submit",saveEntry);
-    $("cardForm").addEventListener("submit",saveCard);
-    $("recurringForm").addEventListener("submit",saveRecurringCharge);
-
-    document.querySelectorAll(".modal-bg").forEach(m=>{
-      m.addEventListener("click",ev=>{
-        if (ev.target === m) closeModal(m.id);
+    function showPage(name){
+      ["dash","entries","cards"].forEach(p=>{
+        $(p+"Page").classList.toggle("active",p===name);
+        $(p+"Nav").classList.toggle("active",p===name);
       });
-    });
-    document.addEventListener("keydown",ev=>{
-      if (ev.key === "Escape"){
-        ["entryModal","cardModal","settingsModal","recurringModal"].forEach(closeModal);
-      }
+    }
+
+    // Event listeners (attached after DOM ready)
+    document.addEventListener("DOMContentLoaded", function () {
+      const signInForm = $("signInForm");
+      if (signInForm) signInForm.addEventListener("submit", handleSignIn);
+
+      const createForm = $("createAccountForm");
+      if (createForm) createForm.addEventListener("submit", createAccount);
+
+      const resetForm = $("resetForm");
+      if (resetForm) resetForm.addEventListener("submit", resetPassword);
+
+      const resetConfirmForm = $("resetConfirmForm");
+      if (resetConfirmForm) resetConfirmForm.addEventListener("submit", completePasswordReset);
+
+      const forgotForm = $("forgotUsernameForm");
+      if (forgotForm) forgotForm.addEventListener("submit", forgotUsername);
+
+      const entryForm = $("entryForm");
+      if (entryForm) entryForm.addEventListener("submit", saveEntry);
+
+      const cardForm = $("cardForm");
+      if (cardForm) cardForm.addEventListener("submit", saveCard);
+
+      const recurringForm = $("recurringForm");
+      if (recurringForm) recurringForm.addEventListener("submit", saveRecurringCharge);
+
+      document.querySelectorAll(".modal-bg").forEach(m=>{
+        m.addEventListener("click",ev=>{
+          if (ev.target === m) closeModal(m.id);
+        });
+      });
+      document.addEventListener("keydown",ev=>{
+        if (ev.key === "Escape"){
+          ["entryModal","cardModal","settingsModal","recurringModal"].forEach(closeModal);
+        }
+      });
+
+      buildMonthOptions();
+      initialize();
     });
 
     supabaseClient.auth.onAuthStateChange((_event,session)=>{
       if (session?.user) currentUser = session.user;
     });
-
-    buildMonthOptions();
-    initialize();
   </script>
 </body>
 </html>
