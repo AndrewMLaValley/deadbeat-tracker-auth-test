@@ -381,7 +381,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.39 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.40 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +600,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.39 — Shared Supabase Version
+              BUILD 9.40 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1427,9 +1427,8 @@ function recurringListHTML(cardId){
         const dayLabel = rc.charge_day ? ("Day " + rc.charge_day) : "Day not set";
         const status = rc.active === false ? "Inactive" : "Active";
 
-        // NEW: use cash_moved on recurring (if present) to control style and button text
         const isCashMoved = !!rc.cash_moved;
-        const containerBg = isCashMoved ? "background:#e5f6ee;border-color:#13795b;" : "";
+        const containerBg = isCashMoved ? "background:#d1fae5;border-color:#10b981;" : "";
         const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
         const moveButtonText = isCashMoved ? "Mark as not moved" : "Mark as moved";
         const moveButtonClass = isCashMoved ? "success" : "secondary";
@@ -1461,7 +1460,47 @@ function recurringListHTML(cardId){
       }).join("");
     }
 
-  function entryHTML(entry){
+ function entryHTML(entry){
+      const isPayment = entry.entry_type === "payment";
+      const isCashMoved = !!entry.cash_moved;
+
+      const statusLabel = isCashMoved ? "Cash moved" : "Cash not moved";
+      const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
+      const toggleText = isCashMoved ? "Mark as not moved" : "Mark as moved";
+      const buttonClass = isCashMoved ? "success" : "secondary";
+
+      // Emerald-style background & border when cash moved
+      const containerBg = isCashMoved ? "background:#d1fae5;border-color:#10b981;" : "";
+
+      return `
+        <div class="card" style="margin-bottom:6px;padding:10px;${containerBg}">
+          <button class="list" type="button"
+            onclick="openEntry('${entry.id}')"
+            style="border-bottom:0;border-radius:9px 9px 0 0">
+            <div class="row">
+              <b>${esc(entry.merchant)}</b>
+              <b>${isPayment ? "−" : ""}${cash(entry.amount)}</b>
+            </div>
+            <div class="sub">
+              ${isPayment ? "Payment" : "Expense"} ·
+              ${entry.entry_date} ·
+              ${esc(cardName(entry.card_id))}
+            </div>
+          </button>
+          <div class="row" style="margin-top:6px;justify-content:space-between">
+            <span class="sub" style="color:${statusColor}">
+              ${statusLabel}
+            </span>
+            <button type="button" class="${buttonClass}"
+              onclick="toggleCashMoved('${entry.id}')">
+              ${toggleText}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function entryHTML(entry){
       const isPayment = entry.entry_type === "payment";
       const isCashMoved = !!entry.cash_moved;
 
@@ -1471,7 +1510,7 @@ function recurringListHTML(cardId){
       const buttonClass = isCashMoved ? "success" : "secondary";
 
       // NEW: green background & stronger border when cash moved
-      const containerBg = isCashMoved ? "background:#e5f6ee;border-color:#13795b;" : "";
+     const containerBg = isCashMoved ? "background:#d1fae5;border-color:#10b981;" : "";
 
       return `
         <div class="card" style="margin-bottom:6px;padding:10px;${containerBg}">
