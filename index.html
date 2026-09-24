@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.42 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.43 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.42 — Shared Supabase Version
+              BUILD 9.43 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -2417,7 +2417,7 @@ async function toggleRecurringCashMoved(recurringId){
     const jwt = session.access_token;
 
     // 1) Get a link token from backend
-    const resp = await fetch("https://deadbeat-plaid-server.onrender.com/create-link-token", {
+    const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/create-link-token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -2449,7 +2449,7 @@ async function toggleRecurringCashMoved(recurringId){
       token: linkToken,
       onSuccess: async function(public_token, metadata) {
         try {
-          const exchangeResp = await fetch("https://deadbeat-plaid-server.onrender.com/exchange-public-token", {
+          const exchangeResp = await fetch("https://deadbeat-plaid-server-3.onrender.com/exchange-public-token", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
