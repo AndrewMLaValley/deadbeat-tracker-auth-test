@@ -2350,9 +2350,9 @@ async function toggleRecurringCashMoved(recurringId){
           return;
         }
         const jwt = session.access_token;
-        const url =
-          "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
-          "?tracker_id=" + encodeURIComponent(currentTracker.id);
+       const url =
+  "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
+  "?tracker_id=" + encodeURIComponent(currentTracker.id);
         const resp = await fetch(url,{
           method:"GET",
           headers:{"Authorization":"Bearer " + jwt}
