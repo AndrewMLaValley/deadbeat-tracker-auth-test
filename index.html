@@ -374,6 +374,8 @@
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  
 </head>
 <body>
   <!-- AUTH -->
@@ -381,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.41 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.42 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -600,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.41 — Shared Supabase Version
+              BUILD 9.42 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -2349,7 +2351,7 @@ async function toggleRecurringCashMoved(recurringId){
         }
         const jwt = session.access_token;
         const url =
-          "https://deadbeat-plaid-server.onrender.com/linked-accounts" +
+          "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
           "?tracker_id=" + encodeURIComponent(currentTracker.id);
         const resp = await fetch(url,{
           method:"GET",
@@ -2401,40 +2403,93 @@ async function toggleRecurringCashMoved(recurringId){
     }
 
     async function linkBankAccount(){
-      setMessage("settingsMessage","Linking bank is disabled in this version.","error");
+  if (!currentTracker){
+    setMessage("settingsMessage","Open a tracker first.","error");
+    return;
+  }
+
+  try {
+    const { data:{session} } = await supabaseClient.auth.getSession();
+    if (!session?.access_token){
+      setMessage("settingsMessage","You must be signed in to link a bank account.","error");
+      return;
     }
-    async function unlinkSelectedBankAccount(){
-      setMessage("settingsMessage","Unlinking bank is disabled in this version.","error");
+    const jwt = session.access_token;
+
+    // 1) Get a link token from backend
+    const resp = await fetch("https://deadbeat-plaid-server.onrender.com/create-link-token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + jwt
+      },
+      body: JSON.stringify({
+        tracker_id: currentTracker.id
+      })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok){
+      setMessage("settingsMessage", data.error || "Could not create Plaid link token.", "error");
+      return;
     }
-    async function deleteAccount(){
-      setMessage("settingsMessage","Account deletion is disabled in this demo version.","error");
+    const linkToken = data.link_token;
+    if (!linkToken){
+      setMessage("settingsMessage","Backend did not return a link token.","error");
+      return;
     }
 
-    // RECURRING (single place: Entries page)
-    function openRecurringModal(cardId, recurringId=""){
-      $("recurringForm").reset();
-      $("recurringId").value = "";
-      $("recurringCardId").value = cardId;
-      $("recurringActive").checked = true;
-      $("recurringTitle").textContent = "Add Recurring Charge";
-      $("deleteRecurringButton").classList.add("hidden");
+    if (typeof Plaid === "undefined"){
+      setMessage("settingsMessage","Plaid Link script not loaded.", "error");
+      return;
+    }
 
-      if (recurringId){
-        const rc = recurringCharges.find(r=>r.id===recurringId);
-        if (rc){
-          $("recurringId").value = rc.id;
-          $("recurringCardId").value = rc.card_id;
-          $("recurringName").value = rc.name || "";
-          $("recurringAmount").value = rc.amount || 0;
-          $("recurringDay").value = rc.charge_day || "";
-          $("recurringNotes").value = rc.notes || "";
-          $("recurringActive").checked = rc.active !== false;
-          $("recurringTitle").textContent = "Edit Recurring Charge";
-          $("deleteRecurringButton").classList.remove("hidden");
+    // 2) Initialize Plaid Link
+    const handler = Plaid.create({
+      token: linkToken,
+      onSuccess: async function(public_token, metadata) {
+        try {
+          const exchangeResp = await fetch("https://deadbeat-plaid-server.onrender.com/exchange-public-token", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + jwt
+            },
+            body: JSON.stringify({
+              public_token,
+              tracker_id: currentTracker.id
+            })
+          });
+
+          const exchangeData = await exchangeResp.json();
+          if (!exchangeResp.ok){
+            setMessage("settingsMessage", exchangeData.error || "Error exchanging public token.", "error");
+            return;
+          }
+
+          setMessage("settingsMessage","Bank account linked successfully.","good");
+
+          await loadLinkedAccountsForCurrentTracker();
+          render();
+        } catch (e){
+          console.error("Exchange public_token error", e);
+          setMessage("settingsMessage","Unexpected error exchanging public token.","error");
+        }
+      },
+      onExit: function(err, metadata) {
+        if (err){
+          console.warn("Plaid Link exited with error:", err);
+          setMessage("settingsMessage","Plaid Link exited. You can try again.","error");
         }
       }
-      openModal("recurringModal");
-    }
+    });
+
+    handler.open();
+  } catch (e){
+    console.error("linkBankAccount error", e);
+    setMessage("settingsMessage","Unexpected error starting Plaid Link.","error");
+  }
+}
 
     async function saveRecurringCharge(ev){
       ev.preventDefault();
