@@ -382,7 +382,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.47 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.48 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -601,7 +601,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.47 — Shared Supabase Version
+              BUILD 9.48 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1205,7 +1205,6 @@
       setMessage("authMessage","");
     }
 
-    // Eye toggle (password show/hide) - safe
     function togglePassword(inputId, buttonId) {
       const input = document.getElementById(inputId);
       const button = document.getElementById(buttonId);
@@ -1274,7 +1273,6 @@
       const id = card.id;
       const ym = selectedMonth;
 
-      // Cash moved for actual expense entries this cycle
       const entriesMoved = entries
         .filter(e =>
           e.card_id === id &&
@@ -1284,14 +1282,13 @@
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
 
-      // Cash moved for recurring charges flagged as moved (automatic bank transfers)
       const recurringMoved = cardRecurringCashMovedThisCycle(card);
 
       return entriesMoved + recurringMoved;
     }
     function cardCashStillToMoveThisCycle(card){
-      const newSpend = cardNewCycleSpend(card);            // actual expenses this cycle
-      const recurringPlanned = cardRecurringThisCycle(card); // planned recurring this cycle
+      const newSpend = cardNewCycleSpend(card);
+      const recurringPlanned = cardRecurringThisCycle(card);
       const moved = cardCashMovedThisCycle(card);
       const rem = (newSpend + recurringPlanned) - moved;
       return rem > 0 ? rem : 0;
@@ -1377,9 +1374,8 @@
       return bal * (Math.pow(1 + (apr/100)/365, 30) - 1);
     }
 
-    // NEW: total active recurring charges for this cycle for a card
     function cardRecurringThisCycle(card){
-      const ym = selectedMonth; // currently the selected month
+      const ym = selectedMonth;
       return recurringCharges
         .filter(r =>
           r.card_id === card.id &&
@@ -1389,7 +1385,6 @@
         .reduce((s,r)=>s+Number(r.amount||0),0);
     }
 
-    // NEW: recurring cash moved this cycle = those with automatic transfer set/cash_moved true
     function cardRecurringCashMovedThisCycle(card){
       const ym = selectedMonth;
       return recurringCharges
@@ -1818,7 +1813,6 @@
       renderEntriesPage();
     }
 
-    // Open the recurring charge modal
     function openRecurringModal(cardId, recurringId = "") {
       const card = cardById(cardId);
       if (!card) {
@@ -1847,7 +1841,6 @@
         $("recurringNotes").value = rc.notes || "";
         $("recurringActive").checked = rc.active !== false;
 
-        // Interpret existing cash_moved as "automatic transfer set"
         $("recurringAutoTransfer").checked = !!rc.cash_moved;
 
         $("recurringTitle").textContent = "Edit Recurring Charge for " + (card.name || "Card");
@@ -2351,7 +2344,7 @@
         charge_day: Number($("recurringDay").value || 0) || null,
         notes: $("recurringNotes").value.trim(),
         active: $("recurringActive").checked,
-        cash_moved: $("recurringAutoTransfer").checked // automatic transfer flag
+        cash_moved: $("recurringAutoTransfer").checked
       };
 
       showDebug(
@@ -2422,6 +2415,172 @@
       selectedCardIdForEntries = cardId;
       showPage("entries");
       renderEntriesPage();
+    }
+
+    function openSettings(){
+      if (!currentTracker){
+        setMessage("settingsMessage","Open a tracker first.","error");
+        return;
+      }
+      $("inviteCodeDisplay").textContent = currentTracker.invite_code || "";
+      $("budgetType").value = currentTracker.budget_type || "monthly";
+      $("budgetInput").value = currentTracker.monthly_budget || 0;
+      $("payPeriodBudgetInput").value = currentTracker.pay_period_budget || 0;
+      $("payPeriodFirstDateInput").value = currentTracker.pay_period_first_date || "";
+      setMessage("settingsMessage","");
+      loadLinkedAccountsForCurrentTracker();
+      openModal("settingsModal");
+    }
+
+    async function loadLinkedAccountsForCurrentTracker(){
+      if (!currentTracker){
+        renderLinkedAccounts([]);
+        return;
+      }
+      try {
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          renderLinkedAccounts([]);
+          return;
+        }
+        const jwt = session.access_token;
+        const url =
+          "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
+          "?tracker_id=" + encodeURIComponent(currentTracker.id);
+        const resp = await fetch(url,{
+          method:"GET",
+          headers:{"Authorization":"Bearer " + jwt}
+        });
+        const data = await resp.json();
+        if (!resp.ok){
+          renderLinkedAccounts([]);
+          setMessage("settingsMessage",data.error || "Could not load linked accounts.","error");
+          return;
+        }
+        renderLinkedAccounts(data.accounts || []);
+      } catch(e){
+        renderLinkedAccounts([]);
+        setMessage("settingsMessage","Error loading linked accounts.","error");
+      }
+    }
+
+    async function saveBudget(){
+      const budgetType = $("budgetType").value || "monthly";
+      const monthlyBudget = Number($("budgetInput").value || 0);
+      const payBudget = Number($("payPeriodBudgetInput").value || 0);
+      const first = $("payPeriodFirstDateInput").value || null;
+
+      const update = {
+        budget_type: budgetType,
+        monthly_budget: monthlyBudget,
+        pay_period_budget: payBudget,
+        pay_period_first_date: first
+      };
+
+      const { data, error } = await supabaseClient
+        .from("trackers")
+        .update(update)
+        .eq("id",currentTracker.id)
+        .select()
+        .single();
+      if (error){
+        setMessage(
+          "settingsMessage",
+          "Only the tracker owner can update the budget. " + error.message,
+          "error"
+        );
+        return;
+      }
+      currentTracker = data;
+      render();
+      setMessage("settingsMessage","Budget settings saved.","good");
+    }
+
+    async function linkBankAccount(){
+      if (!currentTracker){
+        setMessage("settingsMessage","Open a tracker first.","error");
+        return;
+      }
+
+      try {
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          setMessage("settingsMessage","You must be signed in to link a bank account.","error");
+          return;
+        }
+        const jwt = session.access_token;
+
+        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/create-link-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + jwt
+          },
+          body: JSON.stringify({
+            tracker_id: currentTracker.id
+          })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok){
+          setMessage("settingsMessage", data.error || "Could not create Plaid link token.", "error");
+          return;
+        }
+        const linkToken = data.link_token;
+        if (!linkToken){
+          setMessage("settingsMessage","Backend did not return a link token.","error");
+          return;
+        }
+
+        if (typeof Plaid === "undefined"){
+          setMessage("settingsMessage","Plaid Link script not loaded.", "error");
+          return;
+        }
+
+        const handler = Plaid.create({
+          token: linkToken,
+          onSuccess: async function(public_token, metadata) {
+            try {
+              const exchangeResp = await fetch("https://deadbeat-plaid-server-3.onrender.com/exchange-public-token", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + jwt
+                },
+                body: JSON.stringify({
+                  public_token,
+                  tracker_id: currentTracker.id
+                })
+              });
+
+              const exchangeData = await exchangeResp.json();
+              if (!exchangeResp.ok){
+                setMessage("settingsMessage", exchangeData.error || "Error exchanging public token.", "error");
+                return;
+              }
+
+              setMessage("settingsMessage","Bank account linked successfully.","good");
+
+              await loadLinkedAccountsForCurrentTracker();
+              render();
+            } catch (e){
+              console.error("Exchange public_token error", e);
+              setMessage("settingsMessage","Unexpected error exchanging public token.","error");
+            }
+          },
+          onExit: function(err, metadata) {
+            if (err){
+              console.warn("Plaid Link exited with error:", err);
+              setMessage("settingsMessage","Plaid Link exited. You can try again.","error");
+            }
+          }
+        });
+
+        handler.open();
+      } catch (e){
+        console.error("linkBankAccount error", e);
+        setMessage("settingsMessage","Unexpected error starting Plaid Link.","error");
+      }
     }
 
     function loadRememberedLogin(){
@@ -2711,9 +2870,12 @@
           if (ev.target === m) closeModal(m.id);
         });
       });
+
+      // SAFER ESC HANDLER: only close open modals, do not interfere with clicks
       document.addEventListener("keydown",ev=>{
         if (ev.key === "Escape"){
-          ["entryModal","cardModal","settingsModal","recurringModal"].forEach(closeModal);
+          const openModals = document.querySelectorAll(".modal-bg.show");
+          openModals.forEach(m => closeModal(m.id));
         }
       });
 
