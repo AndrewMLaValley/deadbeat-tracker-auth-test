@@ -382,7 +382,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.45 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.46 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -601,7 +601,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.45 — Shared Supabase Version
+              BUILD 9.46 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1198,11 +1198,17 @@
       setMessage("authMessage","");
     }
 
-    // Eye toggle (password show/hide)
+    // Eye toggle (password show/hide) - updated to be extra safe
     function togglePassword(inputId, buttonId) {
       const input = document.getElementById(inputId);
       const button = document.getElementById(buttonId);
       if (!input || !button) return;
+
+      // Ensure eye button is never treated as submit
+      if (button.type !== "button") {
+        button.type = "button";
+      }
+
       if (input.type === "password") {
         input.type = "text";
         button.textContent = "🙈";
@@ -1210,6 +1216,9 @@
         input.type = "password";
         button.textContent = "👁";
       }
+
+      // Keep focus on the password field so browser validation/autofill behaves
+      input.focus();
     }
 
     function cardById(id){return cards.find(c=>c.id===id);}
@@ -1805,6 +1814,43 @@
     function clearSelectedCardAndShowAllEntries(){
       selectedCardIdForEntries = "";
       renderEntriesPage();
+    }
+
+    // Open the recurring charge modal
+    function openRecurringModal(cardId, recurringId = "") {
+      const card = cardById(cardId);
+      if (!card) {
+        setMessage("settingsMessage", "Card not found for recurring charge.", "error");
+        return;
+      }
+
+      // Reset the form
+      $("recurringForm").reset();
+      $("recurringId").value = "";
+      $("recurringCardId").value = cardId;
+      $("recurringTitle").textContent = "Recurring Charge for " + (card.name || "Card");
+      $("deleteRecurringButton").classList.add("hidden");
+
+      if (recurringId) {
+        // Editing an existing recurring charge
+        const rc = recurringCharges.find(r => r.id === recurringId);
+        if (!rc) {
+          setMessage("settingsMessage", "Recurring charge not found.", "error");
+          return;
+        }
+
+        $("recurringId").value = rc.id;
+        $("recurringName").value = rc.name || "";
+        $("recurringAmount").value = rc.amount != null ? rc.amount : "";
+        $("recurringDay").value = rc.charge_day != null ? rc.charge_day : "";
+        $("recurringNotes").value = rc.notes || "";
+        $("recurringActive").checked = rc.active !== false;
+
+        $("recurringTitle").textContent = "Edit Recurring Charge for " + (card.name || "Card");
+        $("deleteRecurringButton").classList.remove("hidden");
+      }
+
+      openModal("recurringModal");
     }
 
     // Data loading
@@ -2460,55 +2506,7 @@
         setMessage("settingsMessage","Unexpected error starting Plaid Link.","error");
       }
     }
-<script>
-  ...
-  // Add this function somewhere before saveRecurringCharge:
 
-  // Open the recurring charge modal.
-  // If recurringId is provided, load that record for editing.
-  // If recurringId is empty, prepare a blank form for a new recurring charge.
-  function openRecurringModal(cardId, recurringId = "") {
-    const card = cardById(cardId);
-    if (!card) {
-      setMessage("settingsMessage", "Card not found for recurring charge.", "error");
-      return;
-    }
-
-    // Reset the form
-    $("recurringForm").reset();
-    $("recurringId").value = "";
-    $("recurringCardId").value = cardId;
-    $("recurringTitle").textContent = "Recurring Charge for " + (card.name || "Card");
-    $("deleteRecurringButton").classList.add("hidden");
-
-    if (recurringId) {
-      // Editing an existing recurring charge
-      const rc = recurringCharges.find(r => r.id === recurringId);
-      if (!rc) {
-        setMessage("settingsMessage", "Recurring charge not found.", "error");
-        return;
-      }
-
-      $("recurringId").value = rc.id;
-      $("recurringName").value = rc.name || "";
-      $("recurringAmount").value = rc.amount != null ? rc.amount : "";
-      $("recurringDay").value = rc.charge_day != null ? rc.charge_day : "";
-      $("recurringNotes").value = rc.notes || "";
-      $("recurringActive").checked = rc.active !== false;
-
-      $("recurringTitle").textContent = "Edit Recurring Charge for " + (card.name || "Card");
-      $("deleteRecurringButton").classList.remove("hidden");
-    }
-
-    openModal("recurringModal");
-  }
-
-  // keep your existing saveRecurringCharge below
-  async function saveRecurringCharge(ev){
-    ...
-  }
-  ...
-</script>
     async function saveRecurringCharge(ev){
       ev.preventDefault();
 
@@ -2642,20 +2640,23 @@
       if (type === "good") el.classList.add("good");
     }
 
-    // Sign-in handler
+    // Sign-in handler (with debug lines)
     async function handleSignIn(event){
       event.preventDefault();
+      showDebug("handleSignIn fired");
       try {
         const emailInput = $("signInEmail");
         const passwordInput = $("signInPassword");
         if (!emailInput || !passwordInput){
           setAuthMessage("Login inputs not found in the page.", "error");
+          showDebug("Login inputs not found");
           return;
         }
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         if (!email || !password){
           setAuthMessage("Enter both email and password.", "error");
+          showDebug("Missing email or password");
           return;
         }
 
@@ -2663,19 +2664,23 @@
           email,
           password
         });
+        showDebug("signInWithPassword returned");
 
         if (error){
           setAuthMessage(error.message || "Unable to sign in.", "error");
+          showDebug("Supabase sign-in error: " + error.message);
           return;
         }
         if (!data || !data.user){
           setAuthMessage("Sign in succeeded but no user returned.", "error");
+          showDebug("Sign-in succeeded but no user returned");
           return;
         }
 
         currentUser = data.user;
         saveRememberedLoginIfNeeded();
         setAuthMessage("Signed in successfully.", "good");
+        showDebug("Signed in, loading tracker");
 
         const home = await ensureUserHasHomeTracker();
         if (home){
@@ -2685,6 +2690,7 @@
         }
       } catch (e){
         console.error("Sign-in error:", e);
+        showDebug("Sign-in thrown error: " + (e.message || String(e)));
         setAuthMessage("Unexpected error during sign in. Check console.", "error");
       }
     }
