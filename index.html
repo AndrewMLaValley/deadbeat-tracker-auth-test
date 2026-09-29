@@ -382,7 +382,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.46 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.47 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -601,7 +601,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.46 — Shared Supabase Version
+              BUILD 9.47 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -957,6 +957,13 @@
 
         <div class="group">
           <label>
+            <input id="recurringAutoTransfer" type="checkbox" style="width:auto;margin-right:8px">
+            Automatic transfer set up in bank (cash moved on charge day)
+          </label>
+        </div>
+
+        <div class="group">
+          <label>
             <input id="recurringActive" type="checkbox" style="width:auto;margin-right:8px" checked>
             Active (will be considered in planning)
           </label>
@@ -1198,13 +1205,12 @@
       setMessage("authMessage","");
     }
 
-    // Eye toggle (password show/hide) - updated to be extra safe
+    // Eye toggle (password show/hide) - safe
     function togglePassword(inputId, buttonId) {
       const input = document.getElementById(inputId);
       const button = document.getElementById(buttonId);
       if (!input || !button) return;
 
-      // Ensure eye button is never treated as submit
       if (button.type !== "button") {
         button.type = "button";
       }
@@ -1217,7 +1223,6 @@
         button.textContent = "👁";
       }
 
-      // Keep focus on the password field so browser validation/autofill behaves
       input.focus();
     }
 
@@ -1279,7 +1284,7 @@
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
 
-      // Cash moved for recurring charges flagged as moved
+      // Cash moved for recurring charges flagged as moved (automatic bank transfers)
       const recurringMoved = cardRecurringCashMovedThisCycle(card);
 
       return entriesMoved + recurringMoved;
@@ -1371,6 +1376,32 @@
       if (bal <= 0 || apr <= 0) return 0;
       return bal * (Math.pow(1 + (apr/100)/365, 30) - 1);
     }
+
+    // NEW: total active recurring charges for this cycle for a card
+    function cardRecurringThisCycle(card){
+      const ym = selectedMonth; // currently the selected month
+      return recurringCharges
+        .filter(r =>
+          r.card_id === card.id &&
+          r.active !== false &&
+          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31))
+        )
+        .reduce((s,r)=>s+Number(r.amount||0),0);
+    }
+
+    // NEW: recurring cash moved this cycle = those with automatic transfer set/cash_moved true
+    function cardRecurringCashMovedThisCycle(card){
+      const ym = selectedMonth;
+      return recurringCharges
+        .filter(r =>
+          r.card_id === card.id &&
+          r.active !== false &&
+          r.cash_moved === true &&
+          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31))
+        )
+        .reduce((s,r)=>s+Number(r.amount||0),0);
+    }
+
     function cardProjectedNextCycleStart(card){
       const unpaid = cardUnpaidFromLastCycle(card);
       const newSpend = cardNewCycleSpend(card);
@@ -1380,13 +1411,13 @@
       return proj > 0 ? proj : 0;
     }
     function cardPaidOffThisCycle(card){
-      const unpaid = cardUnpaidFromLastCycle(card);           // prior cycle balance
-      const newSpend = cardNewCycleSpend(card);               // posted expenses this cycle
-      const recurringPlanned = cardRecurringThisCycle(card);  // planned recurring this cycle
-      const pay = cardPaymentsThisCycle(card);                // payments this cycle
+      const unpaid = cardUnpaidFromLastCycle(card);
+      const newSpend = cardNewCycleSpend(card);
+      const recurringPlanned = cardRecurringThisCycle(card);
+      const pay = cardPaymentsThisCycle(card);
 
       const projected = unpaid + newSpend + recurringPlanned - pay;
-      return projected <= 0.01; // treat near-zero as paid off
+      return projected <= 0.01;
     }
     function recurringForCard(cardId){
       return recurringCharges.filter(r => r.card_id === cardId);
@@ -1397,6 +1428,7 @@
       const newSpend = cardNewCycleSpend(card);
       const pays = cardPaymentsThisCycle(card);
       const current = cardBalance(card.id);
+      const recurringPlanned = cardRecurringThisCycle(card);
       const cashMoved = cardCashMovedThisCycle(card);
       const cashStill = cardCashStillToMoveThisCycle(card);
       const interest = estimatedInterest(card);
@@ -1409,6 +1441,7 @@
           <b>Balance</b><br>
           Prior cycle balance: ${cash(unpaidLastCycle)}<br>
           New cycle spending: ${cash(newSpend)}<br>
+          Recurring charges this cycle: <b>${cash(recurringPlanned)}</b><br>
           Payments this cycle: ${cash(pays)}<br>
           <b>Current balance: ${cash(current)}</b><br>
           <b>Projected starting balance next cycle (if no more changes): ${cash(cardProjectedNextCycleStart(card))}</b><br><br>
@@ -1421,30 +1454,6 @@
       `;
     }
 
-    // NEW: get total active recurring for this card in the selected cycle
-    function cardRecurringThisCycle(card){
-      const ym = selectedMonth; // "YYYY-MM"
-      return recurringCharges
-        .filter(r =>
-          r.card_id === card.id &&
-          r.active !== false &&             // only active
-          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31))
-        )
-        .reduce((s,r)=>s+Number(r.amount||0),0);
-    }
-    // NEW: how much recurring cash has been moved for this card this cycle
-    function cardRecurringCashMovedThisCycle(card){
-      const ym = selectedMonth; // currently unused, here for future date logic
-      return recurringCharges
-        .filter(r =>
-          r.card_id === card.id &&
-          r.active !== false &&
-          r.cash_moved === true &&
-          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31))
-        )
-        .reduce((s,r)=>s+Number(r.amount||0),0);
-    }
-
     function recurringListHTML(cardId){
       const list = recurringForCard(cardId);
       if (!list.length) {
@@ -1454,11 +1463,11 @@
         const dayLabel = rc.charge_day ? ("Day " + rc.charge_day) : "Day not set";
         const status = rc.active === false ? "Inactive" : "Active";
 
-        const isCashMoved = !!rc.cash_moved;
-        const containerBg = isCashMoved ? "background:#d1fae5;border-color:#10b981;" : "";
-        const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
-        const moveButtonText = isCashMoved ? "Mark as not moved" : "Mark as moved";
-        const moveButtonClass = isCashMoved ? "success" : "secondary";
+        const isAuto = !!rc.cash_moved;
+        const containerBg = isAuto ? "background:#d1fae5;border-color:#10b981;" : "";
+        const statusColor = isAuto ? "var(--green)" : "var(--muted)";
+        const moveButtonText = isAuto ? "Mark as not auto-transfer" : "Mark as auto-transfer";
+        const moveButtonClass = isAuto ? "success" : "secondary";
 
         return `
           <div class="card" style="margin-top:4px;${containerBg}">
@@ -1470,12 +1479,14 @@
                 <span>${cash(rc.amount)}</span>
               </div>
               <div class="sub" style="color:${statusColor}">
-                ${dayLabel} · ${status}${isCashMoved ? " · Cash moved" : ""}
+                ${dayLabel} · ${status}${isAuto ? " · Automatic bank transfer" : ""}
               </div>
             </button>
             <div class="row" style="margin-top:6px;justify-content:space-between">
               <span class="sub" style="color:${statusColor}">
-                ${isCashMoved ? "Cash moved for this recurring charge" : "Cash not yet moved for this recurring charge"}
+                ${isAuto
+                  ? "Automatic transfer in bank is set for this recurring charge"
+                  : "No automatic transfer set in bank for this recurring charge"}
               </span>
               <button type="button" class="${moveButtonClass}"
                 onclick="toggleRecurringCashMoved('${rc.id}')">
@@ -1496,7 +1507,6 @@
       const toggleText = isCashMoved ? "Mark as not moved" : "Mark as moved";
       const buttonClass = isCashMoved ? "success" : "secondary";
 
-      // green background & stronger border when cash moved
       const containerBg = isCashMoved ? "background:#d1fae5;border-color:#10b981;" : "";
 
       return `
@@ -1676,14 +1686,12 @@
       $("spendingAccountsList").innerHTML = spendingAccountsHTML();
       $("totalSpendingAccountsCash").textContent = cash(cashAvail);
 
-      // DASHBOARD CARDS: compact view only (name, last 4, balance)
       const dashCardsEl = $("dashboardCards");
       if (cards.length){
         dashCardsEl.innerHTML = cards.map(card => {
           const balance = cardBalance(card.id);
           const paidOff = cardPaidOffThisCycle(card);
 
-          // If not paid off, show a red background and white text as a warning
           const warnStyle = paidOff
             ? ""
             : "background:#fee2e2;border-color:#b42318;color:#7f1d1d;";
@@ -1711,13 +1719,11 @@
         dashCardsEl.innerHTML = '<div class="card empty">No credit cards saved.</div>';
       }
 
-      // Recent entries (global)
       const recent = entries.slice(0,10);
       $("recentEntries").innerHTML = recent.length
         ? recent.map(entryHTML).join("")
         : '<div class="empty">No recent expenses or payments.</div>';
 
-      // Cards page
       $("cardsList").innerHTML = cards.length
         ? cards.map(card => `
           <div class="card">
@@ -1742,7 +1748,6 @@
         `).join("")
         : '<div class="card empty">No credit cards saved.</div>';
 
-      // Entries page
       renderEntriesPage();
 
       showDebug(
@@ -1772,7 +1777,6 @@
         return;
       }
 
-      // Card header: only name, last 4, total balance
       headerEl.classList.remove("hidden");
       headerEl.innerHTML = `
         <div class="row">
@@ -1788,7 +1792,6 @@
         ${cardInfoHTML(card)}
       `;
 
-      // Recurring panel only here
       recurringPanelEl.classList.remove("hidden");
       recurringPanelEl.innerHTML = `
         <div class="row">
@@ -1803,7 +1806,6 @@
         </div>
       `;
 
-      // Entries list filtered by card
       const cardEntries = entries.filter(e => e.card_id === card.id);
       titleEl.textContent = "Transactions — " + cardName(card.id);
       listEl.innerHTML = cardEntries.length
@@ -1824,15 +1826,14 @@
         return;
       }
 
-      // Reset the form
       $("recurringForm").reset();
       $("recurringId").value = "";
       $("recurringCardId").value = cardId;
       $("recurringTitle").textContent = "Recurring Charge for " + (card.name || "Card");
       $("deleteRecurringButton").classList.add("hidden");
+      $("recurringAutoTransfer").checked = false;
 
       if (recurringId) {
-        // Editing an existing recurring charge
         const rc = recurringCharges.find(r => r.id === recurringId);
         if (!rc) {
           setMessage("settingsMessage", "Recurring charge not found.", "error");
@@ -1846,6 +1847,9 @@
         $("recurringNotes").value = rc.notes || "";
         $("recurringActive").checked = rc.active !== false;
 
+        // Interpret existing cash_moved as "automatic transfer set"
+        $("recurringAutoTransfer").checked = !!rc.cash_moved;
+
         $("recurringTitle").textContent = "Edit Recurring Charge for " + (card.name || "Card");
         $("deleteRecurringButton").classList.remove("hidden");
       }
@@ -1853,7 +1857,6 @@
       openModal("recurringModal");
     }
 
-    // Data loading
     async function ensureUserHasHomeTracker(){
       if (!currentUser) return null;
       const { data: memberships, error: memError } = await supabaseClient
@@ -2075,7 +2078,6 @@
       if (entriesRes.error){ setMessage("settingsMessage",entriesRes.error.message,"error"); return; }
       if (trackerRes.error){ setMessage("settingsMessage",trackerRes.error.message,"error"); return; }
 
-      // If recurring fails, still allow cards & entries to work, but show the reason
       if (recurringRes.error){
         setMessage(
           "settingsMessage",
@@ -2239,11 +2241,9 @@
         return;
       }
 
-      // Update local array
       const idx = recurringCharges.findIndex(r => r.id === recurringId);
       if (idx !== -1) recurringCharges[idx] = data;
 
-      // Re-render just the entries page (which includes recurring panel)
       renderEntriesPage();
       showDebug("Recurring cash_moved toggled for id=" + recurringId + " to " + newVal);
     }
@@ -2327,186 +2327,6 @@
       await refreshData();
     }
 
-    async function deleteCard(){
-      const id = $("cardId").value;
-      if (!id || !confirm("Delete this card and all entries associated with it?")) return;
-      const { error } = await supabaseClient
-        .from("cards")
-        .delete()
-        .eq("id",id);
-      if (error){
-        setMessage("settingsMessage",error.message,"error");
-        showDebug("Card delete error: " + error.message);
-        return;
-      }
-      closeModal("cardModal");
-      await refreshData();
-    }
-
-    function openSettings(){
-      $("inviteCodeDisplay").textContent = currentTracker.invite_code || "";
-      $("budgetType").value = currentTracker.budget_type || "monthly";
-      $("budgetInput").value = currentTracker.monthly_budget || 0;
-      $("payPeriodBudgetInput").value = currentTracker.pay_period_budget || 0;
-      $("payPeriodFirstDateInput").value = currentTracker.pay_period_first_date || "";
-      setMessage("settingsMessage","");
-      loadLinkedAccountsForCurrentTracker();
-      openModal("settingsModal");
-    }
-
-    async function loadLinkedAccountsForCurrentTracker(){
-      if (!currentTracker){
-        renderLinkedAccounts([]);
-        return;
-      }
-      try {
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          renderLinkedAccounts([]);
-          return;
-        }
-        const jwt = session.access_token;
-        const url =
-          "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
-          "?tracker_id=" + encodeURIComponent(currentTracker.id);
-        const resp = await fetch(url,{
-          method:"GET",
-          headers:{"Authorization":"Bearer " + jwt}
-        });
-        const data = await resp.json();
-        if (!resp.ok){
-          renderLinkedAccounts([]);
-          setMessage("settingsMessage",data.error || "Could not load linked accounts.","error");
-          return;
-        }
-        renderLinkedAccounts(data.accounts || []);
-      } catch(e){
-        renderLinkedAccounts([]);
-        setMessage("settingsMessage","Error loading linked accounts.","error");
-      }
-    }
-
-    async function saveBudget(){
-      const budgetType = $("budgetType").value || "monthly";
-      const monthlyBudget = Number($("budgetInput").value || 0);
-      const payBudget = Number($("payPeriodBudgetInput").value || 0);
-      const first = $("payPeriodFirstDateInput").value || null;
-
-      const update = {
-        budget_type: budgetType,
-        monthly_budget: monthlyBudget,
-        pay_period_budget: payBudget,
-        pay_period_first_date: first
-      };
-
-      const { data, error } = await supabaseClient
-        .from("trackers")
-        .update(update)
-        .eq("id",currentTracker.id)
-        .select()
-        .single();
-      if (error){
-        setMessage(
-          "settingsMessage",
-          "Only the tracker owner can update the budget. " + error.message,
-          "error"
-        );
-        return;
-      }
-      currentTracker = data;
-      render();
-      setMessage("settingsMessage","Budget settings saved.","good");
-    }
-
-    async function linkBankAccount(){
-      if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
-        return;
-      }
-
-      try {
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          setMessage("settingsMessage","You must be signed in to link a bank account.","error");
-          return;
-        }
-        const jwt = session.access_token;
-
-        // 1) Get a link token from backend
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/create-link-token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + jwt
-          },
-          body: JSON.stringify({
-            tracker_id: currentTracker.id
-          })
-        });
-
-        const data = await resp.json();
-        if (!resp.ok){
-          setMessage("settingsMessage", data.error || "Could not create Plaid link token.", "error");
-          return;
-        }
-        const linkToken = data.link_token;
-        if (!linkToken){
-          setMessage("settingsMessage","Backend did not return a link token.","error");
-          return;
-        }
-
-        if (typeof Plaid === "undefined"){
-          setMessage("settingsMessage","Plaid Link script not loaded.", "error");
-          return;
-        }
-
-        // 2) Initialize Plaid Link
-        const handler = Plaid.create({
-          token: linkToken,
-          onSuccess: async function(public_token, metadata) {
-            try {
-              const exchangeResp = await fetch("https://deadbeat-plaid-server-3.onrender.com/exchange-public-token", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": "Bearer " + jwt
-                },
-                body: JSON.stringify({
-                  public_token,
-                  tracker_id: currentTracker.id
-                })
-              });
-
-              const exchangeData = await exchangeResp.json();
-              if (!exchangeResp.ok){
-                setMessage("settingsMessage", exchangeData.error || "Error exchanging public token.", "error");
-                return;
-              }
-
-              setMessage("settingsMessage","Bank account linked successfully.","good");
-
-              await loadLinkedAccountsForCurrentTracker();
-              render();
-            } catch (e){
-              console.error("Exchange public_token error", e);
-              setMessage("settingsMessage","Unexpected error exchanging public token.","error");
-            }
-          },
-          onExit: function(err, metadata) {
-            if (err){
-              console.warn("Plaid Link exited with error:", err);
-              setMessage("settingsMessage","Plaid Link exited. You can try again.","error");
-            }
-          }
-        });
-
-        handler.open();
-      } catch (e){
-        console.error("linkBankAccount error", e);
-        setMessage("settingsMessage","Unexpected error starting Plaid Link.","error");
-      }
-    }
-
     async function saveRecurringCharge(ev){
       ev.preventDefault();
 
@@ -2530,10 +2350,10 @@
         amount: Number($("recurringAmount").value || 0),
         charge_day: Number($("recurringDay").value || 0) || null,
         notes: $("recurringNotes").value.trim(),
-        active: $("recurringActive").checked
+        active: $("recurringActive").checked,
+        cash_moved: $("recurringAutoTransfer").checked // automatic transfer flag
       };
 
-      // Show what we are trying to send
       showDebug(
         "Saving recurring " +
         JSON.stringify({
@@ -2543,7 +2363,8 @@
           name: record.name,
           amount: record.amount,
           charge_day: record.charge_day,
-          active: record.active
+          active: record.active,
+          cash_moved: record.cash_moved
         })
       );
 
@@ -2597,7 +2418,6 @@
       await refreshData();
     }
 
-    // When clicking a card on dashboard, go to Entries page and show full info there
     function openCardDetail(cardId){
       selectedCardIdForEntries = cardId;
       showPage("entries");
@@ -2628,7 +2448,6 @@
       } catch(e){}
     }
 
-    // Robust auth message helper
     function setAuthMessage(text, type){
       const el = $("authMessage");
       if (!el) return;
@@ -2640,7 +2459,6 @@
       if (type === "good") el.classList.add("good");
     }
 
-    // Sign-in handler (with debug lines)
     async function handleSignIn(event){
       event.preventDefault();
       showDebug("handleSignIn fired");
@@ -2826,7 +2644,6 @@
       const params = new URLSearchParams(window.location.search);
       const mode = params.get("mode");
 
-      // Always check backend connectivity on startup
       checkBackend();
 
       if (session?.user){
@@ -2847,7 +2664,6 @@
       }
     }
 
-    // Basic modal helpers
     function openModal(id){$(id).classList.add("show");}
     function closeModal(id){$(id).classList.remove("show");}
 
@@ -2858,7 +2674,6 @@
       });
     }
 
-    // Placeholder unlink & delete account functions (implement as needed)
     function unlinkSelectedBankAccount(){
       setMessage("settingsMessage","Unlink is not yet implemented in this build.","error");
     }
@@ -2866,7 +2681,6 @@
       setMessage("settingsMessage","Delete account is not yet implemented in this build.","error");
     }
 
-    // Event listeners (attached after DOM ready)
     document.addEventListener("DOMContentLoaded", function () {
       const signInForm = $("signInForm");
       if (signInForm) signInForm.addEventListener("submit", handleSignIn);
