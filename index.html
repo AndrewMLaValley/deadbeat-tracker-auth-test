@@ -384,7 +384,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.53 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 6.54 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -407,7 +407,6 @@
               </div>
             </div>
 
-      </div>
             <div class="remember-row">
               <input id="rememberLogin" type="checkbox">
               <span>Remember my email and password on this device</span>
@@ -604,7 +603,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.53 — Shared Supabase Version
+              BUILD 6.54 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1039,7 +1038,7 @@
         Link Bank Account (Plaid)
       </button>
 
-<div class="group">
+      <div class="group">
         <label>Linked Bank Accounts (Plaid sandbox)</label>
         <div id="linkedAccounts" class="sub">
           No bank accounts linked yet.
@@ -1566,107 +1565,7 @@
       }).join("<br>");
     }
 
-      
-function renderCardFundingDropdowns(){
-      const container = $("cardFundingContainer");
-      if (!container){
-        return;
-      }
-      container.innerHTML = "";
-
-      if (!currentTracker || !cards || !cards.length){
-        container.textContent = "No cards found for this tracker.";
-        return;
-      }
-
-      const accounts = currentLinkedAccounts || [];
-
-      if (!accounts.length){
-        container.textContent = "No bank accounts linked yet.";
-        return;
-      }
-
-      for (const card of cards){
-        const wrapper = document.createElement("div");
-        wrapper.className = "card-funding-row";
-
-        const label = document.createElement("label");
-        label.textContent = `Funding account for ${card.name}`;
-        label.style.display = "block";
-
-        const select = document.createElement("select");
-        select.dataset.cardId = card.id;
-
-        const emptyOption = document.createElement("option");
-        emptyOption.value = "";
-        emptyOption.textContent = "Select an account";
-        select.appendChild(emptyOption);
-
-        for (const acct of accounts){
-          const opt = document.createElement("option");
-          opt.value = acct.id; // linked_accounts.id
-          const displayName =
-            (acct.institution_name || "Bank") + " - " +
-            (acct.plaid_account_name || "Account") +
-            (acct.plaid_account_mask ? " (•••• " + acct.plaid_account_mask + ")" : "");
-          opt.textContent = displayName;
-          select.appendChild(opt);
-        }
-
-        // Pre-select current mapping if any
-        const mappedAccountId = cardPlaidMappings[card.id];
-        if (mappedAccountId){
-          select.value = mappedAccountId;
-        }
-
-        // Save mapping on change
-        select.addEventListener("change", async (e) => {
-          const chosenLinkedAccountId = e.target.value;
-          if (!chosenLinkedAccountId){
-            return;
-          }
-          await saveCardFundingMapping(card.id, chosenLinkedAccountId);
-        });
-
-        wrapper.appendChild(label);
-        wrapper.appendChild(select);
-        container.appendChild(wrapper);
-      }
-    }
-      container.innerHTML = linkedAccountsList.map(a=>{
-        const inst = a.institution_name || "Bank";
-        const name = a.plaid_account_name || "Account";
-        const last4 = a.plaid_account_mask || "";
-        const t = a.plaid_account_type || "";
-        const sub = a.plaid_account_subtype || "";
-        const avail = a.available_balance != null ? cash(a.available_balance) : "";
-        const parts = [
-          inst + ":",
-          name,
-          last4 ? "•••• " + last4 : "",
-          t || "",
-          sub ? "(" + sub + ")" : "",
-          avail ? "Available: " + avail : ""
-        ];
-        return "<div>" + esc(parts.join(" ").replace(/\s+/g," ").trim()) + "</div>";
-      }).join("");
-
-      if (select){
-        const opts = [
-          '<option value="">Select an account to unlink</option>',
-          ...linkedAccountsList.map(a=>{
-            const id = a.id;
-            const inst = a.institution_name || "Bank";
-            const name = a.plaid_account_name || "Account";
-            const last4 = a.plaid_account_mask || "";
-            const label = esc((inst + ": " + name + (last4 ? " •••• " + last4 : "")).trim());
-            return `<option value="${id}">${label}</option>`;
-          })
-        ];
-        select.innerHTML = opts.join("");
-      }
-    }
-function renderLinkedAccounts(accounts){
+    function renderLinkedAccounts(accounts){
       linkedAccountsList = accounts || [];
       const container = $("linkedAccounts");
       const select = $("unlinkAccountSelect");
@@ -1714,7 +1613,7 @@ function renderLinkedAccounts(accounts){
       }
     }
 
-    // NEW: separate, top-level function
+    // Single, correct top-level function for card funding dropdowns
     function renderCardFundingDropdowns(){
       const container = $("cardFundingContainer");
       if (!container){
@@ -1781,6 +1680,7 @@ function renderLinkedAccounts(accounts){
         container.appendChild(wrapper);
       }
     }
+
     function renderBudgetSlider(spent,budget){
       const fill = $("budgetSliderFill");
       const marker = $("budgetSliderMarker");
@@ -2600,7 +2500,7 @@ function renderLinkedAccounts(accounts){
       renderEntriesPage();
     }
 
-   async function openSettings(){
+    async function openSettings(){
       if (!currentTracker){
         setMessage("settingsMessage","Open a tracker first.","error");
         return;
@@ -2620,7 +2520,7 @@ function renderLinkedAccounts(accounts){
       openModal("settingsModal");
     }
 
-async function loadLinkedAccountsForCurrentTracker(){
+    async function loadLinkedAccountsForCurrentTracker(){
       if (!currentTracker){
         currentLinkedAccounts = [];
         renderLinkedAccounts([]);
@@ -2674,7 +2574,7 @@ async function loadLinkedAccountsForCurrentTracker(){
       }
     }
     
-async function loadCardPlaidMappingsForCurrentTracker(){
+    async function loadCardPlaidMappingsForCurrentTracker(){
       if (!currentTracker){
         cardPlaidMappings = {};
         return;
@@ -2719,6 +2619,7 @@ async function loadCardPlaidMappingsForCurrentTracker(){
         showDebug("Card mappings fetch error: " + (e.message || String(e)));
       }
     }
+
     async function saveCardFundingMapping(cardId, linkedAccountId){
       try {
         const { data:{session} } = await supabaseClient.auth.getSession();
