@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.67 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.68 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.67 — Shared Supabase Version
+              BUILD 9.68 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1270,38 +1270,65 @@
     function cardUnpaidFromLastCycle(card){
       return Number(card.starting_balance || 0);
     }
+
+    // Use selectedMonth (YYYY-MM) consistently for "this cycle"
+    function isDateInSelectedMonth(dateStr){
+      if (!dateStr) return false;
+      return String(dateStr).slice(0,7) === selectedMonth;
+    }
+
     function cardNewCycleSpend(card){
       const id = card.id;
-      const ym = selectedMonth;
       return entries
         .filter(e =>
           e.card_id === id &&
           e.entry_type === "expense" &&
-          String(e.entry_date).slice(0,7) === ym
+          isDateInSelectedMonth(e.entry_date)
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
     }
+
     function cardPaymentsThisCycle(card){
       const id = card.id;
-      const ym = selectedMonth;
       return entries
         .filter(e =>
           e.card_id === id &&
           e.entry_type === "payment" &&
-          String(e.entry_date).slice(0,7) === ym
+          isDateInSelectedMonth(e.entry_date)
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
     }
+
+    function cardRecurringThisCycle(card){
+      // Treat all active recurring charges as applying once per selected month
+      return recurringCharges
+        .filter(r =>
+          r.card_id === card.id &&
+          r.active !== false
+        )
+        .reduce((s,r)=>s+Number(r.amount||0),0);
+    }
+
+    function cardRecurringCashMovedThisCycle(card){
+      // Sum only recurring charges marked as auto-transfer
+      return recurringCharges
+        .filter(r =>
+          r.card_id === card.id &&
+          r.active !== false &&
+          r.cash_moved === true
+        )
+        .reduce((s,r)=>s+Number(r.amount||0),0);
+    }
+
     function cardCashMovedThisCycle(card){
       const id = card.id;
-      const ym = selectedMonth;
 
       const entriesMoved = entries
         .filter(e =>
           e.card_id === id &&
           e.entry_type === "expense" &&
           e.cash_moved &&
-          String(e.entry_date).slice(0,7) === ym
+          isDateInSelectedMonth(e.entry_date)
         )
         .reduce((s,e)=>s+Number(e.amount||0),0);
 
@@ -1309,6 +1336,7 @@
 
       return entriesMoved + recurringMoved;
     }
+
     function cardCashStillToMoveThisCycle(card){
       const newSpend = cardNewCycleSpend(card);
       const recurringPlanned = cardRecurringThisCycle(card);
@@ -1397,29 +1425,6 @@
       return bal * (Math.pow(1 + (apr/100)/365, 30) - 1);
     }
 
-    function cardRecurringThisCycle(card){
-      const ym = selectedMonth;
-      return recurringCharges
-        .filter(r =>
-          r.card_id === card.id &&
-          r.active !== false &&
-          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31))
-        )
-        .reduce((s,r)=>s+Number(r.amount||0),0);
-    }
-
-    function cardRecurringCashMovedThisCycle(card){
-      const ym = selectedMonth;
-      return recurringCharges
-        .filter(r =>
-          r.card_id === card.id &&
-          r.active !== false &&
-          r.cash_moved === true &&
-          (!r.charge_day || (r.charge_day >= 1 && r.charge_day <= 31))
-        )
-        .reduce((s,r)=>s+Number(r.amount||0),0);
-    }
-
     function cardProjectedNextCycleStart(card){
       const unpaid = cardUnpaidFromLastCycle(card);
       const newSpend = cardNewCycleSpend(card);
@@ -1458,14 +1463,14 @@
           Due day: ${card.due_day || "Not set"}<br><br>
           <b>Balance</b><br>
           Prior cycle balance: ${cash(unpaidLastCycle)}<br>
-          New cycle spending: ${cash(newSpend)}<br>
-          Recurring charges this cycle: <b>${cash(recurringPlanned)}</b><br>
-          Payments this cycle: ${cash(pays)}<br>
+          New cycle spending (selected month): ${cash(newSpend)}<br>
+          Recurring charges this month: <b>${cash(recurringPlanned)}</b><br>
+          Payments this month: ${cash(pays)}<br>
           <b>Current balance: ${cash(current)}</b><br>
           <b>Projected starting balance next cycle (if no more changes): ${cash(cardProjectedNextCycleStart(card))}</b><br><br>
           <b>Cash coverage</b><br>
-          Cash already moved this cycle: ${cash(cashMoved)}<br>
-          Cash still to move for this cycle: ${cash(cashStill)}<br><br>
+          Cash already moved this month (including auto transfers): ${cash(cashMoved)}<br>
+          Cash still to move for this month: ${cash(cashStill)}<br><br>
           <b>Interest risk</b><br>
           Est. 30-day interest if unpaid: ${cash(interest)}
         </div>
@@ -1799,12 +1804,12 @@
           return `
             <div class="card" onclick="openCardDetail('${card.id}')" style="cursor:pointer;${warnStyle}">
               <div class="row">
-                <b>${esc(card.name)}</b>
+                <span class="tracker-name">${esc(card.name)}</span>
                 <span>💳</span>
               </div>
               <div class="sub" style="${subColor}">
                 ${card.last_four ? "•••• " + card.last_four : "Manual card"}
-                ${paidOff ? "" : " · Not paid off this month"}
+                ${paidOff ? "" : " · Not paid off for selected month"}
               </div>
               <strong>${cash(balance)}</strong>
               <div class="sub" style="${subColor}">
@@ -2152,7 +2157,7 @@
         supabaseClient
           .from("trackers")
           .select("*")
-          .eq("id", currentTracker.id)
+          ..eq("id", currentTracker.id)
           .single(),
         supabaseClient
           .from("card_recurring_charges")
@@ -3263,9 +3268,58 @@
       });
     }
 
-    function unlinkSelectedBankAccount(){
-      setMessage("settingsMessage","Unlink is not yet implemented in this build.","error");
+    async function unlinkSelectedBankAccount(){
+      if (!currentTracker){
+        setMessage("settingsMessage","Open a tracker first.","error");
+        return;
+      }
+      const select = $("unlinkAccountSelect");
+      const accountId = select ? select.value : "";
+      if (!accountId){
+        setMessage("settingsMessage","Select an account to unlink.","error");
+        return;
+      }
+
+      try{
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          setMessage("settingsMessage","You must be signed in to unlink an account.","error");
+          return;
+        }
+        const jwt = session.access_token;
+
+        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/unlink-account",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + jwt
+          },
+          body: JSON.stringify({
+            tracker_id: currentTracker.id,
+            linked_account_id: accountId
+          })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok){
+          setMessage("settingsMessage",data.error || "Could not unlink account.","error");
+          showDebug("unlinkSelectedBankAccount failed: " + (data.error || resp.status));
+          return;
+        }
+
+        setMessage("settingsMessage","Bank account unlinked from this tracker.","good");
+        await loadLinkedAccountsForCurrentTracker();
+        await loadCardPlaidMappingsForCurrentTracker();
+        await loadEntryFundingMappingsForCurrentTracker();
+        renderCardFundingDropdowns();
+        render();
+      }catch(e){
+        console.error("unlinkSelectedBankAccount error",e);
+        setMessage("settingsMessage","Unexpected error unlinking account.","error");
+        showDebug("unlinkSelectedBankAccount error: " + (e.message || String(e)));
+      }
     }
+
     function deleteAccount(){
       setMessage("settingsMessage","Delete account is not yet implemented in this build.","error");
     }
