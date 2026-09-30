@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.69 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.70 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.69 — Shared Supabase Version
+              BUILD 9.70 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -876,6 +876,8 @@
           </label>
         </div>
 
+        <div id="entryMessage" class="message"></div>
+
         <div class="actions">
           <button class="secondary" type="button" onclick="closeModal('entryModal')">
             Cancel
@@ -996,6 +998,8 @@
             Active (will be considered in planning)
           </label>
         </div>
+
+        <div id="recurringMessage" class="message"></div>
 
         <div class="actions">
           <button class="secondary" type="button" onclick="closeModal('recurringModal')">
@@ -1193,6 +1197,28 @@
 
     function setMessage(id, text = "", type = "") {
       const el = $(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = "message";
+      if (!text) return;
+      el.classList.add("show");
+      if (type === "error") el.classList.add("error");
+      if (type === "good") el.classList.add("good");
+    }
+
+    function setEntryMessage(text = "", type = ""){
+      const el = $("entryMessage");
+      if (!el) return;
+      el.textContent = text;
+      el.className = "message";
+      if (!text) return;
+      el.classList.add("show");
+      if (type === "error") el.classList.add("error");
+      if (type === "good") el.classList.add("good");
+    }
+
+    function setRecurringMessage(text = "", type = ""){
+      const el = $("recurringMessage");
       if (!el) return;
       el.textContent = text;
       el.className = "message";
@@ -1888,11 +1914,12 @@
       $("recurringTitle").textContent = "Recurring Charge for " + (card.name || "Card");
       $("deleteRecurringButton").classList.add("hidden");
       $("recurringAutoTransfer").checked = false;
+      setRecurringMessage("");
 
       if (recurringId) {
         const rc = recurringCharges.find(r => r.id === recurringId);
         if (!rc) {
-          setMessage("settingsMessage", "Recurring charge not found.", "error");
+          setRecurringMessage("Recurring charge not found.", "error");
           return;
         }
 
@@ -2206,6 +2233,7 @@
       $("entryCashMoved").checked = false;
       $("deleteEntryButton").classList.add("hidden");
       $("entryType").value = "expense";
+      setEntryMessage("");
 
       fillCardSelect(selectedCardIdForEntries || "");
       fillLinkedAccountSelect($("entryFundingAccount"), "");
@@ -2229,19 +2257,31 @@
         const existingFundingId = entryFundingMappings[e.id] || "";
         fillLinkedAccountSelect($("entryFundingAccount"), existingFundingId);
 
-        // For transfers, try to parse transfer info from notes (if present)
-        if (e.entry_type === "transfer" && e.notes){
-          const matches = e.notes.match(/Transfer from: (.+?) → to: (.+?)$/);
-          if (matches){
-            const fromLabel = matches[1];
-            const toLabel = matches[2];
-            const fromAccount = currentLinkedAccounts.find(a => linkedAccountNameById(a.id) === fromLabel);
-            const toAccount = currentLinkedAccounts.find(a => linkedAccountNameById(a.id) === toLabel);
-            fillLinkedAccountSelect($("transferFromAccount"), fromAccount ? fromAccount.id : "");
-            fillLinkedAccountSelect($("transferToAccount"), toAccount ? toAccount.id : "");
-          } else {
-            fillLinkedAccountSelect($("transferFromAccount"), "");
-            fillLinkedAccountSelect($("transferToAccount"), "");
+        // For transfers, try to parse transfer info from notes (if present),
+        // but do not block editing if parsing fails.
+        if (e.entry_type === "transfer"){
+          fillLinkedAccountSelect($("transferFromAccount"), "");
+          fillLinkedAccountSelect($("transferToAccount"), "");
+
+          if (e.notes){
+            const regex = /Transfer from:\s*(.+?)\s*→\s*to:\s*(.+?)$/;
+            const matches = e.notes.match(regex);
+            if (matches){
+              const fromLabel = matches[1].trim();
+              const toLabel = matches[2].trim();
+              const fromAccount = currentLinkedAccounts.find(
+                a => linkedAccountNameById(a.id) === fromLabel
+              );
+              const toAccount = currentLinkedAccounts.find(
+                a => linkedAccountNameById(a.id) === toLabel
+              );
+              if (fromAccount){
+                fillLinkedAccountSelect($("transferFromAccount"), fromAccount.id);
+              }
+              if (toAccount){
+                fillLinkedAccountSelect($("transferToAccount"), toAccount.id);
+              }
+            }
           }
         } else {
           fillLinkedAccountSelect($("transferFromAccount"), "");
@@ -2259,22 +2299,36 @@
       const transferFromId = $("transferFromAccount").value || "";
       const transferToId = $("transferToAccount").value || "";
 
+      setEntryMessage("");
+
       if (type === "transfer"){
         if (!transferFromId || !transferToId){
-          setMessage("settingsMessage","Transfer must have both Transfer From and Transfer To accounts selected.","error");
+          setEntryMessage(
+            "Transfer must have both Transfer From and Transfer To accounts selected.",
+            "error"
+          );
           return false;
         }
         if (transferFromId === transferToId){
-          setMessage("settingsMessage","Transfer From and Transfer To cannot be the same account.","error");
+          setEntryMessage(
+            "Transfer From and Transfer To cannot be the same account.",
+            "error"
+          );
           return false;
         }
         if (fundingId){
-          setMessage("settingsMessage","Transfer must not have a Funding Account selected.","error");
+          setEntryMessage(
+            "Transfer must not have a Funding Account selected.",
+            "error"
+          );
           return false;
         }
       } else {
         if (transferFromId || transferToId){
-          setMessage("settingsMessage","Expense/Payment entries cannot have Transfer From/To set. Clear those fields.","error");
+          setEntryMessage(
+            "Expense/Payment entries cannot have Transfer From/To set. Clear those fields.",
+            "error"
+          );
           return false;
         }
       }
@@ -2283,8 +2337,10 @@
 
     async function saveEntry(ev){
       ev.preventDefault();
+      setEntryMessage("");
+
       if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
+        setEntryMessage("Open a tracker first.","error");
         return;
       }
 
@@ -2303,7 +2359,7 @@
       if (type === "transfer"){
         const fromLabel = linkedAccountNameById(transferFromId);
         const toLabel = linkedAccountNameById(transferToId);
-        const transferNote = "Transfer from: " + (fromLabel || transferFromId) + " → to: " + (toLabel || transferToId);
+        const transferNote = "Transfer from: " + (fromLabel || transferFromId) + " \u2192 to: " + (toLabel || transferToId);
         notes = notes ? (notes + " · " + transferNote) : transferNote;
       }
 
@@ -2336,7 +2392,7 @@
           .single();
       }
       if (res.error){
-        setMessage("settingsMessage",res.error.message,"error");
+        setEntryMessage(res.error.message || "Error saving entry.","error");
         showDebug("Entry save error: " + res.error.message);
         return;
       }
@@ -2344,7 +2400,6 @@
       const savedEntry = res.data;
       const entryId = savedEntry.id;
 
-      // Save or clear funding mapping (only for non-transfer)
       if (type === "transfer"){
         await clearEntryFundingMapping(entryId);
       } else if (fundingAccountId){
@@ -2365,7 +2420,7 @@
         .delete()
         .eq("id",id);
       if (error){
-        setMessage("settingsMessage",error.message,"error");
+        setEntryMessage(error.message || "Error deleting entry.","error");
         showDebug("Entry delete error: " + error.message);
         return;
       }
@@ -2500,9 +2555,10 @@
 
     async function saveRecurringCharge(ev){
       ev.preventDefault();
+      setRecurringMessage("");
 
       if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
+        setRecurringMessage("Open a tracker first.","error");
         return;
       }
 
@@ -2510,7 +2566,7 @@
       const cardId = $("recurringCardId").value;
 
       if (!cardId){
-        setMessage("settingsMessage","No card selected for this recurring charge.","error");
+        setRecurringMessage("No card selected for this recurring charge.","error");
         return;
       }
 
@@ -2542,15 +2598,15 @@
       }
 
       if (res.error){
-        const msg = "Recurring save error: " + res.error.message;
-        setMessage("settingsMessage",msg,"error");
-        showDebug(msg);
+        const msg = res.error.message || "Error saving recurring charge.";
+        setRecurringMessage(msg,"error");
+        showDebug("Recurring save error: " + msg);
         return;
       }
 
       if (!res.data){
         const msg = "Recurring save returned no data. Check RLS policy.";
-        setMessage("settingsMessage",msg,"error");
+        setRecurringMessage(msg,"error");
         showDebug(msg);
         return;
       }
@@ -2567,7 +2623,7 @@
         .delete()
         .eq("id",id);
       if (error){
-        setMessage("settingsMessage",error.message,"error");
+        setRecurringMessage(error.message || "Error deleting recurring charge.","error");
         showDebug("Recurring delete error: " + error.message);
         return;
       }
@@ -3138,8 +3194,19 @@
       }
     }
 
-    function openModal(id){$(id).classList.add("show");}
-    function closeModal(id){$(id).classList.remove("show");}
+    function openModal(id){
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = "flex";
+      el.classList.add("show");
+    }
+
+    function closeModal(id){
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove("show");
+      el.style.display = "none";
+    }
 
     function showPage(name){
       ["dash","entries","cards"].forEach(p=>{
