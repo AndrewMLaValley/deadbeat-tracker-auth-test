@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.75 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.76 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.75 — Shared Supabase Version
+              BUILD 9.76 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -2009,7 +2009,72 @@
       currentTracker = trackerInsert;
       return currentTracker;
     }
+    async function ensureUserHasHomeTracker() {
+  if (!currentUser) return null;
 
+  const { data: memberships, error: membershipError } =
+    await supabaseClient
+      .from("tracker_members")
+      .select("tracker_id, role")
+      .eq("user_id", currentUser.id);
+
+  if (membershipError) {
+    showDebug("Home tracker membership error: " + membershipError.message);
+    return null;
+  }
+
+  if (memberships && memberships.length) {
+    const trackerId = memberships[0].tracker_id;
+
+    const { data: tracker, error: trackerError } =
+      await supabaseClient
+        .from("trackers")
+        .select("*")
+        .eq("id", trackerId)
+        .single();
+
+    if (trackerError) {
+      showDebug("Home tracker load error: " + trackerError.message);
+      return null;
+    }
+
+    currentTracker = tracker;
+    return tracker;
+  }
+
+  const displayName =
+    currentUser.user_metadata?.display_name ||
+    currentUser.email?.split("@")[0] ||
+    "My";
+
+  const trackerName = `${displayName}'s Deadbeat Tracker`;
+
+  const { data: newTrackerId, error: createError } =
+    await supabaseClient.rpc(
+      "create_tracker",
+      { tracker_name: trackerName }
+    );
+
+  if (createError) {
+    showDebug("Home tracker create error: " + createError.message);
+    return null;
+  }
+
+  const { data: newTracker, error: loadError } =
+    await supabaseClient
+      .from("trackers")
+      .select("*")
+      .eq("id", newTrackerId)
+      .single();
+
+  if (loadError) {
+    showDebug("New tracker load error: " + loadError.message);
+    return null;
+  }
+
+  currentTracker = newTracker;
+  return newTracker;
+}
     async function loadTrackers(){
       $("signedInName").textContent =
         currentUser.user_metadata?.display_name ||
