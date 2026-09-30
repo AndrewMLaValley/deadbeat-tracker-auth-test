@@ -384,7 +384,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.51 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.52 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -406,7 +406,12 @@
                   onclick="togglePassword('signInPassword','signInEye')">👁</button>
               </div>
             </div>
-
+<div class="group">
+        <label>Funding Accounts per Card</label>
+        <div id="cardFundingContainer" class="sub">
+          No cards or bank accounts yet.
+        </div>
+      </div>
             <div class="remember-row">
               <input id="rememberLogin" type="checkbox">
               <span>Remember my email and password on this device</span>
@@ -603,7 +608,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.51 — Shared Supabase Version
+              BUILD 9.52 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1091,6 +1096,12 @@
     let linkedAccountsList = [];
     let selectedCardIdForEntries = ""; // which card is selected on Entries page
 
+    // Card → linked bank account mappings (loaded from backend)
+    let cardPlaidMappings = {}; // { [card_id]: linked_account_id }
+
+    // Linked accounts used throughout the UI (Settings, pay card, etc.)
+    let currentLinkedAccounts = [];
+    
     function showDebug(text) {
       const debug = $("debugArea");
       if (!debug) return;
@@ -1565,7 +1576,73 @@
         }
         return;
       }
+      
+function renderCardFundingDropdowns(){
+      const container = $("cardFundingContainer");
+      if (!container){
+        return;
+      }
+      container.innerHTML = "";
 
+      if (!currentTracker || !cards || !cards.length){
+        container.textContent = "No cards found for this tracker.";
+        return;
+      }
+
+      const accounts = currentLinkedAccounts || [];
+
+      if (!accounts.length){
+        container.textContent = "No bank accounts linked yet.";
+        return;
+      }
+
+      for (const card of cards){
+        const wrapper = document.createElement("div");
+        wrapper.className = "card-funding-row";
+
+        const label = document.createElement("label");
+        label.textContent = `Funding account for ${card.name}`;
+        label.style.display = "block";
+
+        const select = document.createElement("select");
+        select.dataset.cardId = card.id;
+
+        const emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "Select an account";
+        select.appendChild(emptyOption);
+
+        for (const acct of accounts){
+          const opt = document.createElement("option");
+          opt.value = acct.id; // linked_accounts.id
+          const displayName =
+            (acct.institution_name || "Bank") + " - " +
+            (acct.plaid_account_name || "Account") +
+            (acct.plaid_account_mask ? " (•••• " + acct.plaid_account_mask + ")" : "");
+          opt.textContent = displayName;
+          select.appendChild(opt);
+        }
+
+        // Pre-select current mapping if any
+        const mappedAccountId = cardPlaidMappings[card.id];
+        if (mappedAccountId){
+          select.value = mappedAccountId;
+        }
+
+        // Save mapping on change
+        select.addEventListener("change", async (e) => {
+          const chosenLinkedAccountId = e.target.value;
+          if (!chosenLinkedAccountId){
+            return;
+          }
+          await saveCardFundingMapping(card.id, chosenLinkedAccountId);
+        });
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(select);
+        container.appendChild(wrapper);
+      }
+    }
       container.innerHTML = linkedAccountsList.map(a=>{
         const inst = a.institution_name || "Bank";
         const name = a.plaid_account_name || "Account";
@@ -2419,7 +2496,7 @@
       renderEntriesPage();
     }
 
-    function openSettings(){
+   async function openSettings(){
       if (!currentTracker){
         setMessage("settingsMessage","Open a tracker first.","error");
         return;
@@ -2430,58 +2507,151 @@
       $("payPeriodBudgetInput").value = currentTracker.pay_period_budget || 0;
       $("payPeriodFirstDateInput").value = currentTracker.pay_period_first_date || "";
       setMessage("settingsMessage","");
-      loadLinkedAccountsForCurrentTracker();
+
+      // Load linked accounts and card mappings before rendering dropdowns
+      await loadLinkedAccountsForCurrentTracker();
+      await loadCardPlaidMappingsForCurrentTracker();
+      renderCardFundingDropdowns();
+
       openModal("settingsModal");
     }
 
-   async function loadLinkedAccountsForCurrentTracker(){
-  if (!currentTracker){
-    renderLinkedAccounts([]);
-    return;
-  }
-  try {
-    const { data:{session} } = await supabaseClient.auth.getSession();
-    if (!session?.access_token){
-      // Not signed in; just show empty state without error
-      renderLinkedAccounts([]);
-      return;
+async function loadLinkedAccountsForCurrentTracker(){
+      if (!currentTracker){
+        currentLinkedAccounts = [];
+        renderLinkedAccounts([]);
+        return;
+      }
+      try {
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          // Not signed in; just show empty state without error
+          currentLinkedAccounts = [];
+          renderLinkedAccounts([]);
+          return;
+        }
+        const jwt = session.access_token;
+        const url =
+          "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
+          "?tracker_id=" + encodeURIComponent(currentTracker.id);
+
+        const resp = await fetch(url,{
+          method:"GET",
+          headers:{"Authorization":"Bearer " + jwt}
+        });
+
+        let data;
+        try {
+          data = await resp.json();
+        } catch(e){
+          // If response isn't JSON, just show empty state
+          currentLinkedAccounts = [];
+          renderLinkedAccounts([]);
+          showDebug("Linked accounts response was not JSON");
+          return;
+        }
+
+        if (!resp.ok){
+          // Do NOT show error in UI; just log to debug
+          currentLinkedAccounts = [];
+          renderLinkedAccounts([]);
+          showDebug("Linked accounts fetch failed: " + (data.error || resp.status));
+          return;
+        }
+
+        // Success – even if 0 accounts
+        currentLinkedAccounts = data.accounts || [];
+        renderLinkedAccounts(currentLinkedAccounts);
+      } catch(e){
+        // Network or other error — just show empty state
+        currentLinkedAccounts = [];
+        renderLinkedAccounts([]);
+        showDebug("Linked accounts fetch error: " + (e.message || String(e)));
+      }
     }
-    const jwt = session.access_token;
-    const url =
-      "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
-      "?tracker_id=" + encodeURIComponent(currentTracker.id);
+    
+async function loadCardPlaidMappingsForCurrentTracker(){
+      if (!currentTracker){
+        cardPlaidMappings = {};
+        return;
+      }
+      try {
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          cardPlaidMappings = {};
+          return;
+        }
+        const jwt = session.access_token;
+        const url =
+          "https://deadbeat-plaid-server-3.onrender.com/card-plaid-mappings" +
+          "?tracker_id=" + encodeURIComponent(currentTracker.id);
 
-    const resp = await fetch(url,{
-      method:"GET",
-      headers:{"Authorization":"Bearer " + jwt}
-    });
+        const resp = await fetch(url,{
+          method:"GET",
+          headers:{"Authorization":"Bearer " + jwt}
+        });
 
-    let data;
-    try {
-      data = await resp.json();
-    } catch(e){
-      // If response isn't JSON, just show empty state
-      renderLinkedAccounts([]);
-      showDebug("Linked accounts response was not JSON");
-      return;
+        let data;
+        try {
+          data = await resp.json();
+        } catch(e){
+          cardPlaidMappings = {};
+          showDebug("Card mappings response was not JSON");
+          return;
+        }
+
+        if (!resp.ok){
+          cardPlaidMappings = {};
+          showDebug("Card mappings fetch failed: " + (data.error || resp.status));
+          return;
+        }
+
+        cardPlaidMappings = {};
+        for (const row of data.mappings || []){
+          cardPlaidMappings[row.card_id] = row.linked_account_id;
+        }
+      } catch(e){
+        cardPlaidMappings = {};
+        showDebug("Card mappings fetch error: " + (e.message || String(e)));
+      }
     }
+    async function saveCardFundingMapping(cardId, linkedAccountId){
+      try {
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          setMessage("settingsMessage","You must be signed in to change card funding account.","error");
+          return;
+        }
+        const jwt = session.access_token;
 
-    if (!resp.ok){
-      // Do NOT show error in UI; just log to debug
-      renderLinkedAccounts([]);
-      showDebug("Linked accounts fetch failed: " + (data.error || resp.status));
-      return;
+        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/card-plaid-mapping",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + jwt
+          },
+          body: JSON.stringify({
+            tracker_id: currentTracker.id,
+            card_id: cardId,
+            linked_account_id: linkedAccountId
+          })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok){
+          setMessage("settingsMessage",data.error || "Could not save card funding mapping.","error");
+          return;
+        }
+
+        // Update local mapping
+        cardPlaidMappings[cardId] = linkedAccountId;
+        setMessage("settingsMessage","Card funding account updated.","good");
+      } catch(e){
+        console.error("saveCardFundingMapping error",e);
+        setMessage("settingsMessage","Unexpected error saving card funding account.","error");
+      }
     }
-
-    // Success – even if 0 accounts
-    renderLinkedAccounts(data.accounts || []);
-  } catch(e){
-    // Network or other error — just show empty state
-    renderLinkedAccounts([]);
-    showDebug("Linked accounts fetch error: " + (e.message || String(e)));
-  }
-}
-
+    
     async function saveBudget(){
       const budgetType = $("budgetType").value || "monthly";
       const monthlyBudget = Number($("budgetInput").value || 0);
