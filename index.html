@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.70 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.73 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.70 — Shared Supabase Version
+              BUILD 9.73 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -846,7 +846,7 @@
           </select>
           <p class="sub">
             For expenses/payments, choose which linked bank account funded this entry.
-            Leave blank for transfers.
+            Transfers use Transfer From/To below instead of this field.
           </p>
         </div>
 
@@ -932,6 +932,17 @@
         <div class="group">
           <label for="cardBalance">Starting Balance</label>
           <input id="cardBalance" type="number" min="0" step=".01" placeholder="0.00">
+        </div>
+
+        <div class="group">
+          <label for="cardDefaultFundingAccount">Default Funding Account (linked bank account)</label>
+          <select id="cardDefaultFundingAccount">
+            <option value="">No default funding account</option>
+          </select>
+          <p class="sub">
+            When you create a new Expense/Payment on this card, the Funding Account will default to this value.
+            You can override it for any individual entry.
+          </p>
         </div>
 
         <div class="notice">
@@ -2220,6 +2231,13 @@
       }
     }
 
+    // New helper: fill default funding account select in Card modal
+    function fillCardDefaultFundingSelect(selectedLinkedAccountId = ""){
+      const selectEl = $("cardDefaultFundingAccount");
+      if (!selectEl) return;
+      fillLinkedAccountSelect(selectEl, selectedLinkedAccountId || "");
+    }
+
     function openEntry(id=""){
       if (!cards.length){
         setMessage("trackerMessage","Add a credit card before adding an expense, payment, or transfer.","error");
@@ -2240,6 +2258,18 @@
       fillLinkedAccountSelect($("transferFromAccount"), "");
       fillLinkedAccountSelect($("transferToAccount"), "");
 
+      if (!id){
+        // New entry: if a card is selected, default the funding account from card default
+        const cardId = $("entryCard").value;
+        const card = cardById(cardId);
+        if (card && card.default_linked_account_id){
+          fillLinkedAccountSelect(
+            $("entryFundingAccount"),
+            card.default_linked_account_id
+          );
+        }
+      }
+
       if (id){
         const e = entries.find(x=>x.id===id);
         if (!e) return;
@@ -2255,7 +2285,15 @@
         fillCardSelect(e.card_id);
 
         const existingFundingId = entryFundingMappings[e.id] || "";
-        fillLinkedAccountSelect($("entryFundingAccount"), existingFundingId);
+        // If entry has no explicit funding, fall back to card default
+        let fundingToUse = existingFundingId;
+        if (!fundingToUse){
+          const card = cardById(e.card_id);
+          if (card && card.default_linked_account_id){
+            fundingToUse = card.default_linked_account_id;
+          }
+        }
+        fillLinkedAccountSelect($("entryFundingAccount"), fundingToUse);
 
         // For transfers, try to parse transfer info from notes (if present),
         // but do not block editing if parsing fails.
@@ -2496,6 +2534,10 @@
       $("cardId").value = "";
       $("cardTitle").textContent = "Add Card";
       $("deleteCardButton").classList.add("hidden");
+      setMessage("settingsMessage","");
+
+      // Ensure linked accounts are loaded so default funding selector is populated
+      fillCardDefaultFundingSelect("");
 
       if (id){
         const c = cardById(id);
@@ -2509,6 +2551,11 @@
         $("cardBalance").value = c.starting_balance || "";
         $("cardTitle").textContent = "Edit Card";
         $("deleteCardButton").classList.remove("hidden");
+
+        // populate default funding account if present
+        fillCardDefaultFundingSelect(c.default_linked_account_id || "");
+      } else {
+        fillCardDefaultFundingSelect("");
       }
       openModal("cardModal");
     }
@@ -2527,7 +2574,9 @@
         cycle_end_day: Number($("cardCycleDay").value || 0) || null,
         due_day: Number($("cardDueDay").value || 0) || null,
         apr: Number($("cardApr").value || 0),
-        starting_balance: Number($("cardBalance").value || 0)
+        starting_balance: Number($("cardBalance").value || 0),
+        // new per-card default funding account
+        default_linked_account_id: $("cardDefaultFundingAccount").value || null
       };
       let res;
       if (id){
@@ -2696,6 +2745,11 @@
 
         currentLinkedAccounts = data.accounts || [];
         renderLinkedAccounts(currentLinkedAccounts);
+
+        // Also keep the card default funding dropdown current when card modal opens
+        fillCardDefaultFundingSelect(
+          $("cardDefaultFundingAccount") ? $("cardDefaultFundingAccount").value : ""
+        );
       } catch(e){
         currentLinkedAccounts = [];
         renderLinkedAccounts([]);
