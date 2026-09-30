@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.56 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.67 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.56 — Shared Supabase Version
+              BUILD 9.67 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1667,7 +1667,7 @@
 
         const emptyOption = document.createElement("option");
         emptyOption.value = "";
-        emptyOption.textContent = "Select an account";
+        emptyOption.textContent = "No funding account";
         select.appendChild(emptyOption);
 
         for (const acct of accounts){
@@ -1687,11 +1687,12 @@
         }
 
         select.addEventListener("change", async (e) => {
-          const chosenLinkedAccountId = e.target.value;
-          if (!chosenLinkedAccountId){
-            return;
+          const chosenLinkedAccountId = e.target.value || null;
+          if (chosenLinkedAccountId){
+            await saveCardFundingMapping(card.id, chosenLinkedAccountId);
+          } else {
+            await clearCardFundingMapping(card.id);
           }
-          await saveCardFundingMapping(card.id, chosenLinkedAccountId);
         });
 
         wrapper.appendChild(label);
@@ -2247,7 +2248,14 @@
       $("entryCashMoved").checked = false;
       $("deleteEntryButton").classList.add("hidden");
       fillCardSelect(selectedCardIdForEntries || "");
-      fillEntryFundingSelect("");
+
+      // Default funding: use card's mapping if present
+      let defaultFunding = "";
+      const cardId = $("entryCard").value;
+      if (cardId && cardPlaidMappings[cardId]){
+        defaultFunding = cardPlaidMappings[cardId];
+      }
+      fillEntryFundingSelect(defaultFunding);
 
       if (id){
         const e = entries.find(x=>x.id===id);
@@ -2316,11 +2324,11 @@
       const savedEntry = res.data;
       const entryId = savedEntry.id;
 
-      // Save funding mapping if a funding account is selected
+      // Save or clear funding mapping
       if (fundingAccountId){
         await saveEntryFundingMapping(entryId, fundingAccountId);
       } else {
-        // If none selected, we just don't send anything; mapping remains as-is or absent.
+        await clearEntryFundingMapping(entryId);
       }
 
       closeModal("entryModal");
@@ -2339,6 +2347,8 @@
         showDebug("Entry delete error: " + error.message);
         return;
       }
+      // Clear funding mapping as well
+      await clearEntryFundingMapping(id);
       closeModal("entryModal");
       await refreshData();
     }
@@ -2658,6 +2668,7 @@
         for (const row of (data.mappings || [])){
           cardPlaidMappings[row.card_id] = row.linked_account_id;
         }
+        showDebug("Loaded cardPlaidMappings: " + JSON.stringify(cardPlaidMappings));
       } catch(e){
         cardPlaidMappings = {};
         showDebug("Card mappings fetch error: " + (e.message || String(e)));
@@ -2704,6 +2715,7 @@
         for (const row of (data.mappings || [])){
           entryFundingMappings[row.entry_id] = row.linked_account_id;
         }
+        showDebug("Loaded entryFundingMappings: " + JSON.stringify(entryFundingMappings));
       } catch(e){
         entryFundingMappings = {};
         showDebug("Entry funding fetch error: " + (e.message || String(e)));
@@ -2732,17 +2744,67 @@
           })
         });
 
-        const data = await resp.json();
+        let data;
+        try{
+          data = await resp.json();
+        }catch(e){
+          data = {};
+        }
+
         if (!resp.ok){
           setMessage("settingsMessage",data.error || "Could not save card funding mapping.","error");
+          showDebug("saveCardFundingMapping failed: " + (data.error || resp.status));
           return;
         }
 
         cardPlaidMappings[cardId] = linkedAccountId;
         setMessage("settingsMessage","Card funding account updated.","good");
+        showDebug("Card funding saved: cardId=" + cardId + " linkedAccountId=" + linkedAccountId);
       } catch(e){
         console.error("saveCardFundingMapping error",e);
         setMessage("settingsMessage","Unexpected error saving card funding account.","error");
+        showDebug("saveCardFundingMapping error: " + (e.message || String(e)));
+      }
+    }
+
+    async function clearCardFundingMapping(cardId){
+      try{
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          return;
+        }
+        const jwt = session.access_token;
+
+        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/card-plaid-mapping",{
+          method:"DELETE",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + jwt
+          },
+          body: JSON.stringify({
+            tracker_id: currentTracker.id,
+            card_id: cardId
+          })
+        });
+
+        let data;
+        try{
+          data = await resp.json();
+        }catch(e){
+          data = {};
+        }
+
+        if (!resp.ok){
+          showDebug("clearCardFundingMapping failed: " + (data.error || resp.status));
+          return;
+        }
+
+        delete cardPlaidMappings[cardId];
+        setMessage("settingsMessage","Card funding account cleared.","good");
+        showDebug("Card funding cleared: cardId=" + cardId);
+      }catch(e){
+        console.error("clearCardFundingMapping error",e);
+        showDebug("clearCardFundingMapping error: " + (e.message || String(e)));
       }
     }
 
@@ -2768,16 +2830,65 @@
           })
         });
 
-        const data = await resp.json();
+        let data;
+        try{
+          data = await resp.json();
+        }catch(e){
+          data = {};
+        }
+
         if (!resp.ok){
           setMessage("settingsMessage",data.error || "Could not save entry funding mapping.","error");
+          showDebug("saveEntryFundingMapping failed: " + (data.error || resp.status));
           return;
         }
 
         entryFundingMappings[entryId] = linkedAccountId;
+        showDebug("Entry funding saved: entryId=" + entryId + " linkedAccountId=" + linkedAccountId);
       } catch(e){
         console.error("saveEntryFundingMapping error",e);
         setMessage("settingsMessage","Unexpected error saving entry funding account.","error");
+        showDebug("saveEntryFundingMapping error: " + (e.message || String(e)));
+      }
+    }
+
+    async function clearEntryFundingMapping(entryId){
+      try{
+        const { data:{session} } = await supabaseClient.auth.getSession();
+        if (!session?.access_token){
+          return;
+        }
+        const jwt = session.access_token;
+
+        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/entry-funding",{
+          method:"DELETE",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + jwt
+          },
+          body: JSON.stringify({
+            tracker_id: currentTracker.id,
+            entry_id: entryId
+          })
+        });
+
+        let data;
+        try{
+          data = await resp.json();
+        }catch(e){
+          data = {};
+        }
+
+        if (!resp.ok){
+          showDebug("clearEntryFundingMapping failed: " + (data.error || resp.status));
+          return;
+        }
+
+        delete entryFundingMappings[entryId];
+        showDebug("Entry funding cleared: entryId=" + entryId);
+      }catch(e){
+        console.error("clearEntryFundingMapping error",e);
+        showDebug("clearEntryFundingMapping error: " + (e.message || String(e)));
       }
     }
 
