@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.68 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.69 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.68 — Shared Supabase Version
+              BUILD 9.69 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -796,16 +796,21 @@
           <select id="entryType">
             <option value="expense">Expense</option>
             <option value="payment">Payment</option>
+            <option value="transfer">Transfer</option>
           </select>
         </div>
 
         <div class="group">
           <label for="entryCard">Credit Card</label>
           <select id="entryCard" required></select>
+          <p class="sub">
+            For Expense and Payment entries, choose the card this affects.
+            Transfers do not change the card balance; you can pick any card (or your main card) as a placeholder.
+          </p>
         </div>
 
         <div class="group">
-          <label for="entryMerchant">Merchant or Payment Source</label>
+          <label for="entryMerchant">Merchant or Description</label>
           <input id="entryMerchant" required>
         </div>
 
@@ -835,13 +840,28 @@
         </div>
 
         <div class="group">
-          <label for="entryFundingAccount">Funding Account (optional)</label>
+          <label for="entryFundingAccount">Funding Account (linked bank account)</label>
           <select id="entryFundingAccount">
             <option value="">No specific funding account</option>
           </select>
           <p class="sub">
-            Choose which linked bank account you are using to fund this expense/payment.
+            For expenses/payments, choose which linked bank account funded this entry.
+            Leave blank for transfers.
           </p>
+        </div>
+
+        <div class="group">
+          <label for="transferFromAccount">Transfer From (linked bank account)</label>
+          <select id="transferFromAccount">
+            <option value="">No transfer from</option>
+          </select>
+        </div>
+
+        <div class="group">
+          <label for="transferToAccount">Transfer To (linked bank account)</label>
+          <select id="transferToAccount">
+            <option value="">No transfer to</option>
+          </select>
         </div>
 
         <div class="group">
@@ -1052,13 +1072,6 @@
       </div>
 
       <div class="group">
-        <label>Funding Accounts per Card</label>
-        <div id="cardFundingContainer" class="sub">
-          No cards or bank accounts yet.
-        </div>
-      </div>
-
-      <div class="group">
         <label for="unlinkAccountSelect">Unlink a Bank Account</label>
         <select id="unlinkAccountSelect">
           <option value="">Select an account to unlink</option>
@@ -1102,9 +1115,6 @@
     let recurringCharges = [];
     let linkedAccountsList = [];
     let selectedCardIdForEntries = "";
-
-    // Card → linked bank account mappings
-    let cardPlaidMappings = {}; // { [card_id]: linked_account_id }
 
     // Entry → funding account mappings
     let entryFundingMappings = {}; // { [entry_id]: linked_account_id }
@@ -1262,7 +1272,8 @@
       entries.filter(e=>e.card_id===cardId).forEach(e=>{
         const amt = Number(e.amount || 0);
         if (e.entry_type === "payment") total -= amt;
-        else total += amt;
+        else if (e.entry_type === "expense") total += amt;
+        // transfer does not change card balance
       });
       return Math.max(0,total);
     }
@@ -1271,7 +1282,6 @@
       return Number(card.starting_balance || 0);
     }
 
-    // Use selectedMonth (YYYY-MM) consistently for "this cycle"
     function isDateInSelectedMonth(dateStr){
       if (!dateStr) return false;
       return String(dateStr).slice(0,7) === selectedMonth;
@@ -1300,7 +1310,6 @@
     }
 
     function cardRecurringThisCycle(card){
-      // Treat all active recurring charges as applying once per selected month
       return recurringCharges
         .filter(r =>
           r.card_id === card.id &&
@@ -1310,7 +1319,6 @@
     }
 
     function cardRecurringCashMovedThisCycle(card){
-      // Sum only recurring charges marked as auto-transfer
       return recurringCharges
         .filter(r =>
           r.card_id === card.id &&
@@ -1532,6 +1540,8 @@
 
     function entryHTML(entry){
       const isPayment = entry.entry_type === "payment";
+      const isExpense = entry.entry_type === "expense";
+      const isTransfer = entry.entry_type === "transfer";
       const isCashMoved = !!entry.cash_moved;
       const statusLabel = isCashMoved ? "Cash moved" : "Cash not moved";
       const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
@@ -1545,6 +1555,15 @@
         ? `<br><span style="font-weight:600">Funded from:</span> ${esc(fundingLabel)}`
         : "";
 
+      let typeLabel = "Expense";
+      if (isPayment) typeLabel = "Payment";
+      if (isTransfer) typeLabel = "Transfer";
+
+      let transferInfoHtml = "";
+      if (isTransfer && entry.notes){
+        transferInfoHtml = `<br><span class="sub" style="font-style:italic">${esc(entry.notes)}</span>`;
+      }
+
       return `
         <div class="card" style="margin-bottom:6px;padding:10px;${containerBg}">
           <button class="list" type="button"
@@ -1555,10 +1574,11 @@
               <b>${isPayment ? "−" : ""}${cash(entry.amount)}</b>
             </div>
             <div class="sub">
-              ${isPayment ? "Payment" : "Expense"} ·
+              ${typeLabel} ·
               ${entry.entry_date} ·
               ${esc(cardName(entry.card_id))}
               ${fundingHtml}
+              ${transferInfoHtml}
             </div>
           </button>
           <div class="row" style="margin-top:6px;justify-content:space-between">
@@ -1637,72 +1657,6 @@
           })
         ];
         select.innerHTML = opts.join("");
-      }
-    }
-
-    function renderCardFundingDropdowns(){
-      const container = $("cardFundingContainer");
-      if (!container){
-        return;
-      }
-      container.innerHTML = "";
-
-      if (!currentTracker || !cards || !cards.length){
-        container.textContent = "No cards found for this tracker.";
-        return;
-      }
-
-      const accounts = currentLinkedAccounts || [];
-
-      if (!accounts.length){
-        container.textContent = "No bank accounts linked yet.";
-        return;
-      }
-
-      for (const card of cards){
-        const wrapper = document.createElement("div");
-        wrapper.className = "card-funding-row";
-
-        const label = document.createElement("label");
-        label.textContent = `Funding account for ${card.name}`;
-        label.style.display = "block";
-
-        const select = document.createElement("select");
-        select.dataset.cardId = card.id;
-
-        const emptyOption = document.createElement("option");
-        emptyOption.value = "";
-        emptyOption.textContent = "No funding account";
-        select.appendChild(emptyOption);
-
-        for (const acct of accounts){
-          const opt = document.createElement("option");
-          opt.value = acct.id;
-          const displayName =
-            (acct.institution_name || "Bank") + " - " +
-            (acct.plaid_account_name || "Account") +
-            (acct.plaid_account_mask ? " (•••• " + acct.plaid_account_mask + ")" : "");
-          opt.textContent = displayName;
-          select.appendChild(opt);
-        }
-
-        const mappedAccountId = cardPlaidMappings[card.id];
-        if (mappedAccountId){
-          select.value = mappedAccountId;
-        }
-
-        select.addEventListener("change", async (e) => {
-          const chosenLinkedAccountId = e.target.value || null;
-          if (chosenLinkedAccountId){
-            await saveCardFundingMapping(card.id, chosenLinkedAccountId);
-          } else {
-            await clearCardFundingMapping(card.id);
-          }
-        });
-
-        wrapper.appendChild(label);
-        wrapper.appendChild(select);
-        container.appendChild(wrapper);
       }
     }
 
@@ -2157,7 +2111,7 @@
         supabaseClient
           .from("trackers")
           .select("*")
-          ..eq("id", currentTracker.id)
+          .eq("id", currentTracker.id)
           .single(),
         supabaseClient
           .from("card_recurring_charges")
@@ -2197,9 +2151,7 @@
       $("trackerSubtitle").textContent = "Invite Code: " + (currentTracker.invite_code || "");
       if ($("currentInviteCode")) $("currentInviteCode").value = currentTracker.invite_code || "";
 
-      // Load linked accounts & mappings used in UI
       await loadLinkedAccountsForCurrentTracker();
-      await loadCardPlaidMappingsForCurrentTracker();
       await loadEntryFundingMappingsForCurrentTracker();
 
       try {
@@ -2216,33 +2168,34 @@
       if (selectedId) $("entryCard").value = selectedId;
     }
 
-    function fillEntryFundingSelect(selectedLinkedAccountId=""){
-      const fundingSelect = $("entryFundingAccount");
-      if (!fundingSelect) return;
+    function fillLinkedAccountSelect(selectEl, selectedLinkedAccountId=""){
+      if (!selectEl) return;
       const accounts = currentLinkedAccounts || [];
 
-      fundingSelect.innerHTML = "";
+      selectEl.innerHTML = "";
       const defaultOpt = document.createElement("option");
       defaultOpt.value = "";
-      defaultOpt.textContent = "No specific funding account";
-      fundingSelect.appendChild(defaultOpt);
+      defaultOpt.textContent = selectEl.id === "entryFundingAccount"
+        ? "No specific funding account"
+        : "No account";
+      selectEl.appendChild(defaultOpt);
 
       for (const a of accounts){
         const opt = document.createElement("option");
         opt.value = a.id;
         const label = linkedAccountNameById(a.id);
         opt.textContent = label || ("Account " + a.id);
-        fundingSelect.appendChild(opt);
+        selectEl.appendChild(opt);
       }
 
       if (selectedLinkedAccountId){
-        fundingSelect.value = selectedLinkedAccountId;
+        selectEl.value = selectedLinkedAccountId;
       }
     }
 
     function openEntry(id=""){
       if (!cards.length){
-        setMessage("trackerMessage","Add a credit card before adding an expense or payment.","error");
+        setMessage("trackerMessage","Add a credit card before adding an expense, payment, or transfer.","error");
         openCard();
         return;
       }
@@ -2252,22 +2205,19 @@
       $("entryDate").value = today();
       $("entryCashMoved").checked = false;
       $("deleteEntryButton").classList.add("hidden");
-      fillCardSelect(selectedCardIdForEntries || "");
+      $("entryType").value = "expense";
 
-      // Default funding: use card's mapping if present
-      let defaultFunding = "";
-      const cardId = $("entryCard").value;
-      if (cardId && cardPlaidMappings[cardId]){
-        defaultFunding = cardPlaidMappings[cardId];
-      }
-      fillEntryFundingSelect(defaultFunding);
+      fillCardSelect(selectedCardIdForEntries || "");
+      fillLinkedAccountSelect($("entryFundingAccount"), "");
+      fillLinkedAccountSelect($("transferFromAccount"), "");
+      fillLinkedAccountSelect($("transferToAccount"), "");
 
       if (id){
         const e = entries.find(x=>x.id===id);
         if (!e) return;
         $("entryId").value = e.id;
         $("entryTitle").textContent = "Edit Entry";
-        $("entryType").value = e.entry_type;
+        $("entryType").value = e.entry_type || "expense";
         $("entryMerchant").value = e.merchant;
         $("entryAmount").value = e.amount;
         $("entryDate").value = e.entry_date;
@@ -2277,11 +2227,58 @@
         fillCardSelect(e.card_id);
 
         const existingFundingId = entryFundingMappings[e.id] || "";
-        fillEntryFundingSelect(existingFundingId);
+        fillLinkedAccountSelect($("entryFundingAccount"), existingFundingId);
+
+        // For transfers, try to parse transfer info from notes (if present)
+        if (e.entry_type === "transfer" && e.notes){
+          const matches = e.notes.match(/Transfer from: (.+?) → to: (.+?)$/);
+          if (matches){
+            const fromLabel = matches[1];
+            const toLabel = matches[2];
+            const fromAccount = currentLinkedAccounts.find(a => linkedAccountNameById(a.id) === fromLabel);
+            const toAccount = currentLinkedAccounts.find(a => linkedAccountNameById(a.id) === toLabel);
+            fillLinkedAccountSelect($("transferFromAccount"), fromAccount ? fromAccount.id : "");
+            fillLinkedAccountSelect($("transferToAccount"), toAccount ? toAccount.id : "");
+          } else {
+            fillLinkedAccountSelect($("transferFromAccount"), "");
+            fillLinkedAccountSelect($("transferToAccount"), "");
+          }
+        } else {
+          fillLinkedAccountSelect($("transferFromAccount"), "");
+          fillLinkedAccountSelect($("transferToAccount"), "");
+        }
 
         $("deleteEntryButton").classList.remove("hidden");
       }
       openModal("entryModal");
+    }
+
+    function validateEntryForm(){
+      const type = $("entryType").value;
+      const fundingId = $("entryFundingAccount").value || "";
+      const transferFromId = $("transferFromAccount").value || "";
+      const transferToId = $("transferToAccount").value || "";
+
+      if (type === "transfer"){
+        if (!transferFromId || !transferToId){
+          setMessage("settingsMessage","Transfer must have both Transfer From and Transfer To accounts selected.","error");
+          return false;
+        }
+        if (transferFromId === transferToId){
+          setMessage("settingsMessage","Transfer From and Transfer To cannot be the same account.","error");
+          return false;
+        }
+        if (fundingId){
+          setMessage("settingsMessage","Transfer must not have a Funding Account selected.","error");
+          return false;
+        }
+      } else {
+        if (transferFromId || transferToId){
+          setMessage("settingsMessage","Expense/Payment entries cannot have Transfer From/To set. Clear those fields.","error");
+          return false;
+        }
+      }
+      return true;
     }
 
     async function saveEntry(ev){
@@ -2290,20 +2287,38 @@
         setMessage("settingsMessage","Open a tracker first.","error");
         return;
       }
+
+      if (!validateEntryForm()){
+        return;
+      }
+
       const id = $("entryId").value;
       const fundingAccountId = $("entryFundingAccount").value || null;
+      const transferFromId = $("transferFromAccount").value || "";
+      const transferToId = $("transferToAccount").value || "";
+      const type = $("entryType").value;
+
+      let notes = $("entryNotes").value.trim();
+
+      if (type === "transfer"){
+        const fromLabel = linkedAccountNameById(transferFromId);
+        const toLabel = linkedAccountNameById(transferToId);
+        const transferNote = "Transfer from: " + (fromLabel || transferFromId) + " → to: " + (toLabel || transferToId);
+        notes = notes ? (notes + " · " + transferNote) : transferNote;
+      }
 
       const record = {
         tracker_id: currentTracker.id,
         card_id: $("entryCard").value,
-        entry_type: $("entryType").value,
+        entry_type: type,
         merchant: $("entryMerchant").value.trim(),
         amount: Number($("entryAmount").value),
         entry_date: $("entryDate").value,
         category: $("entryCategory").value,
-        notes: $("entryNotes").value.trim(),
+        notes: notes,
         cash_moved: $("entryCashMoved").checked
       };
+
       let res;
       if (id){
         res = await supabaseClient
@@ -2329,8 +2344,10 @@
       const savedEntry = res.data;
       const entryId = savedEntry.id;
 
-      // Save or clear funding mapping
-      if (fundingAccountId){
+      // Save or clear funding mapping (only for non-transfer)
+      if (type === "transfer"){
+        await clearEntryFundingMapping(entryId);
+      } else if (fundingAccountId){
         await saveEntryFundingMapping(entryId, fundingAccountId);
       } else {
         await clearEntryFundingMapping(entryId);
@@ -2352,7 +2369,6 @@
         showDebug("Entry delete error: " + error.message);
         return;
       }
-      // Clear funding mapping as well
       await clearEntryFundingMapping(id);
       closeModal("entryModal");
       await refreshData();
@@ -2578,8 +2594,6 @@
       setMessage("settingsMessage","");
 
       await loadLinkedAccountsForCurrentTracker();
-      await loadCardPlaidMappingsForCurrentTracker();
-      renderCardFundingDropdowns();
 
       openModal("settingsModal");
     }
@@ -2633,53 +2647,6 @@
       }
     }
 
-    async function loadCardPlaidMappingsForCurrentTracker(){
-      if (!currentTracker){
-        cardPlaidMappings = {};
-        return;
-      }
-      try {
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          cardPlaidMappings = {};
-          return;
-        }
-        const jwt = session.access_token;
-        const url =
-          "https://deadbeat-plaid-server-3.onrender.com/card-plaid-mappings" +
-          "?tracker_id=" + encodeURIComponent(currentTracker.id);
-
-        const resp = await fetch(url,{
-          method:"GET",
-          headers:{"Authorization":"Bearer " + jwt}
-        });
-
-        let data;
-        try {
-          data = await resp.json();
-        } catch(e){
-          cardPlaidMappings = {};
-          showDebug("Card mappings response was not JSON");
-          return;
-        }
-
-        if (!resp.ok){
-          cardPlaidMappings = {};
-          showDebug("Card mappings fetch failed: " + (data.error || resp.status));
-          return;
-        }
-
-        cardPlaidMappings = {};
-        for (const row of (data.mappings || [])){
-          cardPlaidMappings[row.card_id] = row.linked_account_id;
-        }
-        showDebug("Loaded cardPlaidMappings: " + JSON.stringify(cardPlaidMappings));
-      } catch(e){
-        cardPlaidMappings = {};
-        showDebug("Card mappings fetch error: " + (e.message || String(e)));
-      }
-    }
-
     async function loadEntryFundingMappingsForCurrentTracker(){
       if (!currentTracker){
         entryFundingMappings = {};
@@ -2724,92 +2691,6 @@
       } catch(e){
         entryFundingMappings = {};
         showDebug("Entry funding fetch error: " + (e.message || String(e)));
-      }
-    }
-
-    async function saveCardFundingMapping(cardId, linkedAccountId){
-      try {
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          setMessage("settingsMessage","You must be signed in to change card funding account.","error");
-          return;
-        }
-        const jwt = session.access_token;
-
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/card-plaid-mapping",{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + jwt
-          },
-          body: JSON.stringify({
-            tracker_id: currentTracker.id,
-            card_id: cardId,
-            linked_account_id: linkedAccountId
-          })
-        });
-
-        let data;
-        try{
-          data = await resp.json();
-        }catch(e){
-          data = {};
-        }
-
-        if (!resp.ok){
-          setMessage("settingsMessage",data.error || "Could not save card funding mapping.","error");
-          showDebug("saveCardFundingMapping failed: " + (data.error || resp.status));
-          return;
-        }
-
-        cardPlaidMappings[cardId] = linkedAccountId;
-        setMessage("settingsMessage","Card funding account updated.","good");
-        showDebug("Card funding saved: cardId=" + cardId + " linkedAccountId=" + linkedAccountId);
-      } catch(e){
-        console.error("saveCardFundingMapping error",e);
-        setMessage("settingsMessage","Unexpected error saving card funding account.","error");
-        showDebug("saveCardFundingMapping error: " + (e.message || String(e)));
-      }
-    }
-
-    async function clearCardFundingMapping(cardId){
-      try{
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          return;
-        }
-        const jwt = session.access_token;
-
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/card-plaid-mapping",{
-          method:"DELETE",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + jwt
-          },
-          body: JSON.stringify({
-            tracker_id: currentTracker.id,
-            card_id: cardId
-          })
-        });
-
-        let data;
-        try{
-          data = await resp.json();
-        }catch(e){
-          data = {};
-        }
-
-        if (!resp.ok){
-          showDebug("clearCardFundingMapping failed: " + (data.error || resp.status));
-          return;
-        }
-
-        delete cardPlaidMappings[cardId];
-        setMessage("settingsMessage","Card funding account cleared.","good");
-        showDebug("Card funding cleared: cardId=" + cardId);
-      }catch(e){
-        console.error("clearCardFundingMapping error",e);
-        showDebug("clearCardFundingMapping error: " + (e.message || String(e)));
       }
     }
 
@@ -3224,7 +3105,6 @@
       entries = [];
       recurringCharges = [];
       selectedCardIdForEntries = "";
-      cardPlaidMappings = {};
       entryFundingMappings = {};
       showScreen("authScreen");
       showAuthPanel("signInPanel");
@@ -3309,9 +3189,7 @@
 
         setMessage("settingsMessage","Bank account unlinked from this tracker.","good");
         await loadLinkedAccountsForCurrentTracker();
-        await loadCardPlaidMappingsForCurrentTracker();
         await loadEntryFundingMappingsForCurrentTracker();
-        renderCardFundingDropdowns();
         render();
       }catch(e){
         console.error("unlinkSelectedBankAccount error",e);
