@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.76 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.77 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -602,7 +602,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.76 — Shared Supabase Version
+              BUILD 9.77 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1948,98 +1948,28 @@
 
       openModal("recurringModal");
     }
-
-    async function ensureUserHasHomeTracker(){
-      if (!currentUser) return null;
-      const { data: memberships, error: memError } = await supabaseClient
-        .from("tracker_members")
-        .select("tracker_id, role")
-        .eq("user_id", currentUser.id);
-      if (memError){
-        showDebug("Home tracker memberships error: " + memError.message);
-        return null;
-      }
-      if (memberships && memberships.length){
-        const homeId = memberships[0].tracker_id;
-        const { data: trackerRows, error: trError } = await supabaseClient
-          .from("trackers")
-          .select("*")
-          .eq("id", homeId);
-        if (trError || !trackerRows || !trackerRows.length){
-          showDebug("Home tracker load error");
-          return null;
-        }
-        currentTracker = trackerRows[0];
-        return currentTracker;
-      }
-
-      const displayName =
-        currentUser.user_metadata?.display_name ||
-        (currentUser.email ? currentUser.email.split("@")[0] : "My");
-      const name = displayName + "’s Deadbeat Tracker";
-      const invite = makeInviteCode();
-
-      const { data: trackerInsert, error: trackerError } = await supabaseClient
-        .from("trackers")
-        .insert({
-          name,
-          invite_code: invite,
-          owner_id: currentUser.id,
-          budget_type: "monthly",
-          monthly_budget: 0
-        })
-        .select()
-        .single();
-      if (trackerError){
-        showDebug("Home tracker create error: " + trackerError.message);
-        return null;
-      }
-
-      const { error: memberInsertError } = await supabaseClient
-        .from("tracker_members")
-        .insert({
-          tracker_id: trackerInsert.id,
-          user_id: currentUser.id,
-          role: "owner"
-        });
-      if (memberInsertError){
-        showDebug("Home tracker member insert error: " + memberInsertError.message);
-      }
-
-      currentTracker = trackerInsert;
-      return currentTracker;
-    }
-    async function ensureUserHasHomeTracker() {
+async function ensureUserHasHomeTracker() {
   if (!currentUser) return null;
 
-  const { data: memberships, error: membershipError } =
+  // Look only for a tracker OWNED by this user.
+  // A tracker they joined using an invite code does not count
+  // as their personal tracker.
+  const { data: ownedTrackers, error: ownedError } =
     await supabaseClient
-      .from("tracker_members")
-      .select("tracker_id, role")
-      .eq("user_id", currentUser.id);
+      .from("trackers")
+      .select("*")
+      .eq("owner_id", currentUser.id)
+      .order("created_at", { ascending: true })
+      .limit(1);
 
-  if (membershipError) {
-    showDebug("Home tracker membership error: " + membershipError.message);
+  if (ownedError) {
+    showDebug("Personal tracker lookup error: " + ownedError.message);
     return null;
   }
 
-  if (memberships && memberships.length) {
-    const trackerId = memberships[0].tracker_id;
-
-    const { data: tracker, error: trackerError } =
-      await supabaseClient
-        .from("trackers")
-        .select("*")
-        .eq("id", trackerId)
-        .single();
-
-    if (trackerError) {
-      showDebug("Home tracker load error: " + trackerError.message);
-      return null;
-    }
-
-    currentTracker = tracker;
-    return tracker;
+  if (ownedTrackers && ownedTrackers.length) {
+    currentTracker = ownedTrackers[0];
+    return currentTracker;
   }
 
   const displayName =
@@ -2047,16 +1977,17 @@
     currentUser.email?.split("@")[0] ||
     "My";
 
-  const trackerName = `${displayName}'s Deadbeat Tracker`;
+  const personalTrackerName = `${displayName}'s Deadbeat Tracker`;
 
+  // Uses the secure create_tracker database function.
   const { data: newTrackerId, error: createError } =
     await supabaseClient.rpc(
       "create_tracker",
-      { tracker_name: trackerName }
+      { tracker_name: personalTrackerName }
     );
 
   if (createError) {
-    showDebug("Home tracker create error: " + createError.message);
+    showDebug("Personal tracker create error: " + createError.message);
     return null;
   }
 
@@ -2068,41 +1999,13 @@
       .single();
 
   if (loadError) {
-    showDebug("New tracker load error: " + loadError.message);
+    showDebug("New personal tracker load error: " + loadError.message);
     return null;
   }
 
   currentTracker = newTracker;
-  return newTracker;
+  return currentTracker;
 }
-    async function loadTrackers(){
-      $("signedInName").textContent =
-        currentUser.user_metadata?.display_name ||
-        currentUser.email;
-      showScreen("trackerScreen");
-    }
-
-    async function joinTracker(){
-      const code = $("inviteCode").value.trim();
-      if (!code){
-        setMessage("trackerMessage","Enter an invite code.","error");
-        return;
-      }
-      const { data, error } = await supabaseClient.rpc(
-        "join_tracker_by_invite",
-        { supplied_invite_code: code }
-      );
-      if (error){
-        setMessage("trackerMessage", error.message || "Failed to join tracker.","error");
-        return;
-      }
-      if (!data){
-        setMessage("trackerMessage","No tracker ID returned for that invite code.","error");
-        return;
-      }
-      $("inviteCode").value = "";
-      await openTracker(data);
-    }
 
     async function useDefaultTracker(){
       if (!currentUser){
