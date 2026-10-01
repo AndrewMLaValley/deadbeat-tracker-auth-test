@@ -343,6 +343,56 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
+    /* BUILD 9.84 — dashboard card status colors */
+
+.dashboard-card{
+  width:100%;
+  text-align:left;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px;
+  background:white;
+  color:var(--text);
+  box-shadow:0 4px 16px rgba(18,53,91,.08);
+}
+
+.dashboard-card.has-balance{
+  background:#fff7cc;
+  border-color:#e6bf32;
+}
+
+.dashboard-card.payment-risk{
+  background:#fdecea;
+  border-color:var(--red);
+  color:#7f1d1d;
+}
+
+.dashboard-card .sub{
+  color:inherit;
+  opacity:.78;
+}
+
+.entry-moved{
+  background:#e5f6ee !important;
+  border-left:5px solid var(--green) !important;
+}
+
+.bank-account-list{
+  margin-top:12px;
+}
+
+.bank-account-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+
+.bank-account-row:last-child{
+  border-bottom:0;
+}
   </style>
 </head>
 
@@ -353,7 +403,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 9.83 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 9.84 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -566,7 +616,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 9.83 — Shared Supabase Version
+              BUILD 9.84 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -734,10 +784,39 @@
           </select>
         </div>
 
-        <div class="group">
-          <label for="entryNotes">Notes</label>
-          <textarea id="entryNotes"></textarea>
-        </div>
+<div class="group">
+  <label for="entryFromBankAccount">From Bank Account</label>
+  <select id="entryFromBankAccount">
+    <option value="">No bank account selected</option>
+  </select>
+  <p class="sub">
+    Select the account where the money came from or was set aside.
+  </p>
+</div>
+
+<div class="group">
+  <label for="entryToBankAccount">To Bank Account</label>
+  <select id="entryToBankAccount">
+    <option value="">No bank account selected</option>
+  </select>
+  <p class="sub">
+    Use this for account-to-account transfers. For a credit-card payment,
+    select the card above and normally leave this field blank.
+  </p>
+</div>
+
+<div class="group">
+  <label for="entryNotes">Notes</label>
+  <textarea id="entryNotes"></textarea>
+</div>
+
+<div class="group">
+  <label>
+    <input id="entryCashMoved" type="checkbox"
+      style="width:auto;margin-right:8px">
+    Cash moved or set aside to cover this entry
+  </label>
+</div>
 <div class="group">
   <label>
     <input id="entryCashMoved" type="checkbox"
@@ -791,6 +870,15 @@
     <option value="Store Card">Store Card</option>
     <option value="Other" selected>Other</option>
   </select>
+</div>
+        <div class="group">
+  <label for="minimumPayment">Minimum Payment</label>
+  <input id="minimumPayment" type="number" min="0" step=".01"
+    placeholder="Example: 45.00">
+  <p class="sub">
+    The dashboard turns red three days before the payment due date
+    when recorded payments are below this amount.
+  </p>
 </div>
         <div class="group">
           <label for="cardLastFour">Last Four Digits</label>
@@ -875,6 +963,13 @@
   </label>
 </div>
         <div class="group">
+  <label>
+    <input id="recurringCashMoved" type="checkbox"
+      style="width:auto;margin-right:8px">
+    Cash automatically moved or set aside for this charge
+  </label>
+</div>
+        <div class="group">
           <label>
             <input id="recurringActive" type="checkbox" checked style="width:auto;margin-right:8px">
             Active
@@ -928,7 +1023,9 @@
       <button class="secondary wide" type="button" onclick="refreshData()">
         Refresh Shared Data
       </button>
-
+<button class="secondary wide" type="button" onclick="openBankAccount()">
+  Manage Bank Accounts
+</button>
       <button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
         Switch Tracker
       </button>
@@ -945,7 +1042,70 @@
       <div id="settingsMessage" class="message"></div>
     </div>
   </div>
+  
+<!-- BANK ACCOUNT MODAL -->
+<div id="bankAccountModal" class="modal-bg">
+  <div class="modal">
+    <div class="row">
+      <h2 id="bankAccountTitle">Manage Bank Accounts</h2>
+      <button class="close" type="button"
+        onclick="closeModal('bankAccountModal')">×</button>
+    </div>
 
+    <form id="bankAccountForm">
+      <input id="bankAccountId" type="hidden">
+
+      <div class="group">
+        <label for="bankAccountName">Account Name</label>
+        <input id="bankAccountName" required
+          placeholder="Example: Primary Checking">
+      </div>
+
+      <div class="group">
+        <label for="bankAccountType">Account Type</label>
+        <select id="bankAccountType">
+          <option value="checking">Checking</option>
+          <option value="savings">Savings</option>
+          <option value="cash">Cash</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="group">
+        <label for="bankAccountLastFour">Last Four Digits (Optional)</label>
+        <input id="bankAccountLastFour" maxlength="4" inputmode="numeric">
+      </div>
+
+      <div class="actions">
+        <button class="secondary" type="button"
+          onclick="closeModal('bankAccountModal')">
+          Cancel
+        </button>
+
+        <button class="primary" type="submit">
+          Save Bank Account
+        </button>
+      </div>
+
+      <button id="deleteBankAccountButton"
+        class="danger wide hidden"
+        type="button"
+        onclick="deleteBankAccount()">
+        Delete Bank Account
+      </button>
+    </form>
+
+    <div class="heading">
+      <h2>Saved Bank Accounts</h2>
+      <button class="secondary" type="button"
+        onclick="openBankAccount('new')">
+        + Add
+      </button>
+    </div>
+
+    <div id="bankAccountsList" class="bank-account-list"></div>
+  </div>
+</div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
@@ -989,7 +1149,8 @@ let cards = [];
 let entries = [];
 let recurringCharges = [];
 let selectedCardIdForEntries = "";
-
+let bankAccounts = [];
+    
     function money(value) {
       return new Intl.NumberFormat("en-US", {
         style:"currency",
@@ -1136,6 +1297,179 @@ function renderEntriesPage() {
     }
   `;
 }
+
+    function bankAccountById(id) {
+  return bankAccounts.find(account => account.id === id);
+}
+
+function bankAccountName(id) {
+  const account = bankAccountById(id);
+
+  if (!account) return "Not selected";
+
+  const lastFour = account.last_four
+    ? ` •••• ${account.last_four}`
+    : "";
+
+  return `${account.name}${lastFour}`;
+}
+
+function fillBankAccountSelect(selectId, selectedId = "") {
+  const select = $(selectId);
+
+  if (!select) return;
+
+  select.innerHTML = `
+    <option value="">No bank account selected</option>
+    ${
+      bankAccounts
+        .filter(account => account.active !== false)
+        .map(account => `
+          <option value="${account.id}">
+            ${esc(bankAccountName(account.id))}
+          </option>
+        `)
+        .join("")
+    }
+  `;
+
+  select.value = selectedId || "";
+}
+
+async function loadBankAccounts() {
+  if (!currentTracker) {
+    bankAccounts = [];
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("bank_accounts")
+    .select("*")
+    .eq("tracker_id", currentTracker.id)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Bank-account load error:", error.message);
+    bankAccounts = [];
+    return;
+  }
+
+  bankAccounts = data || [];
+  renderBankAccountsList();
+}
+
+function renderBankAccountsList() {
+  const list = $("bankAccountsList");
+
+  if (!list) return;
+
+  list.innerHTML = bankAccounts.length
+    ? bankAccounts.map(account => `
+      <div class="bank-account-row">
+        <div>
+          <b>${esc(account.name)}</b>
+          <div class="sub">
+            ${esc(account.account_type || "other")}
+            ${account.last_four ? ` · •••• ${esc(account.last_four)}` : ""}
+          </div>
+        </div>
+
+        <button class="secondary" type="button"
+          onclick="openBankAccount('${account.id}')">
+          Edit
+        </button>
+      </div>
+    `).join("")
+    : `<div class="empty">No bank accounts saved yet.</div>`;
+}
+
+function openBankAccount(id = "") {
+  if (!currentTracker) {
+    alert("Open a tracker first.");
+    return;
+  }
+
+  $("bankAccountForm").reset();
+  $("bankAccountId").value = "";
+  $("bankAccountTitle").textContent = "Add Bank Account";
+  $("deleteBankAccountButton").classList.add("hidden");
+
+  if (id && id !== "new") {
+    const account = bankAccountById(id);
+
+    if (!account) return;
+
+    $("bankAccountId").value = account.id;
+    $("bankAccountName").value = account.name || "";
+    $("bankAccountType").value = account.account_type || "checking";
+    $("bankAccountLastFour").value = account.last_four || "";
+    $("bankAccountTitle").textContent = "Edit Bank Account";
+    $("deleteBankAccountButton").classList.remove("hidden");
+  }
+
+  renderBankAccountsList();
+  openModal("bankAccountModal");
+}
+
+async function saveBankAccount(event) {
+  event.preventDefault();
+
+  const id = $("bankAccountId").value;
+
+  const record = {
+    tracker_id: currentTracker.id,
+    name: $("bankAccountName").value.trim(),
+    account_type: $("bankAccountType").value,
+    last_four: $("bankAccountLastFour").value
+      .replace(/\D/g, "")
+      .slice(0, 4)
+  };
+
+  let result;
+
+  if (id) {
+    result = await supabaseClient
+      .from("bank_accounts")
+      .update(record)
+      .eq("id", id)
+      .select()
+      .single();
+  } else {
+    result = await supabaseClient
+      .from("bank_accounts")
+      .insert(record)
+      .select()
+      .single();
+  }
+
+  if (result.error) {
+    alert(result.error.message);
+    return;
+  }
+
+  await loadBankAccounts();
+  openBankAccount();
+}
+
+async function deleteBankAccount() {
+  const id = $("bankAccountId").value;
+
+  if (!id || !confirm("Delete this bank account?")) return;
+
+  const { error } = await supabaseClient
+    .from("bank_accounts")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadBankAccounts();
+  openBankAccount();
+}
+    
     function cardById(id) {
       return cards.find(card => card.id === id);
     }
@@ -1286,45 +1620,241 @@ function cardCashStillToMove(cardId) {
     cardExpenses + plannedRecurring - cardCashMoved(cardId)
   );
 }
-    function cardInfoHTML(card) {
-      return `
-        <div class="interest">
-        Card Type: ${esc(card.card_network || "Other")}<br>
-        Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
-               Due Day: ${card.due_day || "Not set"}<br>
-          Current Balance: ${money(cardBalance(card.id))}<br>
-Recurring Planned Charges: ${money(recurringTotal(card.id))}<br>
-Cash Moved This Month: ${money(cardCashMoved(card.id))}<br>
-Cash Still To Move: ${money(cardCashStillToMove(card.id))}<br>
-Estimated 30-Day Interest if Unpaid:
-          ${money(estimatedInterest(card))}
-        </div>
-      `;
-    }
 
+   function dateForDay(year, monthIndex, requestedDay) {
+  const lastDayOfMonth = new Date(
+    year,
+    monthIndex + 1,
+    0
+  ).getDate();
+
+  const day = Math.min(
+    Math.max(Number(requestedDay || 1), 1),
+    lastDayOfMonth
+  );
+
+  return new Date(year, monthIndex, day);
+}
+
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getMinimumPaymentStatus(card) {
+  const balance = cardBalance(card.id);
+  const minimumPayment = Number(card.minimum_payment || 0);
+  const dueDay = Number(card.due_day || 0);
+
+  if (balance <= 0) {
+    return {
+      risk: false,
+      label: "No balance due.",
+      dueDate: null,
+      deadlineDate: null,
+      paymentsRecorded: 0
+    };
+  }
+
+  if (minimumPayment <= 0 || dueDay <= 0) {
+    return {
+      risk: false,
+      label: "Set a minimum payment and due day to enable payment alerts.",
+      dueDate: null,
+      deadlineDate: null,
+      paymentsRecorded: 0
+    };
+  }
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const dueDate = dateForDay(
+    now.getFullYear(),
+    now.getMonth(),
+    dueDay
+  );
+
+  const previousDueDate = dateForDay(
+    now.getFullYear(),
+    now.getMonth() - 1,
+    dueDay
+  );
+
+  const deadlineDate = new Date(dueDate);
+  deadlineDate.setDate(deadlineDate.getDate() - 3);
+
+  const paymentWindowStart = toDateInputValue(previousDueDate);
+  const paymentWindowEnd = toDateInputValue(dueDate);
+
+  const paymentsRecorded = entries
+    .filter(entry =>
+      entry.card_id === card.id &&
+      entry.entry_type === "payment" &&
+      entry.entry_date >= paymentWindowStart &&
+      entry.entry_date <= paymentWindowEnd
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+
+  const minimumIsCovered =
+    paymentsRecorded >= minimumPayment;
+
+  const risk =
+    now >= deadlineDate &&
+    !minimumIsCovered;
+
+  let label = "";
+
+  if (minimumIsCovered) {
+    label = `Minimum payment covered: ${money(paymentsRecorded)} recorded.`;
+  } else if (now > dueDate) {
+    label =
+      `Minimum payment overdue. ` +
+      `${money(Math.max(0, minimumPayment - paymentsRecorded))} remains.`;
+  } else if (risk) {
+    label =
+      `Minimum payment at risk. ` +
+      `${money(Math.max(0, minimumPayment - paymentsRecorded))} remains ` +
+      `before ${toDateInputValue(dueDate)}.`;
+  } else {
+    label =
+      `Minimum payment: ${money(minimumPayment)} due by ` +
+      `${toDateInputValue(deadlineDate)}.`;
+  }
+
+  return {
+    risk,
+    label,
+    dueDate,
+    deadlineDate,
+    paymentsRecorded
+  };
+}
+
+function cardCashMoved(cardId) {
+  const expenseCashMoved = entries
+    .filter(entry =>
+      entry.card_id === cardId &&
+      entry.entry_type === "expense" &&
+      entry.cash_moved === true &&
+      String(entry.entry_date).slice(0, 7) === currentMonth()
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+
+  const recurringCashMoved = recurringCharges
+    .filter(charge =>
+      charge.card_id === cardId &&
+      charge.active !== false &&
+      charge.cash_moved === true
+    )
+    .reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
+
+  return expenseCashMoved + recurringCashMoved;
+}
+
+function cardCashStillToMove(cardId) {
+  const expensesThisMonth = entries
+    .filter(entry =>
+      entry.card_id === cardId &&
+      entry.entry_type === "expense" &&
+      String(entry.entry_date).slice(0, 7) === currentMonth()
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+
+  const recurringPlanned = recurringCharges
+    .filter(charge =>
+      charge.card_id === cardId &&
+      charge.active !== false
+    )
+    .reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
+
+  return Math.max(
+    0,
+    expensesThisMonth + recurringPlanned - cardCashMoved(cardId)
+  );
+} 
+    
+  function cardInfoHTML(card) {
+  const paymentStatus = getMinimumPaymentStatus(card);
+
+  return `
+    <div class="interest">
+      <b>Card Details</b><br>
+      Card Type: ${esc(card.card_network || "Other")}<br>
+      Last Four: ${card.last_four ? `•••• ${esc(card.last_four)}` : "Not set"}<br>
+      Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
+      Payment Due Day: ${card.due_day || "Not set"}<br><br>
+
+      <b>Payment Planning</b><br>
+      Minimum Payment: ${money(card.minimum_payment || 0)}<br>
+      ${
+        paymentStatus.deadlineDate
+          ? `Tracker Payment Deadline: ${
+              toDateInputValue(paymentStatus.deadlineDate)
+            }<br>`
+          : ""
+      }
+      ${esc(paymentStatus.label)}<br><br>
+
+      <b>Card Balance</b><br>
+      Current Balance: ${money(cardBalance(card.id))}<br>
+      Recurring Planned Charges: ${money(recurringTotal(card.id))}<br>
+      Cash Moved This Month: ${money(cardCashMoved(card.id))}<br>
+      Cash Still To Move: ${money(cardCashStillToMove(card.id))}<br>
+      Estimated 30-Day Interest if Unpaid:
+      ${money(estimatedInterest(card))}
+    </div>
+  `;
+}
     function entryHTML(entry) {
-      const payment = entry.entry_type === "payment";
-      const transfer = entry.entry_type === "transfer";
+  const payment = entry.entry_type === "payment";
+  const transfer = entry.entry_type === "transfer";
+  const cashMoved = entry.cash_moved === true;
 
-      let label = "Expense";
-      if (payment) label = "Payment";
-      if (transfer) label = "Transfer";
+  let label = "Expense";
 
-      return `
-        <button class="list" type="button"
-          onclick="openEntry('${entry.id}')">
-          <div class="row">
-            <b>${esc(entry.merchant)}</b>
-            <b>${payment ? "−" : ""}${money(entry.amount)}</b>
-          </div>
-          <div class="sub">
-            ${label} ·
-            ${entry.entry_date} ·
-            ${esc(cardName(entry.card_id))}
-          </div>
-        </button>
-      `;
-    }
+  if (payment) label = "Payment";
+  if (transfer) label = "Transfer";
+
+  const fromAccount = entry.from_bank_account_id
+    ? bankAccountName(entry.from_bank_account_id)
+    : "";
+
+  const toAccount = entry.to_bank_account_id
+    ? bankAccountName(entry.to_bank_account_id)
+    : "";
+
+  let accountLine = "";
+
+  if (fromAccount && toAccount) {
+    accountLine = `From: ${esc(fromAccount)} → To: ${esc(toAccount)}`;
+  } else if (fromAccount) {
+    accountLine = `From: ${esc(fromAccount)}`;
+  } else if (toAccount) {
+    accountLine = `To: ${esc(toAccount)}`;
+  }
+
+  return `
+    <button class="list ${cashMoved ? "entry-moved" : ""}" type="button"
+      onclick="openEntry('${entry.id}')">
+      <div class="row">
+        <b>${esc(entry.merchant)}</b>
+        <b>${payment ? "−" : ""}${money(entry.amount)}</b>
+      </div>
+
+      <div class="sub">
+        ${label} ·
+        ${entry.entry_date} ·
+        ${esc(cardName(entry.card_id))}
+        ${cashMoved ? " · Cash Moved" : ""}
+        ${accountLine ? `<br>${accountLine}` : ""}
+      </div>
+    </button>
+  `;
+}
 
     function recurringHTML(cardId) {
       const charges = recurringForCard(cardId);
@@ -1386,29 +1916,36 @@ $("monthCashStillToMove").textContent = money(cashStillToMove);
             : `${money(Math.abs(remaining))} over the monthly budget.`;
 
 $("dashboardCards").innerHTML = cards.length
-  ? cards.map(card => `
-    <button class="card" type="button"
-      onclick="openCardDetail('${card.id}')"
-      style="width:100%;text-align:left;cursor:pointer">
-      <div class="row">
-        <b>${esc(card.name)}</b>
-        <span>💳</span>
-      </div>
+  ? cards.map(card => {
+      const balance = cardBalance(card.id);
+      const paymentStatus = getMinimumPaymentStatus(card);
 
-      <div class="sub">
-        ${esc(card.card_network || "Other")} ·
-${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
-      </div>
+      let statusClass = "";
 
-      <strong>${money(cardBalance(card.id))}</strong>
+      if (balance > 0) {
+        statusClass = "has-balance";
+      }
 
-      ${cardInfoHTML(card)}
+      if (paymentStatus.risk) {
+        statusClass = "payment-risk";
+      }
 
-      <div class="sub" style="margin-top:10px">
-        Tap to view this card's transactions.
-      </div>
-    </button>
-  `).join("")
+      return `
+        <button class="dashboard-card ${statusClass}" type="button"
+          onclick="openCardDetail('${card.id}')">
+          <div class="row">
+            <b>${esc(card.name)}</b>
+            <span>💳</span>
+          </div>
+
+          <div class="sub">
+            ${esc(card.card_network || "Other")}
+          </div>
+
+          <strong>${money(balance)}</strong>
+        </button>
+      `;
+    }).join("")
   : `<div class="card empty">No credit cards saved.</div>`;
 
       $("recentEntries").innerHTML = entries.length
@@ -1645,10 +2182,12 @@ renderEntriesPage();
 
       cards = cardsResult.data || [];
       entries = entriesResult.data || [];
-      currentTracker = trackerResult.data;
-      recurringCharges = recurringResult.error
-        ? []
-        : recurringResult.data || [];
+     currentTracker = trackerResult.data;
+recurringCharges = recurringResult.error
+  ? []
+  : recurringResult.data || [];
+
+await loadBankAccounts();
 
       $("trackerTitle").textContent = currentTracker.name;
       $("trackerSubtitle").textContent =
@@ -1683,7 +2222,9 @@ $("entryDate").value = today();
 $("entryCashMoved").checked = false;
 $("deleteEntryButton").classList.add("hidden");;
 
-      fillCardSelect();
+      fillCardSelect();fillCardSelect();
+fillBankAccountSelect("entryFromBankAccount");
+fillBankAccountSelect("entryToBankAccount");
 
       if (id) {
         const entry = entries.find(item => item.id === id);
@@ -1697,8 +2238,18 @@ $("deleteEntryButton").classList.add("hidden");;
         $("entryAmount").value = entry.amount;
         $("entryDate").value = entry.entry_date;
         $("entryCategory").value = entry.category || "Other";
-        $("entryNotes").value = entry.notes || "";
+       $("entryNotes").value = entry.notes || "";
 $("entryCashMoved").checked = entry.cash_moved === true;
+
+fillBankAccountSelect(
+  "entryFromBankAccount",
+  entry.from_bank_account_id || ""
+);
+
+fillBankAccountSelect(
+  "entryToBankAccount",
+  entry.to_bank_account_id || ""
+);
         fillCardSelect(entry.card_id);
 
         $("deleteEntryButton").classList.remove("hidden");
@@ -1719,9 +2270,11 @@ $("entryCashMoved").checked = entry.cash_moved === true;
         merchant: $("entryMerchant").value.trim(),
         amount: Number($("entryAmount").value),
         entry_date: $("entryDate").value,
-        category: $("entryCategory").value,
+category: $("entryCategory").value,
 notes: $("entryNotes").value.trim(),
-cash_moved: $("entryCashMoved").checked
+cash_moved: $("entryCashMoved").checked,
+from_bank_account_id: $("entryFromBankAccount").value || null,
+to_bank_account_id: $("entryToBankAccount").value || null
             };
       let result;
 
@@ -1784,8 +2337,9 @@ cash_moved: $("entryCashMoved").checked
 $("cardId").value = card.id;
 $("cardName").value = card.name;
 $("cardNetwork").value = card.card_network || "Other";
+$("minimumPayment").value = card.minimum_payment || "";
 $("cardLastFour").value = card.last_four || "";
-        $("cardCycleDay").value = card.cycle_end_day || "";
+      $("cardCycleDay").value = card.cycle_end_day || "";
         $("cardDueDay").value = card.due_day || "";
         $("cardApr").value = card.apr || "";
         $("cardBalance").value = card.starting_balance || "";
@@ -1805,8 +2359,9 @@ $("cardLastFour").value = card.last_four || "";
 const record = {
   tracker_id: currentTracker.id,
   name: $("cardName").value.trim(),
-  card_network: $("cardNetwork").value || "Other",
-  last_four: $("cardLastFour").value
+card_network: $("cardNetwork").value || "Other",
+minimum_payment: Number($("minimumPayment").value || 0),
+last_four: $("cardLastFour").value
           .replace(/\D/g,"")
           .slice(0,4),
         cycle_end_day:
@@ -1870,7 +2425,7 @@ const record = {
       $("recurringCardId").value = cardId;
       $("recurringTitle").textContent = "Add Recurring Charge";
       $("deleteRecurringButton").classList.add("hidden");
-$("recurringCashMoved").checked = false;
+      $("recurringCashMoved").checked = false;
       if (recurringId) {
         const charge = recurringCharges.find(item => item.id === recurringId);
 
@@ -2311,6 +2866,7 @@ selectedCardIdForEntries = "";
     $("entryForm").addEventListener("submit",saveEntry);
     $("cardForm").addEventListener("submit",saveCard);
     $("recurringForm").addEventListener("submit",saveRecurring);
+   $("bankAccountForm").addEventListener("submit",saveBankAccount);
 
     document.querySelectorAll(".modal-bg").forEach(modal => {
       modal.addEventListener("click",event => {
@@ -2326,6 +2882,7 @@ selectedCardIdForEntries = "";
         closeModal("cardModal");
         closeModal("recurringModal");
         closeModal("settingsModal");
+closeModal("bankAccountModal");
       }
     });
 
