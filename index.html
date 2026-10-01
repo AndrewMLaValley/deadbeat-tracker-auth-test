@@ -383,7 +383,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.78 Avoid the interest.</p>
+        <p class="sub">Pay the balance BUILD 9.79 Avoid the interest.</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -557,42 +557,53 @@
 
   <!-- TRACKER CHOICE -->
   <section id="trackerScreen" class="screen">
-    <div class="auth-wrap">
-      <div class="card">
-        <div class="row">
-          <div>
-            <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-            <p id="signedInName" class="sub"></p>
-          </div>
-          <button class="secondary" type="button" onclick="signOut()">Sign Out</button>
+  <div class="auth-wrap">
+    <div class="card">
+      <div class="row">
+        <div>
+          <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
+          <p id="signedInName" class="sub"></p>
         </div>
-
-        <div class="heading">
-          <h2>Use This Tracker</h2>
-        </div>
-        <p class="sub">
-          This app already has a built‑in tracker. You can start using it immediately
-          or join another shared tracker with an invite code.
-        </p>
-        <button class="primary wide" type="button" onclick="useDefaultTracker()">
-          Open Built‑in Tracker
+        <button class="secondary" type="button" onclick="signOut()">
+          Sign Out
         </button>
-
-        <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
-
-        <h2>Join a Shared Tracker</h2>
-        <div class="group">
-          <label for="inviteCode">Invite Code</label>
-          <input id="inviteCode" placeholder="Example: A1B2C3D4">
-        </div>
-        <button class="secondary wide" type="button" onclick="joinTracker()">
-          Join Shared Tracker
-        </button>
-
-        <div id="trackerMessage" class="message"></div>
       </div>
+
+      <div class="heading">
+        <h2>Select a Tracker</h2>
+      </div>
+
+      <p class="sub">
+        Your personal tracker is private. Shared trackers appear here only after
+        you join them using an invite code.
+      </p>
+
+      <div class="group">
+        <label for="trackerSelect">Available Trackers</label>
+        <select id="trackerSelect"></select>
+      </div>
+
+      <button class="primary wide" type="button" onclick="openSelectedTracker()">
+        Open Selected Tracker
+      </button>
+
+      <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
+
+      <h2>Join a Shared Tracker</h2>
+
+      <div class="group">
+        <label for="inviteCode">Invite Code</label>
+        <input id="inviteCode" placeholder="Example: A1B2C3D4">
+      </div>
+
+      <button class="secondary wide" type="button" onclick="joinTracker()">
+        Join Shared Tracker
+      </button>
+
+      <div id="trackerMessage" class="message"></div>
     </div>
-  </section>
+  </div>
+</section>
 
   <!-- MAIN APP -->
   <section id="appScreen" class="screen">
@@ -602,7 +613,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.78 — Shared Supabase Version
+              BUILD 9.79 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Shared credit-card spending tracker</p>
           </div>
@@ -1098,7 +1109,14 @@
           This will unlink the account from this tracker (Plaid sandbox) and remove it from the app. It will not affect your actual bank.
         </p>
       </div>
+<button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
+  Switch Tracker
+</button>
 
+<button id="leaveTrackerButton" class="danger wide hidden" type="button"
+  onclick="leaveCurrentTracker()">
+  Leave This Shared Tracker
+</button>
       <button class="danger wide" type="button" onclick="signOut()">
         Sign Out
       </button>
@@ -1142,7 +1160,66 @@
       if (!debug) return;
       debug.textContent = "DEBUG: " + (text || "");
     }
+async function returnToTrackerSelection() {
+  closeModal("settingsModal");
 
+  currentTracker = null;
+  cards = [];
+  entries = [];
+  recurringCharges = [];
+  selectedCardIdForEntries = "";
+
+  await ensureUserHasHomeTracker();
+  await loadTrackers();
+}
+
+async function leaveCurrentTracker() {
+  if (!currentTracker) return;
+
+  if (
+    currentTracker.is_personal === true ||
+    currentTracker.owner_id === currentUser.id
+  ) {
+    setMessage(
+      "settingsMessage",
+      "You cannot leave your personal tracker or a tracker you own.",
+      "error"
+    );
+    return;
+  }
+
+  if (!confirm(
+    `Leave the shared tracker "${currentTracker.name}"? ` +
+    "You will lose access to its cards, entries, and budget."
+  )) {
+    return;
+  }
+
+  const { error } = await supabaseClient.rpc(
+    "leave_tracker",
+    { p_tracker_id: currentTracker.id }
+  );
+
+  if (error) {
+    setMessage(
+      "settingsMessage",
+      error.message || "Unable to leave tracker.",
+      "error"
+    );
+    return;
+  }
+
+  closeModal("settingsModal");
+
+  currentTracker = null;
+  cards = [];
+  entries = [];
+  recurringCharges = [];
+  selectedCardIdForEntries = "";
+
+  await ensureUserHasHomeTracker();
+  await loadTrackers();
+}
     async function checkBackend(){
       try {
         showDebug("Checking backend /ping...");
@@ -1951,82 +2028,169 @@
 async function ensureUserHasHomeTracker() {
   if (!currentUser) return null;
 
-  // Look only for a tracker OWNED by this user.
-  // A tracker they joined using an invite code does not count
-  // as their personal tracker.
-  const { data: ownedTrackers, error: ownedError } =
-    await supabaseClient
-      .from("trackers")
-      .select("*")
-      .eq("owner_id", currentUser.id)
-      .order("created_at", { ascending: true })
-      .limit(1);
-
-  if (ownedError) {
-    showDebug("Personal tracker lookup error: " + ownedError.message);
-    return null;
-  }
-
-  if (ownedTrackers && ownedTrackers.length) {
-    currentTracker = ownedTrackers[0];
-    return currentTracker;
-  }
-
-  const displayName =
-    currentUser.user_metadata?.display_name ||
-    currentUser.email?.split("@")[0] ||
-    "My";
-
-  const personalTrackerName = `${displayName}'s Deadbeat Tracker`;
-
-  // Uses the secure create_tracker database function.
-  const { data: newTrackerId, error: createError } =
-    await supabaseClient.rpc(
-      "create_tracker",
-      { tracker_name: personalTrackerName }
-    );
+  const { data: trackerId, error: createError } =
+    await supabaseClient.rpc("ensure_personal_tracker");
 
   if (createError) {
-    showDebug("Personal tracker create error: " + createError.message);
+    showDebug(
+      "Personal tracker ensure error: " +
+      (createError.message || "Unknown error")
+    );
     return null;
   }
 
-  const { data: newTracker, error: loadError } =
+  const { data: tracker, error: loadError } =
     await supabaseClient
       .from("trackers")
       .select("*")
-      .eq("id", newTrackerId)
+      .eq("id", trackerId)
       .single();
 
   if (loadError) {
-    showDebug("New personal tracker load error: " + loadError.message);
+    showDebug(
+      "Personal tracker load error: " +
+      (loadError.message || "Unknown error")
+    );
     return null;
   }
 
-  currentTracker = newTracker;
-  return currentTracker;
+  return tracker;
 }
 
- async function loadTrackers() {
+async function loadTrackers(selectedTrackerId = "") {
+  if (!currentUser) return;
+
   $("signedInName").textContent =
     currentUser.user_metadata?.display_name ||
     currentUser.email;
 
+  const { data: memberships, error: membershipError } =
+    await supabaseClient
+      .from("tracker_members")
+      .select("tracker_id, role")
+      .eq("user_id", currentUser.id);
+
+  if (membershipError) {
+    setMessage("trackerMessage", membershipError.message, "error");
+    showScreen("trackerScreen");
+    return;
+  }
+  
+async function openSelectedTracker() {
+  const trackerId = $("trackerSelect").value;
+
+  if (!trackerId) {
+    setMessage(
+      "trackerMessage",
+      "Select a tracker first.",
+      "error"
+    );
+    return;
+  }
+
+  await openTracker(trackerId);
+}
+  const trackerIds = (memberships || []).map(item => item.tracker_id);
+
+  if (!trackerIds.length) {
+    setMessage(
+      "trackerMessage",
+      "No trackers found. Refresh the page to create your personal tracker.",
+      "error"
+    );
+    showScreen("trackerScreen");
+    return;
+  }
+
+  const { data: trackers, error: trackerError } =
+    await supabaseClient
+      .from("trackers")
+      .select("*")
+      .in("id", trackerIds)
+      .order("created_at", { ascending: true });
+
+  if (trackerError) {
+    setMessage("trackerMessage", trackerError.message, "error");
+    showScreen("trackerScreen");
+    return;
+  }
+
+  const personalTracker = (trackers || []).find(
+    tracker =>
+      tracker.is_personal === true &&
+      tracker.owner_id === currentUser.id
+  );
+
+  $("trackerSelect").innerHTML = (trackers || []).map(tracker => {
+    let label = tracker.name;
+
+    if (tracker.is_personal === true &&
+        tracker.owner_id === currentUser.id) {
+      label += " — Personal Tracker";
+    } else if (tracker.owner_id === currentUser.id) {
+      label += " — Owner";
+    } else {
+      label += " — Shared";
+    }
+
+    return `
+      <option value="${tracker.id}">
+        ${esc(label)}
+      </option>
+    `;
+  }).join("");
+
+  const selected =
+    selectedTrackerId ||
+    personalTracker?.id ||
+    trackers?.[0]?.id ||
+    "";
+
+  $("trackerSelect").value = selected;
+
+  setMessage("trackerMessage", "");
   showScreen("trackerScreen");
-}   
-    
+}
+    async function joinTracker() {
+  const code = $("inviteCode").value.trim();
+
+  if (!code) {
+    setMessage("trackerMessage", "Enter an invite code.", "error");
+    return;
+  }
+
+  const { data: trackerId, error } =
+    await supabaseClient.rpc(
+      "join_tracker_by_invite",
+      { supplied_invite_code: code }
+    );
+
+  if (error) {
+    setMessage(
+      "trackerMessage",
+      error.message || "Unable to join tracker.",
+      "error"
+    );
+    return;
+  }
+
+  $("inviteCode").value = "";
+
+  await loadTrackers(trackerId);
+
+  setMessage(
+    "trackerMessage",
+    "You joined the shared tracker. Select Open Selected Tracker to use it.",
+    "good"
+  );
+}
     async function useDefaultTracker(){
       if (!currentUser){
         setMessage("trackerMessage","Sign in first.","error");
         return;
       }
-      const home = await ensureUserHasHomeTracker();
-      if (!home){
-        setMessage("trackerMessage","Could not create or find your personal tracker.","error");
-        return;
-      }
-      await openTracker(home.id);
-    }
+    await ensureUserHasHomeTracker();
+     await loadTrackers();
 
     async function openTracker(trackerId){
       const { data, error } = await supabaseClient
@@ -2675,7 +2839,15 @@ async function ensureUserHasHomeTracker() {
       setMessage("settingsMessage","");
 
       await loadLinkedAccountsForCurrentTracker();
+const leaveButton = $("leaveTrackerButton");
 
+if (leaveButton) {
+  const canLeave =
+    currentTracker.is_personal !== true &&
+    currentTracker.owner_id !== currentUser.id;
+
+  leaveButton.classList.toggle("hidden", !canLeave);
+}
       openModal("settingsModal");
     }
 
