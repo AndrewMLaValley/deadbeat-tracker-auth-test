@@ -950,10 +950,11 @@ if (!window.supabase) {
     const $ = id => document.getElementById(id);
 
     let currentUser = null;
-    let currentTracker = null;
-    let cards = [];
-    let entries = [];
-    let recurringCharges = [];
+let currentTracker = null;
+let cards = [];
+let entries = [];
+let recurringCharges = [];
+let selectedCardIdForEntries = "";
 
     function money(value) {
       return new Intl.NumberFormat("en-US", {
@@ -1043,7 +1044,64 @@ if (!window.supabase) {
         $(page + "Nav").classList.toggle("active", page === pageName);
       });
     }
+function openCardDetail(cardId) {
+  selectedCardIdForEntries = cardId;
+  showPage("entries");
+  renderEntriesPage();
+}
 
+function clearSelectedCardAndShowAllEntries() {
+  selectedCardIdForEntries = "";
+  renderEntriesPage();
+}
+
+function renderEntriesPage() {
+  const selectedCard = selectedCardIdForEntries
+    ? cardById(selectedCardIdForEntries)
+    : null;
+
+  if (!selectedCard) {
+    $("entriesList").innerHTML = entries.length
+      ? entries.map(entryHTML).join("")
+      : `<div class="empty">No expenses, payments, or transfers yet.</div>`;
+
+    return;
+  }
+
+  const selectedEntries = entries.filter(entry =>
+    entry.card_id === selectedCard.id
+  );
+
+  $("entriesList").innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="row">
+        <div>
+          <h2>${esc(selectedCard.name)}</h2>
+          <div class="sub">
+            ${
+              selectedCard.last_four
+                ? `•••• ${selectedCard.last_four}`
+                : "Manual card"
+            }
+          </div>
+        </div>
+
+        <button class="secondary" type="button"
+          onclick="clearSelectedCardAndShowAllEntries()">
+          Show All
+        </button>
+      </div>
+
+      ${cardInfoHTML(selectedCard)}
+    </div>
+
+    ${
+      selectedEntries.length
+        ? selectedEntries.map(entryHTML).join("")
+        : `<div class="card empty">No entries for this card yet.</div>`
+    }
+  `;
+}
     function cardById(id) {
       return cards.find(card => card.id === id);
     }
@@ -1208,32 +1266,36 @@ if (!window.supabase) {
             ? `${money(remaining)} remains in the monthly budget.`
             : `${money(Math.abs(remaining))} over the monthly budget.`;
 
-      $("dashboardCards").innerHTML = cards.length
-        ? cards.map(card => `
-          <div class="card">
-            <div class="row">
-              <b>${esc(card.name)}</b>
-              <button class="secondary" type="button"
-                onclick="openCard('${card.id}')">
-                Edit
-              </button>
-            </div>
-            <div class="sub">
-              ${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
-            </div>
-            <strong>${money(cardBalance(card.id))}</strong>
-            ${cardInfoHTML(card)}
-          </div>
-        `).join("")
-        : `<div class="card empty">No credit cards saved.</div>`;
+$("dashboardCards").innerHTML = cards.length
+  ? cards.map(card => `
+    <button class="card" type="button"
+      onclick="openCardDetail('${card.id}')"
+      style="width:100%;text-align:left;cursor:pointer">
+      <div class="row">
+        <b>${esc(card.name)}</b>
+        <span>💳</span>
+      </div>
+
+      <div class="sub">
+        ${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
+      </div>
+
+      <strong>${money(cardBalance(card.id))}</strong>
+
+      ${cardInfoHTML(card)}
+
+      <div class="sub" style="margin-top:10px">
+        Tap to view this card's transactions.
+      </div>
+    </button>
+  `).join("")
+  : `<div class="card empty">No credit cards saved.</div>`;
 
       $("recentEntries").innerHTML = entries.length
         ? entries.slice(0,5).map(entryHTML).join("")
         : `<div class="empty">No recent entries.</div>`;
 
-      $("entriesList").innerHTML = entries.length
-        ? entries.map(entryHTML).join("")
-        : `<div class="empty">No expenses, payments, or transfers yet.</div>`;
+renderEntriesPage();
 
       $("cardsList").innerHTML = cards.length
         ? cards.map(card => `
@@ -1861,9 +1923,10 @@ if (!window.supabase) {
       closeModal("settingsModal");
 
       currentTracker = null;
-      cards = [];
-      entries = [];
-      recurringCharges = [];
+cards = [];
+entries = [];
+recurringCharges = [];
+selectedCardIdForEntries = "";
 
       await ensurePersonalTracker();
       await loadTrackers();
@@ -1906,10 +1969,11 @@ if (!window.supabase) {
 
       closeModal("settingsModal");
 
-      currentTracker = null;
-      cards = [];
-      entries = [];
-      recurringCharges = [];
+currentTracker = null;
+cards = [];
+entries = [];
+recurringCharges = [];
+selectedCardIdForEntries = "";
 
       await ensurePersonalTracker();
       await loadTrackers();
@@ -2077,11 +2141,12 @@ if (!window.supabase) {
     async function signOut() {
       await supabaseClient.auth.signOut();
 
-      currentUser = null;
-      currentTracker = null;
-      cards = [];
-      entries = [];
-      recurringCharges = [];
+currentUser = null;
+currentTracker = null;
+cards = [];
+entries = [];
+recurringCharges = [];
+selectedCardIdForEntries = "";
 
       showScreen("authScreen");
       showAuthPanel("signInPanel");
