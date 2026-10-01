@@ -353,7 +353,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 9.82 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 9.83 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -566,7 +566,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 9.82 — Shared Supabase Version
+              BUILD 9.83 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -605,7 +605,13 @@
             <p class="sub">
               Still Allotted to Spend: <b id="monthRemaining">$0.00</b>
             </p>
+<p class="sub">
+  Cash Moved This Month: <b id="monthCashMoved">$0.00</b>
+</p>
 
+<p class="sub">
+  Cash Still To Move: <b id="monthCashStillToMove">$0.00</b>
+</p>
             <div class="budget-bar">
               <div id="budgetFill" class="budget-fill"></div>
             </div>
@@ -732,7 +738,18 @@
           <label for="entryNotes">Notes</label>
           <textarea id="entryNotes"></textarea>
         </div>
+<div class="group">
+  <label>
+    <input id="entryCashMoved" type="checkbox"
+      style="width:auto;margin-right:8px">
+    Cash moved or set aside to cover this expense
+  </label>
 
+  <p class="sub">
+    Select this after you transfer or reserve the money needed to pay
+    the credit-card expense.
+  </p>
+</div>
         <div class="actions">
           <button class="secondary" type="button" onclick="closeModal('entryModal')">
             Cancel
@@ -763,7 +780,18 @@
           <label for="cardName">Card Name</label>
           <input id="cardName" required>
         </div>
-
+<div class="group">
+  <label for="cardNetwork">Card Network / Type</label>
+  <select id="cardNetwork">
+    <option value="Visa">Visa</option>
+    <option value="Mastercard">Mastercard</option>
+    <option value="American Express">American Express</option>
+    <option value="Discover">Discover</option>
+    <option value="Capital One">Capital One</option>
+    <option value="Store Card">Store Card</option>
+    <option value="Other" selected>Other</option>
+  </select>
+</div>
         <div class="group">
           <label for="cardLastFour">Last Four Digits</label>
           <input id="cardLastFour" maxlength="4" inputmode="numeric">
@@ -839,7 +867,13 @@
           <label for="recurringNotes">Notes</label>
           <textarea id="recurringNotes"></textarea>
         </div>
-
+<div class="group">
+  <label>
+    <input id="recurringCashMoved" type="checkbox"
+      style="width:auto;margin-right:8px">
+    Cash automatically moved or set aside for this charge
+  </label>
+</div>
         <div class="group">
           <label>
             <input id="recurringActive" type="checkbox" checked style="width:auto;margin-right:8px">
@@ -1150,7 +1184,44 @@ function renderEntriesPage() {
         )
         .reduce((sum,entry) => sum + Number(entry.amount),0);
     }
+function monthlyCashMoved() {
+  const entryCashMoved = entries
+    .filter(entry =>
+      entry.entry_type === "expense" &&
+      entry.cash_moved === true &&
+      String(entry.entry_date).slice(0,7) === currentMonth()
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
 
+  const recurringCashMoved = recurringCharges
+    .filter(charge =>
+      charge.active !== false &&
+      charge.cash_moved === true
+    )
+    .reduce((sum, charge) => sum + Number(charge.amount), 0);
+
+  return entryCashMoved + recurringCashMoved;
+}
+
+function monthlyCashStillToMove() {
+  const expenseTotal = entries
+    .filter(entry =>
+      entry.entry_type === "expense" &&
+      String(entry.entry_date).slice(0,7) === currentMonth()
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
+
+  const plannedRecurring = recurringCharges
+    .filter(charge => charge.active !== false)
+    .reduce((sum, charge) => sum + Number(charge.amount), 0);
+
+  const stillToMove =
+    expenseTotal +
+    plannedRecurring -
+    monthlyCashMoved();
+
+  return Math.max(0, stillToMove);
+}
     function estimatedInterest(card) {
       const balance = cardBalance(card.id);
       const apr = Number(card.apr || 0);
@@ -1173,15 +1244,59 @@ function renderEntriesPage() {
       return recurringForCard(cardId)
         .reduce((sum,charge) => sum + Number(charge.amount),0);
     }
+function cardCashMoved(cardId) {
+  const entryCashMoved = entries
+    .filter(entry =>
+      entry.card_id === cardId &&
+      entry.entry_type === "expense" &&
+      entry.cash_moved === true &&
+      String(entry.entry_date).slice(0,7) === currentMonth()
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
 
+  const recurringCashMoved = recurringCharges
+    .filter(charge =>
+      charge.card_id === cardId &&
+      charge.active !== false &&
+      charge.cash_moved === true
+    )
+    .reduce((sum, charge) => sum + Number(charge.amount), 0);
+
+  return entryCashMoved + recurringCashMoved;
+}
+
+function cardCashStillToMove(cardId) {
+  const cardExpenses = entries
+    .filter(entry =>
+      entry.card_id === cardId &&
+      entry.entry_type === "expense" &&
+      String(entry.entry_date).slice(0,7) === currentMonth()
+    )
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
+
+  const plannedRecurring = recurringCharges
+    .filter(charge =>
+      charge.card_id === cardId &&
+      charge.active !== false
+    )
+    .reduce((sum, charge) => sum + Number(charge.amount), 0);
+
+  return Math.max(
+    0,
+    cardExpenses + plannedRecurring - cardCashMoved(cardId)
+  );
+}
     function cardInfoHTML(card) {
       return `
         <div class="interest">
-          Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
-          Due Day: ${card.due_day || "Not set"}<br>
+        Card Type: ${esc(card.card_network || "Other")}<br>
+        Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
+               Due Day: ${card.due_day || "Not set"}<br>
           Current Balance: ${money(cardBalance(card.id))}<br>
-          Recurring Planned Charges: ${money(recurringTotal(card.id))}<br>
-          Estimated 30-Day Interest if Unpaid:
+Recurring Planned Charges: ${money(recurringTotal(card.id))}<br>
+Cash Moved This Month: ${money(cardCashMoved(card.id))}<br>
+Cash Still To Move: ${money(cardCashStillToMove(card.id))}<br>
+Estimated 30-Day Interest if Unpaid:
           ${money(estimatedInterest(card))}
         </div>
       `;
@@ -1243,8 +1358,10 @@ function renderEntriesPage() {
       if (!currentTracker) return;
 
       const monthlyBudget = Number(currentTracker.monthly_budget || 0);
-      const spent = monthlySpending();
-      const remaining = monthlyBudget - spent;
+const spent = monthlySpending();
+const cashMoved = monthlyCashMoved();
+const cashStillToMove = monthlyCashStillToMove();
+const remaining = monthlyBudget - spent;
       const budgetPercent =
         monthlyBudget > 0
           ? Math.min((spent / monthlyBudget) * 100,100)
@@ -1253,6 +1370,8 @@ function renderEntriesPage() {
       $("totalSpending").textContent = money(totalSpending());
       $("monthSpent").textContent = money(spent);
       $("monthRemaining").textContent = money(remaining);
+      $("monthCashMoved").textContent = money(cashMoved);
+$("monthCashStillToMove").textContent = money(cashStillToMove);
       $("monthRemaining").style.color =
         remaining < 0 ? "var(--red)" : "var(--green)";
 
@@ -1277,7 +1396,8 @@ $("dashboardCards").innerHTML = cards.length
       </div>
 
       <div class="sub">
-        ${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
+        ${esc(card.card_network || "Other")} ·
+${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
       </div>
 
       <strong>${money(cardBalance(card.id))}</strong>
@@ -1559,8 +1679,9 @@ renderEntriesPage();
       $("entryForm").reset();
       $("entryId").value = "";
       $("entryTitle").textContent = "Add Entry";
-      $("entryDate").value = today();
-      $("deleteEntryButton").classList.add("hidden");
+$("entryDate").value = today();
+$("entryCashMoved").checked = false;
+$("deleteEntryButton").classList.add("hidden");;
 
       fillCardSelect();
 
@@ -1577,7 +1698,7 @@ renderEntriesPage();
         $("entryDate").value = entry.entry_date;
         $("entryCategory").value = entry.category || "Other";
         $("entryNotes").value = entry.notes || "";
-
+$("entryCashMoved").checked = entry.cash_moved === true;
         fillCardSelect(entry.card_id);
 
         $("deleteEntryButton").classList.remove("hidden");
@@ -1599,9 +1720,9 @@ renderEntriesPage();
         amount: Number($("entryAmount").value),
         entry_date: $("entryDate").value,
         category: $("entryCategory").value,
-        notes: $("entryNotes").value.trim()
-      };
-
+notes: $("entryNotes").value.trim(),
+cash_moved: $("entryCashMoved").checked
+            };
       let result;
 
       if (id) {
@@ -1660,9 +1781,10 @@ renderEntriesPage();
 
         if (!card) return;
 
-        $("cardId").value = card.id;
-        $("cardName").value = card.name;
-        $("cardLastFour").value = card.last_four || "";
+$("cardId").value = card.id;
+$("cardName").value = card.name;
+$("cardNetwork").value = card.card_network || "Other";
+$("cardLastFour").value = card.last_four || "";
         $("cardCycleDay").value = card.cycle_end_day || "";
         $("cardDueDay").value = card.due_day || "";
         $("cardApr").value = card.apr || "";
@@ -1680,10 +1802,11 @@ renderEntriesPage();
 
       const id = $("cardId").value;
 
-      const record = {
-        tracker_id: currentTracker.id,
-        name: $("cardName").value.trim(),
-        last_four: $("cardLastFour").value
+const record = {
+  tracker_id: currentTracker.id,
+  name: $("cardName").value.trim(),
+  card_network: $("cardNetwork").value || "Other",
+  last_four: $("cardLastFour").value
           .replace(/\D/g,"")
           .slice(0,4),
         cycle_end_day:
@@ -1747,7 +1870,7 @@ renderEntriesPage();
       $("recurringCardId").value = cardId;
       $("recurringTitle").textContent = "Add Recurring Charge";
       $("deleteRecurringButton").classList.add("hidden");
-
+$("recurringCashMoved").checked = false;
       if (recurringId) {
         const charge = recurringCharges.find(item => item.id === recurringId);
 
@@ -1759,7 +1882,7 @@ renderEntriesPage();
         $("recurringDay").value = charge.charge_day || "";
         $("recurringNotes").value = charge.notes || "";
         $("recurringActive").checked = charge.active !== false;
-
+$("recurringCashMoved").checked = charge.cash_moved === true;
         $("recurringTitle").textContent = "Edit Recurring Charge";
         $("deleteRecurringButton").classList.remove("hidden");
       }
@@ -1778,8 +1901,9 @@ renderEntriesPage();
         name: $("recurringName").value.trim(),
         amount: Number($("recurringAmount").value),
         charge_day: Number($("recurringDay").value || 0) || null,
-        notes: $("recurringNotes").value.trim(),
-        active: $("recurringActive").checked
+notes: $("recurringNotes").value.trim(),
+active: $("recurringActive").checked,
+cash_moved: $("recurringCashMoved").checked
       };
 
       let result;
