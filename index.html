@@ -1,12 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-
   <meta charset="utf-8">
-  <title>Deadbeat Tracker</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#12355b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Deadbeat Tracker</title>
 
   <style>
     :root{
@@ -22,13 +21,16 @@
     }
 
     *{box-sizing:border-box}
+
     body{
       margin:0;
       background:var(--bg);
       color:var(--text);
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
     }
+
     button,input,select,textarea{font:inherit}
+
     button{
       border:0;
       border-radius:9px;
@@ -36,6 +38,7 @@
       cursor:pointer;
       font-weight:700;
     }
+
     input,select,textarea{
       width:100%;
       padding:11px;
@@ -44,7 +47,11 @@
       background:white;
       color:var(--text);
     }
-    textarea{min-height:76px;resize:vertical}
+
+    textarea{
+      min-height:76px;
+      resize:vertical;
+    }
 
     .hidden{display:none!important}
     .screen{display:none;min-height:100vh}
@@ -57,11 +64,12 @@
       margin:auto;
       padding:60px 18px;
     }
+
     .app{
       width:min(100%,760px);
       min-height:100vh;
       margin:auto;
-      padding-bottom:110px;
+      padding-bottom:100px;
     }
 
     .card,.panel{
@@ -77,10 +85,12 @@
       color:white;
       background:var(--navy);
     }
+
     header h1{margin:0;font-size:1.3rem}
     header p{margin:4px 0 0;color:#cbdcf1;font-size:.85rem}
 
     main{padding:16px}
+
     h2{margin:0;font-size:1.15rem}
 
     .row,.heading{
@@ -89,6 +99,7 @@
       justify-content:space-between;
       gap:10px;
     }
+
     .heading{margin:20px 0 10px}
 
     .grid{
@@ -98,12 +109,14 @@
     }
 
     .group{margin-top:13px}
+
     label{
       display:block;
       margin-bottom:5px;
       font-size:.85rem;
       font-weight:750;
     }
+
     .sub{
       color:var(--muted);
       font-size:.85rem;
@@ -121,6 +134,7 @@
       gap:8px;
       margin-top:15px;
     }
+
     .actions button{flex:1}
 
     .total{
@@ -129,6 +143,7 @@
       color:white;
       background:linear-gradient(135deg,#12355b,#1d73c9);
     }
+
     .total strong{
       display:block;
       margin-top:5px;
@@ -158,12 +173,13 @@
       background:white;
       text-align:left;
     }
+
     .list:last-child{border-bottom:0}
 
     .nav{
       position:fixed;
       z-index:10;
-      bottom:40px;
+      bottom:12px;
       left:50%;
       transform:translateX(-50%);
       display:grid;
@@ -175,11 +191,13 @@
       background:white;
       box-shadow:0 4px 16px rgba(18,53,91,.16);
     }
+
     .nav button{
       border-radius:0;
       color:var(--muted);
       background:white;
     }
+
     .nav .active{
       color:var(--blue);
       background:#f2f8ff;
@@ -189,7 +207,7 @@
       position:fixed;
       z-index:9;
       right:20px;
-      bottom:94px;
+      bottom:82px;
       width:58px;
       height:58px;
       border-radius:50%;
@@ -209,7 +227,9 @@
       justify-content:center;
       background:rgba(0,0,0,.55);
     }
+
     .modal-bg.show{display:flex}
+
     .modal{
       width:min(100%,650px);
       max-height:90vh;
@@ -218,6 +238,7 @@
       border-radius:17px 17px 9px 9px;
       background:white;
     }
+
     .close{
       width:36px;
       height:36px;
@@ -228,22 +249,22 @@
       font-size:1.2rem;
     }
 
-    .password-row{position:relative;}
-    .password-row input{padding-right:40px;}
+    .password-row{position:relative}
+
+    .password-row input{padding-right:42px}
+
     .eye-inline{
       position:absolute;
       right:10px;
       top:50%;
       transform:translateY(-50%);
-      width:24px;
-      height:24px;
+      width:25px;
+      height:25px;
+      padding:0;
       border-radius:50%;
-      border:none;
       background:transparent;
       color:var(--muted);
       font-size:1rem;
-      cursor:pointer;
-      padding:0;
     }
 
     .message{
@@ -255,7 +276,9 @@
       line-height:1.4;
       background:var(--light);
       color:var(--navy);
+      white-space:pre-wrap;
     }
+
     .message.show{display:block}
     .message.error{background:#fdecea;color:var(--red)}
     .message.good{background:#e5f6ee;color:var(--green)}
@@ -278,12 +301,12 @@
 
     .tracker-name{
       margin:0;
-      font-size:1.45rem;
+      font-size:1.2rem;
       color:var(--navy);
     }
 
-    .password-panel{display:none;}
-    .password-panel.active{display:block;}
+    .password-panel{display:none}
+    .password-panel.active{display:block}
 
     .remember-row{
       display:flex;
@@ -292,98 +315,45 @@
       margin-top:10px;
       font-size:.85rem;
     }
+
     .remember-row input[type="checkbox"]{
       width:auto;
       margin:0;
     }
 
-    /* Budget slider styles */
-    .budget-slider-wrap{margin-top:10px;}
-    .budget-slider-bar{
-      position:relative;
+    .budget-bar{
       width:100%;
-      height:18px;
+      height:14px;
+      overflow:hidden;
+      margin-top:10px;
       border-radius:999px;
       background:#e2e8f0;
-      overflow:hidden;
     }
-    .budget-slider-fill{
-      position:absolute;
-      top:0;
-      bottom:0;
-      left:0;
-      background:linear-gradient(90deg,var(--green),#9ae6b4);
-      transform-origin:left center;
-      transform:scaleX(0);
-      transition:transform 0.4s ease-out;
+
+    .budget-fill{
+      height:100%;
+      background:var(--green);
+      transform-origin:left;
     }
-    .budget-slider-fill.over{
-      background:linear-gradient(90deg,#fed7d7,var(--red));
+
+    .budget-fill.over{
+      background:var(--red);
     }
-    .budget-slider-marker{
-      position:absolute;
-      top:50%;
-      width:4px;
-      height:22px;
-      transform:translate(-50%,-50%);
-      border-radius:999px;
-      background:#1a202c;
-      box-shadow:0 0 6px rgba(0,0,0,0.4);
-      transition:left 0.4s ease-out;
-    }
-    .budget-slider-label{
-      margin-top:6px;
-      font-size:.8rem;
-      color:var(--muted);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .budget-slider-status{font-weight:700;}
-    .budget-slider-status.good{color:var(--green);}
-    .budget-slider-status.bad{color:var(--red);}
 
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-
-    .card-header-actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      justify-content:flex-end;
-    }
-    .card-header-actions button{flex:0 0 auto;}
-
-    #debugArea{
-      position:fixed;
-      z-index:11;
-      left:50%;
-      bottom:0;
-      transform:translateX(-50%);
-      width:min(calc(100% - 24px),760px);
-      margin:0 auto;
-      padding:6px 10px;
-      border-radius:10px 10px 0 0;
-      background:#fef3c7;
-      color:#78350f;
-      font-size:.75rem;
-      line-height:1.3;
-    }
   </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 </head>
+
 <body>
+
   <!-- AUTH -->
   <section id="authScreen" class="screen active">
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">Pay the balance BUILD 9.79 Avoid the interest.</p>
+        <p class="sub">BUILD 9.80 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -393,7 +363,7 @@
 
           <form id="signInForm">
             <div class="group">
-              <label for="signInEmail">Email (Username)</label>
+              <label for="signInEmail">Email</label>
               <input id="signInEmail" type="email" autocomplete="email" required>
             </div>
 
@@ -407,8 +377,8 @@
             </div>
 
             <div class="remember-row">
-              <input id="rememberLogin" type="checkbox">
-              <span>Remember my email and password on this device</span>
+              <input id="rememberEmail" type="checkbox">
+              <span>Remember my email on this device</span>
             </div>
 
             <button class="primary wide" type="submit">Sign In</button>
@@ -422,11 +392,6 @@
           <button class="secondary wide" type="button"
             onclick="showAuthPanel('resetPanel')">
             Forgot Password
-          </button>
-
-          <button class="secondary wide" type="button"
-            onclick="showAuthPanel('forgotUsernamePanel')">
-            Forgot Username
           </button>
         </div>
 
@@ -443,7 +408,7 @@
             </div>
 
             <div class="group">
-              <label for="createEmail">Email (Your Username)</label>
+              <label for="createEmail">Email</label>
               <input id="createEmail" type="email" autocomplete="email" required>
             </div>
 
@@ -467,13 +432,17 @@
 
             <div class="actions">
               <button class="secondary" type="button"
-                onclick="showAuthPanel('signInPanel')">Back</button>
-              <button class="primary" type="submit">Create Account</button>
+                onclick="showAuthPanel('signInPanel')">
+                Back
+              </button>
+              <button class="primary" type="submit">
+                Create Account
+              </button>
             </div>
           </form>
         </div>
 
-        <!-- RESET PASSWORD REQUEST -->
+        <!-- RESET PASSWORD -->
         <div id="resetPanel" class="password-panel">
           <div class="heading">
             <h2>Reset Password</h2>
@@ -481,19 +450,23 @@
 
           <form id="resetForm">
             <div class="group">
-              <label for="resetEmail">Email (Username)</label>
+              <label for="resetEmail">Email</label>
               <input id="resetEmail" type="email" autocomplete="email" required>
             </div>
 
             <div class="actions">
               <button class="secondary" type="button"
-                onclick="showAuthPanel('signInPanel')">Back</button>
-              <button class="primary" type="submit">Send Reset Link</button>
+                onclick="showAuthPanel('signInPanel')">
+                Back
+              </button>
+              <button class="primary" type="submit">
+                Send Reset Link
+              </button>
             </div>
           </form>
         </div>
 
-        <!-- RESET CONFIRM -->
+        <!-- NEW PASSWORD -->
         <div id="resetConfirmPanel" class="password-panel">
           <div class="heading">
             <h2>Set New Password</h2>
@@ -520,32 +493,12 @@
 
             <div class="actions">
               <button class="secondary" type="button"
-                onclick="showAuthPanel('signInPanel')">Cancel</button>
-              <button class="primary" type="submit">Update Password</button>
-            </div>
-          </form>
-        </div>
-
-        <!-- FORGOT USERNAME -->
-        <div id="forgotUsernamePanel" class="password-panel">
-          <div class="heading">
-            <h2>Forgot Username</h2>
-          </div>
-          <p class="sub">
-            Your username for this app is the email you used when creating the account.
-            Enter your recovery email below and we’ll remind you of that.
-          </p>
-
-          <form id="forgotUsernameForm">
-            <div class="group">
-              <label for="forgotUsernameEmail">Recovery Email</label>
-              <input id="forgotUsernameEmail" type="email" autocomplete="email" required>
-            </div>
-
-            <div class="actions">
-              <button class="secondary" type="button"
-                onclick="showAuthPanel('signInPanel')">Back</button>
-              <button class="primary" type="submit">Send Username Reminder</button>
+                onclick="showAuthPanel('signInPanel')">
+                Cancel
+              </button>
+              <button class="primary" type="submit">
+                Update Password
+              </button>
             </div>
           </form>
         </div>
@@ -555,55 +508,55 @@
     </div>
   </section>
 
-  <!-- TRACKER CHOICE -->
+  <!-- TRACKER SELECTOR -->
   <section id="trackerScreen" class="screen">
-  <div class="auth-wrap">
-    <div class="card">
-      <div class="row">
-        <div>
-          <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-          <p id="signedInName" class="sub"></p>
+    <div class="auth-wrap">
+      <div class="card">
+        <div class="row">
+          <div>
+            <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
+            <p id="signedInName" class="sub"></p>
+          </div>
+          <button class="secondary" type="button" onclick="signOut()">
+            Sign Out
+          </button>
         </div>
-        <button class="secondary" type="button" onclick="signOut()">
-          Sign Out
+
+        <div class="heading">
+          <h2>Select a Tracker</h2>
+        </div>
+
+        <p class="sub">
+          Your personal tracker is private. Shared trackers appear only after
+          you join them with an invite code.
+        </p>
+
+        <div class="group">
+          <label for="trackerSelect">Available Trackers</label>
+          <select id="trackerSelect"></select>
+        </div>
+
+        <button class="primary wide" type="button" onclick="openSelectedTracker()">
+          Open Selected Tracker
         </button>
+
+        <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
+
+        <h2>Join a Shared Tracker</h2>
+
+        <div class="group">
+          <label for="inviteCode">Invite Code</label>
+          <input id="inviteCode" placeholder="Example: A1B2C3D4">
+        </div>
+
+        <button class="secondary wide" type="button" onclick="joinTracker()">
+          Join Shared Tracker
+        </button>
+
+        <div id="trackerMessage" class="message"></div>
       </div>
-
-      <div class="heading">
-        <h2>Select a Tracker</h2>
-      </div>
-
-      <p class="sub">
-        Your personal tracker is private. Shared trackers appear here only after
-        you join them using an invite code.
-      </p>
-
-      <div class="group">
-        <label for="trackerSelect">Available Trackers</label>
-        <select id="trackerSelect"></select>
-      </div>
-
-      <button class="primary wide" type="button" onclick="openSelectedTracker()">
-        Open Selected Tracker
-      </button>
-
-      <hr style="margin:24px 0;border:0;border-top:1px solid #d9e1ec">
-
-      <h2>Join a Shared Tracker</h2>
-
-      <div class="group">
-        <label for="inviteCode">Invite Code</label>
-        <input id="inviteCode" placeholder="Example: A1B2C3D4">
-      </div>
-
-      <button class="secondary wide" type="button" onclick="joinTracker()">
-        Join Shared Tracker
-      </button>
-
-      <div id="trackerMessage" class="message"></div>
     </div>
-  </div>
-</section>
+  </section>
 
   <!-- MAIN APP -->
   <section id="appScreen" class="screen">
@@ -612,11 +565,12 @@
         <div class="row">
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
-            <p style="margin:4px 0 0;color:#cbdcf1;font-size:.75rem;font-weight:700">
-              BUILD 9.79 — Shared Supabase Version
+            <p style="font-size:.75rem;font-weight:700">
+              BUILD 9.80 — Shared Supabase Version
             </p>
-            <p id="trackerSubtitle">Shared credit-card spending tracker</p>
+            <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
+
           <div class="row" style="gap:6px">
             <button class="secondary" type="button" onclick="openSettings()">
               Settings
@@ -638,127 +592,52 @@
 
           <div class="card" style="margin-top:14px">
             <div class="row">
-              <h2 id="budgetTitle">Monthly Budget</h2>
+              <h2>Monthly Budget</h2>
               <button class="secondary" type="button" onclick="openSettings()">
                 Edit Budget
               </button>
             </div>
-            <p class="sub" id="budgetPeriodLabel">
-              Period: This Calendar Month
-            </p>
+
             <p class="sub">
-              Spent This Period: <b id="monthSpent">$0.00</b>
+              Spent This Month: <b id="monthSpent">$0.00</b>
             </p>
+
             <p class="sub">
               Still Allotted to Spend: <b id="monthRemaining">$0.00</b>
             </p>
-            <p class="sub">
-              Cash Moved This Period: <b id="cashMovedThisMonth">$0.00</b>
-            </p>
-            <p class="sub">
-              Cash Still To Move This Period: <b id="cashStillToMove">$0.00</b>
-            </p>
 
-            <div class="budget-slider-wrap">
-              <div class="budget-slider-bar">
-                <div id="budgetSliderFill" class="budget-slider-fill"></div>
-                <div id="budgetSliderMarker" class="budget-slider-marker"></div>
-              </div>
-              <div class="budget-slider-label">
-                <span id="budgetSliderSummary">Budget: $0.00 · Spent: $0.00</span>
-                <span id="budgetSliderStatus" class="budget-slider-status">On track</span>
-              </div>
+            <div class="budget-bar">
+              <div id="budgetFill" class="budget-fill"></div>
             </div>
-          </div>
 
-          <div class="card" style="margin-top:14px">
-            <div class="row">
-              <h2>Cycle View</h2>
-              <select id="monthSelect" onchange="changeSelectedMonth(this.value)"></select>
-            </div>
-            <p class="sub">
-              The selected month is used to calculate "this cycle" spending, payments, and cash moved.
-            </p>
-          </div>
-
-          <div class="card" style="margin-top:14px">
-            <div class="row">
-              <h2>Spending Accounts</h2>
-            </div>
-            <p class="sub">
-              Linked bank accounts (via Plaid) used as spending sources.
-            </p>
-            <div id="spendingAccountsList" class="sub" style="margin-top:8px"></div>
-            <p class="sub" style="margin-top:8px">
-              Total cash available in spending accounts:
-              <b id="totalSpendingAccountsCash">$0.00</b>
-            </p>
+            <p id="budgetStatus" class="sub"></p>
           </div>
 
           <div class="heading">
             <h2>Credit Cards</h2>
-            <button class="secondary" type="button" onclick="showPage('cards')">View All</button>
+            <button class="secondary" type="button" onclick="showPage('cards')">
+              View All
+            </button>
           </div>
+
           <div id="dashboardCards" class="grid"></div>
 
           <div class="heading">
             <h2>Recent Activity</h2>
-            <button class="secondary" type="button" onclick="showPage('entries')">View All</button>
-          </div>
-          <div id="recentEntries" class="card"></div>
-
-          <!-- INVITE -->
-          <div id="inviteSection" class="card" style="margin-top:14px">
-            <h2>Invite Someone to This Tracker</h2>
-            <p class="sub">
-              Share this tracker with someone by sending them the invite code below.
-              They can join using the Join Shared Tracker box on the previous screen.
-            </p>
-
-            <div class="group">
-              <label for="inviteContact">Email or Phone</label>
-              <input id="inviteContact" type="text"
-                     placeholder="e.g. person@example.com or 555-123-4567">
-            </div>
-
-            <div class="group">
-              <label>Invite Code</label>
-              <div class="row">
-                <input id="currentInviteCode" type="text" readonly>
-                <button type="button" class="secondary" onclick="copyInviteCode()">
-                  Copy Code
-                </button>
-              </div>
-            </div>
-
-            <div class="group">
-              <label for="inviteMessage">Message (optional)</label>
-              <textarea id="inviteMessage" rows="2"
-                placeholder="I’m sharing my Deadbeat Tracker with you. Use this invite code to join."></textarea>
-            </div>
-
-            <button type="button" class="primary wide" onclick="prepareInvite()">
-              Prepare Invite Text
+            <button class="secondary" type="button" onclick="showPage('entries')">
+              View All
             </button>
-
-            <div id="inviteStatus" class="message"></div>
           </div>
+
+          <div id="recentEntries" class="card"></div>
         </section>
 
         <!-- ENTRIES -->
         <section id="entriesPage" class="page">
           <div class="row">
-            <h2>Expenses and Payments</h2>
-            <button class="primary" type="button" onclick="openEntry()">+ Add Entry</button>
-          </div>
-
-          <div id="entriesCardHeader" class="card hidden" style="margin-top:12px"></div>
-          <div id="entriesRecurringPanel" class="card hidden" style="margin-top:12px"></div>
-
-          <div class="row" style="margin-top:12px">
-            <h2 id="entriesListTitle">All Transactions</h2>
-            <button class="secondary" type="button" onclick="clearSelectedCardAndShowAllEntries()">
-              Show All
+            <h2>Expenses, Payments, and Transfers</h2>
+            <button class="primary" type="button" onclick="openEntry()">
+              + Add Entry
             </button>
           </div>
 
@@ -769,8 +648,11 @@
         <section id="cardsPage" class="page">
           <div class="row">
             <h2>Credit Cards</h2>
-            <button class="primary" type="button" onclick="openCard()">+ Add Card</button>
+            <button class="primary" type="button" onclick="openCard()">
+              + Add Card
+            </button>
           </div>
+
           <div id="cardsList" class="grid" style="margin-top:12px"></div>
         </section>
       </main>
@@ -814,10 +696,6 @@
         <div class="group">
           <label for="entryCard">Credit Card</label>
           <select id="entryCard" required></select>
-          <p class="sub">
-            For Expense and Payment entries, choose the card this affects.
-            Transfers do not change the card balance; you can pick any card (or your main card) as a placeholder.
-          </p>
         </div>
 
         <div class="group">
@@ -851,43 +729,9 @@
         </div>
 
         <div class="group">
-          <label for="entryFundingAccount">Funding Account (linked bank account)</label>
-          <select id="entryFundingAccount">
-            <option value="">No specific funding account</option>
-          </select>
-          <p class="sub">
-            For expenses/payments, choose which linked bank account funded this entry.
-            Transfers use Transfer From/To below instead of this field.
-          </p>
-        </div>
-
-        <div class="group">
-          <label for="transferFromAccount">Transfer From (linked bank account)</label>
-          <select id="transferFromAccount">
-            <option value="">No transfer from</option>
-          </select>
-        </div>
-
-        <div class="group">
-          <label for="transferToAccount">Transfer To (linked bank account)</label>
-          <select id="transferToAccount">
-            <option value="">No transfer to</option>
-          </select>
-        </div>
-
-        <div class="group">
           <label for="entryNotes">Notes</label>
           <textarea id="entryNotes"></textarea>
         </div>
-
-        <div class="group">
-          <label>
-            <input id="entryCashMoved" type="checkbox" style="width:auto;margin-right:8px">
-            Cash moved to cover this entry
-          </label>
-        </div>
-
-        <div id="entryMessage" class="message"></div>
 
         <div class="actions">
           <button class="secondary" type="button" onclick="closeModal('entryModal')">
@@ -917,43 +761,32 @@
 
         <div class="group">
           <label for="cardName">Card Name</label>
-          <input id="cardName" placeholder="Example: Visa Rewards" required>
+          <input id="cardName" required>
         </div>
 
         <div class="group">
           <label for="cardLastFour">Last Four Digits</label>
-          <input id="cardLastFour" maxlength="4" inputmode="numeric" placeholder="1234">
+          <input id="cardLastFour" maxlength="4" inputmode="numeric">
         </div>
 
         <div class="group">
           <label for="cardCycleDay">Cycle End Day</label>
-          <input id="cardCycleDay" type="number" min="1" max="31" placeholder="Example: 16">
+          <input id="cardCycleDay" type="number" min="1" max="31">
         </div>
 
         <div class="group">
           <label for="cardDueDay">Payment Due Day</label>
-          <input id="cardDueDay" type="number" min="1" max="31" placeholder="Example: 18">
+          <input id="cardDueDay" type="number" min="1" max="31">
         </div>
 
         <div class="group">
           <label for="cardApr">Purchase APR (%)</label>
-          <input id="cardApr" type="number" min="0" step=".01" placeholder="Example: 24.99">
+          <input id="cardApr" type="number" min="0" step=".01">
         </div>
 
         <div class="group">
           <label for="cardBalance">Starting Balance</label>
-          <input id="cardBalance" type="number" min="0" step=".01" placeholder="0.00">
-        </div>
-
-        <div class="group">
-          <label for="cardDefaultFundingAccount">Default Funding Account (linked bank account)</label>
-          <select id="cardDefaultFundingAccount">
-            <option value="">No default funding account</option>
-          </select>
-          <p class="sub">
-            When you create a new Expense/Payment on this card, the Funding Account will default to this value.
-            You can override it for any individual entry.
-          </p>
+          <input id="cardBalance" type="number" min="0" step=".01">
         </div>
 
         <div class="notice">
@@ -969,13 +802,13 @@
 
         <button id="deleteCardButton" class="danger wide hidden" type="button"
           onclick="deleteCard()">
-          Delete Card and Its Entries
+          Delete Card and Entries
         </button>
       </form>
     </div>
   </div>
 
-  <!-- RECURRING CHARGE MODAL -->
+  <!-- RECURRING MODAL -->
   <div id="recurringModal" class="modal-bg">
     <div class="modal">
       <div class="row">
@@ -988,51 +821,42 @@
         <input id="recurringCardId" type="hidden">
 
         <div class="group">
-          <label for="recurringName">Name</label>
-          <input id="recurringName" type="text" required placeholder="e.g. Netflix, Gym membership">
+          <label for="recurringName">Charge Name</label>
+          <input id="recurringName" required>
         </div>
 
         <div class="group">
           <label for="recurringAmount">Amount</label>
-          <input id="recurringAmount" type="number" min="0" step=".01" required>
+          <input id="recurringAmount" type="number" min=".01" step=".01" required>
         </div>
 
         <div class="group">
           <label for="recurringDay">Day of Month</label>
-          <input id="recurringDay" type="number" min="1" max="31" placeholder="e.g. 1 for the 1st of the month">
+          <input id="recurringDay" type="number" min="1" max="31">
         </div>
 
         <div class="group">
           <label for="recurringNotes">Notes</label>
-          <textarea id="recurringNotes" placeholder="Any extra info"></textarea>
+          <textarea id="recurringNotes"></textarea>
         </div>
 
         <div class="group">
           <label>
-            <input id="recurringAutoTransfer" type="checkbox" style="width:auto;margin-right:8px">
-            Automatic transfer set up in bank (cash moved on charge day)
+            <input id="recurringActive" type="checkbox" checked style="width:auto;margin-right:8px">
+            Active
           </label>
         </div>
-
-        <div class="group">
-          <label>
-            <input id="recurringActive" type="checkbox" style="width:auto;margin-right:8px" checked>
-            Active (will be considered in planning)
-          </label>
-        </div>
-
-        <div id="recurringMessage" class="message"></div>
 
         <div class="actions">
           <button class="secondary" type="button" onclick="closeModal('recurringModal')">
             Cancel
           </button>
-          <button class="primary" type="submit">Save Recurring Charge</button>
+          <button class="primary" type="submit">Save Charge</button>
         </div>
 
         <button id="deleteRecurringButton" class="danger wide hidden" type="button"
           onclick="deleteRecurringCharge()">
-          Delete Recurring Charge
+          Delete Charge
         </button>
       </form>
     </div>
@@ -1046,94 +870,58 @@
         <button class="close" type="button" onclick="closeModal('settingsModal')">×</button>
       </div>
 
-      <p class="sub" style="margin-top:16px">Share this invite code with another authorized user:</p>
-      <p style="margin:6px 0 0"><b id="inviteCodeDisplay"></b></p>
-
-      <div class="group">
-        <label for="budgetType">Budget Type</label>
-        <select id="budgetType">
-          <option value="monthly" selected>Monthly (calendar month)</option>
-          <option value="pay_period">Pay Period (every 2 weeks)</option>
-        </select>
-        <p class="sub">
-          Monthly: uses the calendar month. Pay Period: uses 14‑day periods starting from the first pay date of the year.
-        </p>
+      <p class="sub" style="margin-top:16px">Invite Code</p>
+      <div class="row">
+        <input id="inviteCodeDisplay" readonly>
+        <button class="secondary" type="button" onclick="copyInviteCode()">
+          Copy
+        </button>
       </div>
+
+      <button class="secondary wide" type="button" onclick="rotateInviteCode()">
+        Rotate Invite Code
+      </button>
 
       <div class="group">
         <label for="budgetInput">Monthly Budget</label>
         <input id="budgetInput" type="number" min="0" step=".01">
       </div>
 
-      <div class="group">
-        <label for="payPeriodBudgetInput">Pay Period Budget (2 weeks)</label>
-        <input id="payPeriodBudgetInput" type="number" min="0" step=".01">
-      </div>
-
-      <div class="group">
-        <label for="payPeriodFirstDateInput">First Pay Date of the Year</label>
-        <input id="payPeriodFirstDateInput" type="date">
-        <p class="sub">
-          All 2‑week pay periods will be calculated forward from this date.
-        </p>
-      </div>
-
       <button class="primary wide" type="button" onclick="saveBudget()">
-        Save Budget Settings
+        Save Budget
       </button>
 
       <button class="secondary wide" type="button" onclick="refreshData()">
         Refresh Shared Data
       </button>
 
-      <button class="secondary wide" type="button" onclick="linkBankAccount()">
-        Link Bank Account (Plaid)
+      <button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
+        Switch Tracker
       </button>
 
-      <div class="group">
-        <label>Linked Bank Accounts (Plaid sandbox)</label>
-        <div id="linkedAccounts" class="sub">
-          No bank accounts linked yet.
-        </div>
-      </div>
+      <button id="leaveTrackerButton" class="danger wide hidden" type="button"
+        onclick="leaveCurrentTracker()">
+        Leave This Shared Tracker
+      </button>
 
-      <div class="group">
-        <label for="unlinkAccountSelect">Unlink a Bank Account</label>
-        <select id="unlinkAccountSelect">
-          <option value="">Select an account to unlink</option>
-        </select>
-        <button class="danger wide" type="button" onclick="unlinkSelectedBankAccount()">
-          Unlink Selected Account
-        </button>
-        <p class="sub">
-          This will unlink the account from this tracker (Plaid sandbox) and remove it from the app. It will not affect your actual bank.
-        </p>
-      </div>
-<button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
-  Switch Tracker
-</button>
-
-<button id="leaveTrackerButton" class="danger wide hidden" type="button"
-  onclick="leaveCurrentTracker()">
-  Leave This Shared Tracker
-</button>
       <button class="danger wide" type="button" onclick="signOut()">
         Sign Out
-      </button>
-
-      <button class="danger wide" type="button" onclick="deleteAccount()">
-        Delete My Account
       </button>
 
       <div id="settingsMessage" class="message"></div>
     </div>
   </div>
 
-  <div id="debugArea">DEBUG: App starting…</div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    const SUPABASE_URL = "https://ljifsttsohryyuobmjnq.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Z8T064Vr5NmU6-ICT1EZbQ_pn4so7Oe";
+    /*
+      Replace only the two values below with your NEW Supabase project values.
+      Use the Project URL and Publishable Key.
+    */
+    const SUPABASE_URL = "PASTE_YOUR_NEW_PROJECT_URL_HERE";
+    const SUPABASE_PUBLISHABLE_KEY = "PASTE_YOUR_NEW_PUBLISHABLE_KEY_HERE";
+
     const supabaseClient = window.supabase.createClient(
       SUPABASE_URL,
       SUPABASE_PUBLISHABLE_KEY
@@ -1146,220 +934,69 @@
     let cards = [];
     let entries = [];
     let recurringCharges = [];
-    let linkedAccountsList = [];
-    let selectedCardIdForEntries = "";
 
-    // Entry → funding account mappings
-    let entryFundingMappings = {}; // { [entry_id]: linked_account_id }
-
-    // Linked accounts cache
-    let currentLinkedAccounts = [];
-
-    function showDebug(text) {
-      const debug = $("debugArea");
-      if (!debug) return;
-      debug.textContent = "DEBUG: " + (text || "");
-    }
-async function returnToTrackerSelection() {
-  closeModal("settingsModal");
-
-  currentTracker = null;
-  cards = [];
-  entries = [];
-  recurringCharges = [];
-  selectedCardIdForEntries = "";
-
-  await ensureUserHasHomeTracker();
-  await loadTrackers();
-}
-
-async function leaveCurrentTracker() {
-  if (!currentTracker) return;
-
-  if (
-    currentTracker.is_personal === true ||
-    currentTracker.owner_id === currentUser.id
-  ) {
-    setMessage(
-      "settingsMessage",
-      "You cannot leave your personal tracker or a tracker you own.",
-      "error"
-    );
-    return;
-  }
-
-  if (!confirm(
-    `Leave the shared tracker "${currentTracker.name}"? ` +
-    "You will lose access to its cards, entries, and budget."
-  )) {
-    return;
-  }
-
-  const { error } = await supabaseClient.rpc(
-    "leave_tracker",
-    { p_tracker_id: currentTracker.id }
-  );
-
-  if (error) {
-    setMessage(
-      "settingsMessage",
-      error.message || "Unable to leave tracker.",
-      "error"
-    );
-    return;
-  }
-
-  closeModal("settingsModal");
-
-  currentTracker = null;
-  cards = [];
-  entries = [];
-  recurringCharges = [];
-  selectedCardIdForEntries = "";
-
-  await ensureUserHasHomeTracker();
-  await loadTrackers();
-}
-    async function checkBackend(){
-      try {
-        showDebug("Checking backend /ping...");
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/ping");
-        const data = await resp.json();
-        if (resp.ok && data.ok){
-          showDebug("Backend reachable: " + (data.message || "ok"));
-        } else {
-          showDebug("Backend ping failed: status " + resp.status + " · " + (data.error || JSON.stringify(data)));
-        }
-      } catch (e){
-        showDebug("Backend ping error: " + (e.message || String(e)));
-      }
-    }
-
-    function makeInviteCode(length = 8) {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let out = "";
-      for (let i = 0; i < length; i++) {
-        out += chars[Math.floor(Math.random() * chars.length)];
-      }
-      return out;
-    }
-
-    function cash(value) {
+    function money(value) {
       return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD"
+        style:"currency",
+        currency:"USD"
       }).format(Number(value || 0));
     }
 
     function esc(value) {
       return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
     }
 
     function today() {
       const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2,"0");
-      const day = String(d.getDate()).padStart(2,"0");
-      return y + "-" + m + "-" + day;
+      return `${d.getFullYear()}-${
+        String(d.getMonth() + 1).padStart(2,"0")
+      }-${String(d.getDate()).padStart(2,"0")}`;
     }
+
     function currentMonth() {
       return today().slice(0,7);
     }
-    function parseISODate(str) {
-      if (!str) return null;
-      const parts = str.split("-");
-      if (parts.length !== 3) return null;
-      const y = Number(parts[0]);
-      const m = Number(parts[1]);
-      const d = Number(parts[2]);
-      if (!y || !m || !d) return null;
-      return new Date(y, m - 1, d);
-    }
 
-    let selectedMonth = currentMonth();
-
-    function setMessage(id, text = "", type = "") {
+    function setMessage(id, text="", type="") {
       const el = $(id);
       if (!el) return;
+
       el.textContent = text;
       el.className = "message";
+
       if (!text) return;
+
       el.classList.add("show");
+
       if (type === "error") el.classList.add("error");
       if (type === "good") el.classList.add("good");
-    }
-
-    function setEntryMessage(text = "", type = ""){
-      const el = $("entryMessage");
-      if (!el) return;
-      el.textContent = text;
-      el.className = "message";
-      if (!text) return;
-      el.classList.add("show");
-      if (type === "error") el.classList.add("error");
-      if (type === "good") el.classList.add("good");
-    }
-
-    function setRecurringMessage(text = "", type = ""){
-      const el = $("recurringMessage");
-      if (!el) return;
-      el.textContent = text;
-      el.className = "message";
-      if (!text) return;
-      el.classList.add("show");
-      if (type === "error") el.classList.add("error");
-      if (type === "good") el.classList.add("good");
-    }
-
-    function buildMonthOptions() {
-      const sel = $("monthSelect");
-      if (!sel) return;
-      const now = new Date();
-      const opts = [];
-      for (let i = 0; i < 12; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2,"0");
-        const val = y + "-" + m;
-        const label = d.toLocaleString("en-US", {month:"short",year:"numeric"});
-        opts.push({value:val,label});
-      }
-      sel.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
-      sel.value = selectedMonth;
-    }
-    function changeSelectedMonth(val) {
-      selectedMonth = val || currentMonth();
-      render();
     }
 
     function showScreen(id) {
-      ["authScreen","trackerScreen","appScreen"].forEach(s => {
-        $(s).classList.toggle("active", s === id);
+      ["authScreen","trackerScreen","appScreen"].forEach(screen => {
+        $(screen).classList.toggle("active", screen === id);
       });
     }
+
     function showAuthPanel(id) {
-      ["signInPanel","createAccountPanel","resetPanel","resetConfirmPanel","forgotUsernamePanel"]
-        .forEach(p => {
-          const el = $(p);
-          if (!el) return;
-          el.classList.toggle("active", p === id);
+      ["signInPanel","createAccountPanel","resetPanel","resetConfirmPanel"]
+        .forEach(panel => {
+          $(panel).classList.toggle("active", panel === id);
         });
+
       setMessage("authMessage","");
     }
 
     function togglePassword(inputId, buttonId) {
-      const input = document.getElementById(inputId);
-      const button = document.getElementById(buttonId);
-      if (!input || !button) return;
+      const input = $(inputId);
+      const button = $(buttonId);
 
-      if (button.type !== "button") {
-        button.type = "button";
-      }
+      if (!input || !button) return;
 
       if (input.type === "password") {
         input.type = "text";
@@ -1372,1190 +1009,521 @@ async function leaveCurrentTracker() {
       input.focus();
     }
 
-    function cardById(id){return cards.find(c=>c.id===id);}
-    function cardName(id){
-      const c = cardById(id);
-      if (!c) return "Unknown Card";
-      return c.last_four ? (c.name + " •••• " + c.last_four) : c.name;
+    function openModal(id) {
+      $(id).classList.add("show");
     }
 
-    function cardBalance(cardId){
-      const c = cardById(cardId);
-      const starting = c ? Number(c.starting_balance || 0) : 0;
-      let total = starting;
-      entries.filter(e=>e.card_id===cardId).forEach(e=>{
-        const amt = Number(e.amount || 0);
-        if (e.entry_type === "payment") total -= amt;
-        else if (e.entry_type === "expense") total += amt;
-        // transfer does not change card balance
+    function closeModal(id) {
+      $(id).classList.remove("show");
+    }
+
+    function showPage(pageName) {
+      ["dash","entries","cards"].forEach(page => {
+        $(page + "Page").classList.toggle("active", page === pageName);
+        $(page + "Nav").classList.toggle("active", page === pageName);
       });
+    }
+
+    function cardById(id) {
+      return cards.find(card => card.id === id);
+    }
+
+    function cardName(id) {
+      const card = cardById(id);
+
+      if (!card) return "Unknown Card";
+
+      return card.last_four
+        ? `${card.name} •••• ${card.last_four}`
+        : card.name;
+    }
+
+    function cardBalance(cardId) {
+      const card = cardById(cardId);
+
+      let total = Number(card?.starting_balance || 0);
+
+      entries
+        .filter(entry => entry.card_id === cardId)
+        .forEach(entry => {
+          if (entry.entry_type === "payment") {
+            total -= Number(entry.amount);
+          }
+
+          if (entry.entry_type === "expense") {
+            total += Number(entry.amount);
+          }
+        });
+
       return Math.max(0,total);
     }
 
-    function cardUnpaidFromLastCycle(card){
-      return Number(card.starting_balance || 0);
-    }
-
-    function isDateInSelectedMonth(dateStr){
-      if (!dateStr) return false;
-      return String(dateStr).slice(0,7) === selectedMonth;
-    }
-
-    function cardNewCycleSpend(card){
-      const id = card.id;
+    function totalSpending() {
       return entries
-        .filter(e =>
-          e.card_id === id &&
-          e.entry_type === "expense" &&
-          isDateInSelectedMonth(e.entry_date)
+        .filter(entry => entry.entry_type === "expense")
+        .reduce((sum,entry) => sum + Number(entry.amount),0);
+    }
+
+    function monthlySpending() {
+      return entries
+        .filter(entry =>
+          entry.entry_type === "expense" &&
+          String(entry.entry_date).slice(0,7) === currentMonth()
         )
-        .reduce((s,e)=>s+Number(e.amount||0),0);
+        .reduce((sum,entry) => sum + Number(entry.amount),0);
     }
 
-    function cardPaymentsThisCycle(card){
-      const id = card.id;
-      return entries
-        .filter(e =>
-          e.card_id === id &&
-          e.entry_type === "payment" &&
-          isDateInSelectedMonth(e.entry_date)
-        )
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-
-    function cardRecurringThisCycle(card){
-      return recurringCharges
-        .filter(r =>
-          r.card_id === card.id &&
-          r.active !== false
-        )
-        .reduce((s,r)=>s+Number(r.amount||0),0);
-    }
-
-    function cardRecurringCashMovedThisCycle(card){
-      return recurringCharges
-        .filter(r =>
-          r.card_id === card.id &&
-          r.active !== false &&
-          r.cash_moved === true
-        )
-        .reduce((s,r)=>s+Number(r.amount||0),0);
-    }
-
-    function cardCashMovedThisCycle(card){
-      const id = card.id;
-
-      const entriesMoved = entries
-        .filter(e =>
-          e.card_id === id &&
-          e.entry_type === "expense" &&
-          e.cash_moved &&
-          isDateInSelectedMonth(e.entry_date)
-        )
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-
-      const recurringMoved = cardRecurringCashMovedThisCycle(card);
-
-      return entriesMoved + recurringMoved;
-    }
-
-    function cardCashStillToMoveThisCycle(card){
-      const newSpend = cardNewCycleSpend(card);
-      const recurringPlanned = cardRecurringThisCycle(card);
-      const moved = cardCashMovedThisCycle(card);
-      const rem = (newSpend + recurringPlanned) - moved;
-      return rem > 0 ? rem : 0;
-    }
-
-    function totalSpending(){
-      return entries
-        .filter(e=>e.entry_type==="expense")
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-    function monthSpending(){
-      const ym = currentMonth();
-      return entries
-        .filter(e=>e.entry_type==="expense" && String(e.entry_date).slice(0,7)===ym)
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-    function cashMovedThisMonth(){
-      const ym = currentMonth();
-      return entries
-        .filter(e=>e.entry_type==="expense" && e.cash_moved && String(e.entry_date).slice(0,7)===ym)
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-    function cashStillToMoveThisMonth(){
-      const ym = currentMonth();
-      return entries
-        .filter(e=>e.entry_type==="expense" && !e.cash_moved && String(e.entry_date).slice(0,7)===ym)
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-
-    function getCurrentPayPeriod(firstPayDateStr){
-      const first = parseISODate(firstPayDateStr);
-      if (!first) return null;
-      const todayDate = parseISODate(today());
-      if (!todayDate) return null;
-      first.setHours(0,0,0,0);
-      todayDate.setHours(0,0,0,0);
-      if (todayDate < first){
-        return {
-          start:first,
-          end:new Date(first.getTime() + 13*24*60*60*1000)
-        };
-      }
-      const diffMs = todayDate.getTime() - first.getTime();
-      const daysDiff = Math.floor(diffMs/(24*60*60*1000));
-      const periodsSince = Math.floor(daysDiff/14);
-      const start = new Date(first.getTime() + periodsSince*14*24*60*60*1000);
-      const end = new Date(start.getTime() + 13*24*60*60*1000);
-      return {start,end};
-    }
-    function isDateInRange(str,range){
-      if (!range) return false;
-      const d = parseISODate(str);
-      if (!d) return false;
-      d.setHours(0,0,0,0);
-      return d >= range.start && d <= range.end;
-    }
-    function payPeriodSpending(firstDateStr){
-      const r = getCurrentPayPeriod(firstDateStr);
-      if (!r) return 0;
-      return entries
-        .filter(e=>e.entry_type==="expense" && isDateInRange(e.entry_date,r))
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-    function payPeriodCashMoved(firstDateStr){
-      const r = getCurrentPayPeriod(firstDateStr);
-      if (!r) return 0;
-      return entries
-        .filter(e=>e.entry_type==="expense" && e.cash_moved && isDateInRange(e.entry_date,r))
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-    function payPeriodCashStillToMove(firstDateStr){
-      const r = getCurrentPayPeriod(firstDateStr);
-      if (!r) return 0;
-      return entries
-        .filter(e=>e.entry_type==="expense" && !e.cash_moved && isDateInRange(e.entry_date,r))
-        .reduce((s,e)=>s+Number(e.amount||0),0);
-    }
-
-    function estimatedInterest(card){
-      const bal = cardBalance(card.id);
+    function estimatedInterest(card) {
+      const balance = cardBalance(card.id);
       const apr = Number(card.apr || 0);
-      if (bal <= 0 || apr <= 0) return 0;
-      return bal * (Math.pow(1 + (apr/100)/365, 30) - 1);
+
+      if (balance <= 0 || apr <= 0) return 0;
+
+      return balance * (
+        Math.pow(1 + (apr / 100) / 365,30) - 1
+      );
     }
 
-    function cardProjectedNextCycleStart(card){
-      const unpaid = cardUnpaidFromLastCycle(card);
-      const newSpend = cardNewCycleSpend(card);
-      const recurringPlanned = cardRecurringThisCycle(card);
-      const pay = cardPaymentsThisCycle(card);
-      const proj = unpaid + newSpend + recurringPlanned - pay;
-      return proj > 0 ? proj : 0;
-    }
-    function cardPaidOffThisCycle(card){
-      const unpaid = cardUnpaidFromLastCycle(card);
-      const newSpend = cardNewCycleSpend(card);
-      const recurringPlanned = cardRecurringThisCycle(card);
-      const pay = cardPaymentsThisCycle(card);
-
-      const projected = unpaid + newSpend + recurringPlanned - pay;
-      return projected <= 0.01;
-    }
-    function recurringForCard(cardId){
-      return recurringCharges.filter(r => r.card_id === cardId);
+    function recurringForCard(cardId) {
+      return recurringCharges.filter(charge =>
+        charge.card_id === cardId &&
+        charge.active !== false
+      );
     }
 
-    function cardInfoHTML(card){
-      const unpaidLastCycle = cardUnpaidFromLastCycle(card);
-      const newSpend = cardNewCycleSpend(card);
-      const pays = cardPaymentsThisCycle(card);
-      const current = cardBalance(card.id);
-      const recurringPlanned = cardRecurringThisCycle(card);
-      const cashMoved = cardCashMovedThisCycle(card);
-      const cashStill = cardCashStillToMoveThisCycle(card);
-      const interest = estimatedInterest(card);
+    function recurringTotal(cardId) {
+      return recurringForCard(cardId)
+        .reduce((sum,charge) => sum + Number(charge.amount),0);
+    }
 
+    function cardInfoHTML(card) {
       return `
         <div class="interest">
-          <b>Cycle details</b><br>
-          Cycle end day: ${card.cycle_end_day || "Not set"} ·
-          Due day: ${card.due_day || "Not set"}<br><br>
-          <b>Balance</b><br>
-          Prior cycle balance: ${cash(unpaidLastCycle)}<br>
-          New cycle spending (selected month): ${cash(newSpend)}<br>
-          Recurring charges this month: <b>${cash(recurringPlanned)}</b><br>
-          Payments this month: ${cash(pays)}<br>
-          <b>Current balance: ${cash(current)}</b><br>
-          <b>Projected starting balance next cycle (if no more changes): ${cash(cardProjectedNextCycleStart(card))}</b><br><br>
-          <b>Cash coverage</b><br>
-          Cash already moved this month (including auto transfers): ${cash(cashMoved)}<br>
-          Cash still to move for this month: ${cash(cashStill)}<br><br>
-          <b>Interest risk</b><br>
-          Est. 30-day interest if unpaid: ${cash(interest)}
+          Cycle End Day: ${card.cycle_end_day || "Not set"}<br>
+          Due Day: ${card.due_day || "Not set"}<br>
+          Current Balance: ${money(cardBalance(card.id))}<br>
+          Recurring Planned Charges: ${money(recurringTotal(card.id))}<br>
+          Estimated 30-Day Interest if Unpaid:
+          ${money(estimatedInterest(card))}
         </div>
       `;
     }
 
-    function recurringListHTML(cardId){
-      const list = recurringForCard(cardId);
-      if (!list.length) {
-        return `<div class="sub" style="margin-top:4px">No recurring charges saved.</div>`;
+    function entryHTML(entry) {
+      const payment = entry.entry_type === "payment";
+      const transfer = entry.entry_type === "transfer";
+
+      let label = "Expense";
+      if (payment) label = "Payment";
+      if (transfer) label = "Transfer";
+
+      return `
+        <button class="list" type="button"
+          onclick="openEntry('${entry.id}')">
+          <div class="row">
+            <b>${esc(entry.merchant)}</b>
+            <b>${payment ? "−" : ""}${money(entry.amount)}</b>
+          </div>
+          <div class="sub">
+            ${label} ·
+            ${entry.entry_date} ·
+            ${esc(cardName(entry.card_id))}
+          </div>
+        </button>
+      `;
+    }
+
+    function recurringHTML(cardId) {
+      const charges = recurringForCard(cardId);
+
+      if (!charges.length) {
+        return `<div class="sub">No recurring charges saved.</div>`;
       }
-      return list.map(rc => {
-        const dayLabel = rc.charge_day ? ("Day " + rc.charge_day) : "Day not set";
-        const status = rc.active === false ? "Inactive" : "Active";
 
-        const isAuto = !!rc.cash_moved;
-        const containerBg = isAuto ? "background:#d1fae5;border-color:#10b981;" : "";
-        const statusColor = isAuto ? "var(--green)" : "var(--muted)";
-        const moveButtonText = isAuto ? "Mark as not auto-transfer" : "Mark as auto-transfer";
-        const moveButtonClass = isAuto ? "success" : "secondary";
-
-        return `
-          <div class="card" style="margin-top:4px;${containerBg}">
-            <button type="button" class="list"
-              style="display:block;padding:8px 10px;border-radius:9px 9px 0 0"
-              onclick="openRecurringModal('${cardId}','${rc.id}')">
-              <div class="row">
-                <b>${esc(rc.name)}</b>
-                <span>${cash(rc.amount)}</span>
+      return charges.map(charge => `
+        <div class="card" style="margin-top:8px;padding:10px">
+          <div class="row">
+            <div>
+              <b>${esc(charge.name)}</b>
+              <div class="sub">
+                Day: ${charge.charge_day || "Not set"}
               </div>
-              <div class="sub" style="color:${statusColor}">
-                ${dayLabel} · ${status}${isAuto ? " · Automatic bank transfer" : ""}
-              </div>
-            </button>
-            <div class="row" style="margin-top:6px;justify-content:space-between">
-              <span class="sub" style="color:${statusColor}">
-                ${isAuto
-                  ? "Automatic transfer in bank is set for this recurring charge"
-                  : "No automatic transfer set in bank for this recurring charge"}
-              </span>
-              <button type="button" class="${moveButtonClass}"
-                onclick="toggleRecurringCashMoved('${rc.id}')">
-                ${moveButtonText}
+            </div>
+            <div style="text-align:right">
+              <b>${money(charge.amount)}</b><br>
+              <button class="secondary" type="button"
+                onclick="openRecurring('${cardId}','${charge.id}')">
+                Edit
               </button>
             </div>
           </div>
-        `;
-      }).join("");
-    }
-
-    function linkedAccountNameById(id){
-      const a = currentLinkedAccounts.find(x => x.id === id);
-      if (!a) return "";
-      const inst = a.institution_name || "Bank";
-      const name = a.plaid_account_name || "Account";
-      const last4 = a.plaid_account_mask || "";
-      return (inst + ": " + name + (last4 ? " •••• " + last4 : "")).trim();
-    }
-
-    function entryHTML(entry){
-      const isPayment = entry.entry_type === "payment";
-      const isExpense = entry.entry_type === "expense";
-      const isTransfer = entry.entry_type === "transfer";
-      const isCashMoved = !!entry.cash_moved;
-      const statusLabel = isCashMoved ? "Cash moved" : "Cash not moved";
-      const statusColor = isCashMoved ? "var(--green)" : "var(--muted)";
-      const toggleText = isCashMoved ? "Mark as not moved" : "Mark as moved";
-      const buttonClass = isCashMoved ? "success" : "secondary";
-      const containerBg = isCashMoved ? "background:#d1fae5;border-color:#10b981;" : "";
-
-      const fundingId = entryFundingMappings[entry.id];
-      const fundingLabel = fundingId ? linkedAccountNameById(fundingId) : "";
-      const fundingHtml = fundingLabel
-        ? `<br><span style="font-weight:600">Funded from:</span> ${esc(fundingLabel)}`
-        : "";
-
-      let typeLabel = "Expense";
-      if (isPayment) typeLabel = "Payment";
-      if (isTransfer) typeLabel = "Transfer";
-
-      let transferInfoHtml = "";
-      if (isTransfer && entry.notes){
-        transferInfoHtml = `<br><span class="sub" style="font-style:italic">${esc(entry.notes)}</span>`;
-      }
-
-      return `
-        <div class="card" style="margin-bottom:6px;padding:10px;${containerBg}">
-          <button class="list" type="button"
-            onclick="openEntry('${entry.id}')"
-            style="border-bottom:0;border-radius:9px 9px 0 0">
-            <div class="row">
-              <b>${esc(entry.merchant)}</b>
-              <b>${isPayment ? "−" : ""}${cash(entry.amount)}</b>
-            </div>
-            <div class="sub">
-              ${typeLabel} ·
-              ${entry.entry_date} ·
-              ${esc(cardName(entry.card_id))}
-              ${fundingHtml}
-              ${transferInfoHtml}
-            </div>
-          </button>
-          <div class="row" style="margin-top:6px;justify-content:space-between">
-            <span class="sub" style="color:${statusColor}">
-              ${statusLabel}
-            </span>
-            <button type="button" class="${buttonClass}"
-              onclick="toggleCashMoved('${entry.id}')">
-              ${toggleText}
-            </button>
-          </div>
         </div>
-      `;
+      `).join("");
     }
 
-    function totalSpendingAccountsCash(){
-      return linkedAccountsList
-        .filter(a => a.available_balance != null && a.plaid_account_subtype === "checking")
-        .reduce((s,a)=>s+Number(a.available_balance || 0),0);
-    }
-
-    function spendingAccountsHTML(){
-      if (!linkedAccountsList.length) return "No spending accounts linked yet.";
-      return linkedAccountsList.map(a=>{
-        const inst = a.institution_name || "Bank";
-        const name = a.plaid_account_name || "Account";
-        const last4 = a.plaid_account_mask || "";
-        const avail = a.available_balance != null ? cash(a.available_balance) : "";
-        const label = (inst + ": " + name + (last4 ? " •••• " + last4 : "")).trim();
-        return esc(label) + (avail ? " — Available: " + avail : "");
-      }).join("<br>");
-    }
-
-    function renderLinkedAccounts(accounts){
-      linkedAccountsList = accounts || [];
-      const container = $("linkedAccounts");
-      const select = $("unlinkAccountSelect");
-      if (!container) return;
-
-      if (!linkedAccountsList.length){
-        container.textContent = "No bank accounts linked yet.";
-        if (select){
-          select.innerHTML = '<option value="">Select an account to unlink</option>';
-        }
-        return;
-      }
-
-      container.innerHTML = linkedAccountsList.map(a=>{
-        const inst = a.institution_name || "Bank";
-        const name = a.plaid_account_name || "Account";
-        const last4 = a.plaid_account_mask || "";
-        const t = a.plaid_account_type || "";
-        const sub = a.plaid_account_subtype || "";
-        const avail = a.available_balance != null ? cash(a.available_balance) : "";
-        const parts = [
-          inst + ":",
-          name,
-          last4 ? "•••• " + last4 : "",
-          t || "",
-          sub ? "(" + sub + ")" : "",
-          avail ? "Available: " + avail : ""
-        ];
-        return "<div>" + esc(parts.join(" ").replace(/\s+/g," ").trim()) + "</div>";
-      }).join("");
-
-      if (select){
-        const opts = [
-          '<option value="">Select an account to unlink</option>',
-          ...linkedAccountsList.map(a=>{
-            const id = a.id;
-            const inst = a.institution_name || "Bank";
-            const name = a.plaid_account_name || "Account";
-            const last4 = a.plaid_account_mask || "";
-            const label = esc((inst + ": " + name + (last4 ? " •••• " + last4 : "")).trim());
-            return `<option value="${id}">${label}</option>`;
-          })
-        ];
-        select.innerHTML = opts.join("");
-      }
-    }
-
-    function renderBudgetSlider(spent,budget){
-      const fill = $("budgetSliderFill");
-      const marker = $("budgetSliderMarker");
-      const summary = $("budgetSliderSummary");
-      const status = $("budgetSliderStatus");
-      if (!fill || !marker || !summary || !status) return;
-
-      const safeBudget = budget > 0 ? budget : 0;
-      const ratio = safeBudget > 0 ? spent/safeBudget : 0;
-      const rClamp = Math.min(Math.max(ratio,0),2);
-
-      const fillScale = Math.min(rClamp,1);
-      fill.style.transform = "scaleX(" + fillScale.toFixed(3) + ")";
-      fill.classList.toggle("over", ratio>1);
-
-      marker.style.left = (rClamp*100) + "%";
-
-      summary.textContent = "Budget: " + cash(budget) + " · Spent: " + cash(spent);
-
-      const diff = budget - spent;
-      if (budget <= 0){
-        status.textContent = "No budget set";
-        status.className = "budget-slider-status";
-      } else if (diff > 0.01){
-        status.textContent = "Ahead by " + cash(diff);
-        status.className = "budget-slider-status good";
-      } else if (diff < -0.01){
-        status.textContent = "Behind by " + cash(-diff);
-        status.className = "budget-slider-status bad";
-      } else {
-        status.textContent = "Exactly on budget";
-        status.className = "budget-slider-status";
-      }
-    }
-
-    function render(){
+    function render() {
       if (!currentTracker) return;
 
-      const budgetType = currentTracker.budget_type || "monthly";
       const monthlyBudget = Number(currentTracker.monthly_budget || 0);
-      const payPeriodBudget = Number(currentTracker.pay_period_budget || 0);
-      const firstPayDateStr = currentTracker.pay_period_first_date || "";
+      const spent = monthlySpending();
+      const remaining = monthlyBudget - spent;
+      const budgetPercent =
+        monthlyBudget > 0
+          ? Math.min((spent / monthlyBudget) * 100,100)
+          : 0;
 
-      let spent, moved, stillToMove, budgetUsed, periodLabel;
+      $("totalSpending").textContent = money(totalSpending());
+      $("monthSpent").textContent = money(spent);
+      $("monthRemaining").textContent = money(remaining);
+      $("monthRemaining").style.color =
+        remaining < 0 ? "var(--red)" : "var(--green)";
 
-      if (budgetType === "pay_period" && firstPayDateStr){
-        const range = getCurrentPayPeriod(firstPayDateStr);
-        spent = payPeriodSpending(firstPayDateStr);
-        moved = payPeriodCashMoved(firstPayDateStr);
-        stillToMove = payPeriodCashStillToMove(firstPayDateStr);
-        budgetUsed = payPeriodBudget;
-        if (range){
-          const s = range.start.toLocaleDateString("en-US");
-          const e = range.end.toLocaleDateString("en-US");
-          periodLabel = "Period: Pay Period (" + s + " – " + e + ")";
-        } else {
-          periodLabel = "Period: Pay Period (set a valid first pay date)";
-        }
-        $("budgetTitle").textContent = "Pay Period Budget (2 weeks)";
-      } else {
-        spent = monthSpending();
-        moved = cashMovedThisMonth();
-        stillToMove = cashStillToMoveThisMonth();
-        budgetUsed = monthlyBudget;
-        periodLabel = "Period: This Calendar Month";
-        $("budgetTitle").textContent = "Monthly Budget";
-      }
+      $("budgetFill").style.width = `${budgetPercent}%`;
+      $("budgetFill").classList.toggle("over", spent > monthlyBudget);
 
-      const remaining = budgetUsed - spent;
-      $("budgetPeriodLabel").textContent = periodLabel;
-      $("totalSpending").textContent = cash(totalSpending());
-      $("monthSpent").textContent = cash(spent);
-      $("monthRemaining").textContent = cash(remaining);
-      $("cashMovedThisMonth").textContent = cash(moved);
-      $("cashStillToMove").textContent = cash(stillToMove);
-      $("monthRemaining").style.color = remaining<0 ? "var(--red)" : "var(--green)";
+      $("budgetStatus").textContent =
+        monthlyBudget <= 0
+          ? "No monthly budget set."
+          : remaining >= 0
+            ? `${money(remaining)} remains in the monthly budget.`
+            : `${money(Math.abs(remaining))} over the monthly budget.`;
 
-      renderBudgetSlider(spent,budgetUsed);
-
-      const cashAvail = totalSpendingAccountsCash();
-      $("spendingAccountsList").innerHTML = spendingAccountsHTML();
-      $("totalSpendingAccountsCash").textContent = cash(cashAvail);
-
-      const dashCardsEl = $("dashboardCards");
-      if (cards.length){
-        dashCardsEl.innerHTML = cards.map(card => {
-          const balance = cardBalance(card.id);
-          const paidOff = cardPaidOffThisCycle(card);
-
-          const warnStyle = paidOff
-            ? ""
-            : "background:#fee2e2;border-color:#b42318;color:#7f1d1d;";
-
-          const subColor = paidOff ? "" : "color:#7f1d1d;";
-
-          return `
-            <div class="card" onclick="openCardDetail('${card.id}')" style="cursor:pointer;${warnStyle}">
-              <div class="row">
-                <span class="tracker-name">${esc(card.name)}</span>
-                <span>💳</span>
-              </div>
-              <div class="sub" style="${subColor}">
-                ${card.last_four ? "•••• " + card.last_four : "Manual card"}
-                ${paidOff ? "" : " · Not paid off for selected month"}
-              </div>
-              <strong>${cash(balance)}</strong>
-              <div class="sub" style="${subColor}">
-                Tap to view details & transactions on Entries page
-              </div>
+      $("dashboardCards").innerHTML = cards.length
+        ? cards.map(card => `
+          <div class="card">
+            <div class="row">
+              <b>${esc(card.name)}</b>
+              <button class="secondary" type="button"
+                onclick="openCard('${card.id}')">
+                Edit
+              </button>
             </div>
-          `;
-        }).join("");
-      } else {
-        dashCardsEl.innerHTML = '<div class="card empty">No credit cards saved.</div>';
-      }
+            <div class="sub">
+              ${card.last_four ? `•••• ${card.last_four}` : "Manual card"}
+            </div>
+            <strong>${money(cardBalance(card.id))}</strong>
+            ${cardInfoHTML(card)}
+          </div>
+        `).join("")
+        : `<div class="card empty">No credit cards saved.</div>`;
 
-      const recent = entries.slice(0,10);
-      $("recentEntries").innerHTML = recent.length
-        ? recent.map(entryHTML).join("")
-        : '<div class="empty">No recent expenses or payments.</div>';
+      $("recentEntries").innerHTML = entries.length
+        ? entries.slice(0,5).map(entryHTML).join("")
+        : `<div class="empty">No recent entries.</div>`;
+
+      $("entriesList").innerHTML = entries.length
+        ? entries.map(entryHTML).join("")
+        : `<div class="empty">No expenses, payments, or transfers yet.</div>`;
 
       $("cardsList").innerHTML = cards.length
         ? cards.map(card => `
           <div class="card">
             <div class="row">
               <b>${esc(card.name)}</b>
-              <div class="card-header-actions">
-                <button class="secondary" type="button"
-                  onclick="openCard('${card.id}')">
-                  Edit
-                </button>
-                <button class="secondary" type="button"
-                  onclick="clearCardEntries('${card.id}')">
-                  Clear Entries
-                </button>
-              </div>
+              <button class="secondary" type="button"
+                onclick="openCard('${card.id}')">
+                Edit
+              </button>
             </div>
+
             <div class="sub">
-              ${card.last_four ? "•••• " + card.last_four : "No last four saved"}
+              ${card.last_four ? `•••• ${card.last_four}` : ""}
             </div>
-            <strong>${cash(cardBalance(card.id))}</strong>
+
+            <strong>${money(cardBalance(card.id))}</strong>
+
+            ${cardInfoHTML(card)}
+
+            <div class="heading" style="margin-top:14px">
+              <h2 style="font-size:1rem">Recurring Charges</h2>
+              <button class="secondary" type="button"
+                onclick="openRecurring('${card.id}')">
+                + Add
+              </button>
+            </div>
+
+            ${recurringHTML(card.id)}
           </div>
         `).join("")
-        : '<div class="card empty">No credit cards saved.</div>';
+        : `<div class="card empty">No credit cards saved.</div>`;
+    }
 
-      renderEntriesPage();
+    async function ensurePersonalTracker() {
+      const { data: trackerId, error } =
+        await supabaseClient.rpc("ensure_personal_tracker");
 
-      showDebug(
-        "Loaded cards=" + cards.length +
-        ", entries=" + entries.length +
-        ", recurring=" + recurringCharges.length
+      if (error) {
+        setMessage("trackerMessage", error.message, "error");
+        return null;
+      }
+
+      return trackerId;
+    }
+
+    async function loadTrackers(selectedTrackerId = "") {
+      if (!currentUser) return;
+
+      $("signedInName").textContent =
+        currentUser.user_metadata?.display_name ||
+        currentUser.email;
+
+      const { data: memberships, error: membershipError } =
+        await supabaseClient
+          .from("tracker_members")
+          .select("tracker_id")
+          .eq("user_id", currentUser.id);
+
+      if (membershipError) {
+        setMessage("trackerMessage", membershipError.message, "error");
+        showScreen("trackerScreen");
+        return;
+      }
+
+      const ids = (memberships || []).map(item => item.tracker_id);
+
+      const { data: trackers, error: trackerError } =
+        await supabaseClient
+          .from("trackers")
+          .select("*")
+          .in("id", ids)
+          .order("created_at",{ascending:true});
+
+      if (trackerError) {
+        setMessage("trackerMessage", trackerError.message, "error");
+        showScreen("trackerScreen");
+        return;
+      }
+
+      const personalTracker = (trackers || []).find(tracker =>
+        tracker.is_personal === true &&
+        tracker.owner_id === currentUser.id
+      );
+
+      $("trackerSelect").innerHTML = (trackers || []).map(tracker => {
+        let label = tracker.name;
+
+        if (
+          tracker.is_personal === true &&
+          tracker.owner_id === currentUser.id
+        ) {
+          label += " — Personal";
+        } else if (tracker.owner_id === currentUser.id) {
+          label += " — Owner";
+        } else {
+          label += " — Shared";
+        }
+
+        return `<option value="${tracker.id}">${esc(label)}</option>`;
+      }).join("");
+
+      $("trackerSelect").value =
+        selectedTrackerId ||
+        personalTracker?.id ||
+        trackers?.[0]?.id ||
+        "";
+
+      setMessage("trackerMessage","");
+      showScreen("trackerScreen");
+    }
+
+    async function openSelectedTracker() {
+      const trackerId = $("trackerSelect").value;
+
+      if (!trackerId) {
+        setMessage("trackerMessage","Select a tracker first.","error");
+        return;
+      }
+
+      await openTracker(trackerId);
+    }
+
+    async function joinTracker() {
+      const code = $("inviteCode").value.trim();
+
+      if (!code) {
+        setMessage("trackerMessage","Enter an invite code.","error");
+        return;
+      }
+
+      const { data: trackerId, error } =
+        await supabaseClient.rpc(
+          "join_tracker_by_invite",
+          { supplied_invite_code: code }
+        );
+
+      if (error) {
+        setMessage("trackerMessage",error.message,"error");
+        return;
+      }
+
+      $("inviteCode").value = "";
+
+      await loadTrackers(trackerId);
+
+      setMessage(
+        "trackerMessage",
+        "Shared tracker joined. Select Open Selected Tracker.",
+        "good"
       );
     }
 
-    function renderEntriesPage(){
-      const headerEl = $("entriesCardHeader");
-      const recurringPanelEl = $("entriesRecurringPanel");
-      const listEl = $("entriesList");
-      const titleEl = $("entriesListTitle");
+    async function openTracker(trackerId) {
+      const { data, error } =
+        await supabaseClient
+          .from("trackers")
+          .select("*")
+          .eq("id",trackerId)
+          .single();
 
-      if (!headerEl || !recurringPanelEl || !listEl || !titleEl) return;
-
-      const card = selectedCardIdForEntries ? cardById(selectedCardIdForEntries) : null;
-
-      if (!card){
-        headerEl.classList.add("hidden");
-        recurringPanelEl.classList.add("hidden");
-        titleEl.textContent = "All Transactions";
-        listEl.innerHTML = entries.length
-          ? entries.map(entryHTML).join("")
-          : '<div class="empty">No expenses or payments yet.</div>';
+      if (error) {
+        setMessage("trackerMessage",error.message,"error");
         return;
       }
 
-      headerEl.classList.remove("hidden");
-      headerEl.innerHTML = `
-        <div class="row">
-          <div>
-            <h2>${esc(card.name)}</h2>
-            <div class="sub">${card.last_four ? "•••• " + card.last_four : "No last four saved"}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="sub">Total Balance</div>
-            <strong>${cash(cardBalance(card.id))}</strong>
-          </div>
-        </div>
-        ${cardInfoHTML(card)}
-      `;
+      currentTracker = data;
 
-      recurringPanelEl.classList.remove("hidden");
-      recurringPanelEl.innerHTML = `
-        <div class="row">
-          <h2>Recurring Charges</h2>
-          <button class="secondary" type="button"
-            onclick="openRecurringModal('${card.id}')">
-            Add / Edit Recurring
-          </button>
-        </div>
-        <div style="margin-top:10px">
-          ${recurringListHTML(card.id)}
-        </div>
-      `;
-
-      const cardEntries = entries.filter(e => e.card_id === card.id);
-      titleEl.textContent = "Transactions — " + cardName(card.id);
-      listEl.innerHTML = cardEntries.length
-        ? cardEntries.map(entryHTML).join("")
-        : '<div class="card empty">No transactions for this card yet.</div>';
-    }
-
-    function clearSelectedCardAndShowAllEntries(){
-      selectedCardIdForEntries = "";
-      renderEntriesPage();
-    }
-
-    function openRecurringModal(cardId, recurringId = "") {
-      const card = cardById(cardId);
-      if (!card) {
-        setMessage("settingsMessage", "Card not found for recurring charge.", "error");
-        return;
-      }
-
-      $("recurringForm").reset();
-      $("recurringId").value = "";
-      $("recurringCardId").value = cardId;
-      $("recurringTitle").textContent = "Recurring Charge for " + (card.name || "Card");
-      $("deleteRecurringButton").classList.add("hidden");
-      $("recurringAutoTransfer").checked = false;
-      setRecurringMessage("");
-
-      if (recurringId) {
-        const rc = recurringCharges.find(r => r.id === recurringId);
-        if (!rc) {
-          setRecurringMessage("Recurring charge not found.", "error");
-          return;
-        }
-
-        $("recurringId").value = rc.id;
-        $("recurringName").value = rc.name || "";
-        $("recurringAmount").value = rc.amount != null ? rc.amount : "";
-        $("recurringDay").value = rc.charge_day != null ? rc.charge_day : "";
-        $("recurringNotes").value = rc.notes || "";
-        $("recurringActive").checked = rc.active !== false;
-        $("recurringAutoTransfer").checked = !!rc.cash_moved;
-
-        $("recurringTitle").textContent = "Edit Recurring Charge for " + (card.name || "Card");
-        $("deleteRecurringButton").classList.remove("hidden");
-      }
-
-      openModal("recurringModal");
-    }
-async function ensureUserHasHomeTracker() {
-  if (!currentUser) return null;
-
-  const { data: trackerId, error: createError } =
-    await supabaseClient.rpc("ensure_personal_tracker");
-
-  if (createError) {
-    showDebug(
-      "Personal tracker ensure error: " +
-      (createError.message || "Unknown error")
-    );
-    return null;
-  }
-
-  const { data: tracker, error: loadError } =
-    await supabaseClient
-      .from("trackers")
-      .select("*")
-      .eq("id", trackerId)
-      .single();
-
-  if (loadError) {
-    showDebug(
-      "Personal tracker load error: " +
-      (loadError.message || "Unknown error")
-    );
-    return null;
-  }
-
-  return tracker;
-}
-
-async function loadTrackers(selectedTrackerId = "") {
-  if (!currentUser) return;
-
-  $("signedInName").textContent =
-    currentUser.user_metadata?.display_name ||
-    currentUser.email;
-
-  const { data: memberships, error: membershipError } =
-    await supabaseClient
-      .from("tracker_members")
-      .select("tracker_id, role")
-      .eq("user_id", currentUser.id);
-
-  if (membershipError) {
-    setMessage("trackerMessage", membershipError.message, "error");
-    showScreen("trackerScreen");
-    return;
-  }
-  
-async function openSelectedTracker() {
-  const trackerId = $("trackerSelect").value;
-
-  if (!trackerId) {
-    setMessage(
-      "trackerMessage",
-      "Select a tracker first.",
-      "error"
-    );
-    return;
-  }
-
-  await openTracker(trackerId);
-}
-  const trackerIds = (memberships || []).map(item => item.tracker_id);
-
-  if (!trackerIds.length) {
-    setMessage(
-      "trackerMessage",
-      "No trackers found. Refresh the page to create your personal tracker.",
-      "error"
-    );
-    showScreen("trackerScreen");
-    return;
-  }
-
-  const { data: trackers, error: trackerError } =
-    await supabaseClient
-      .from("trackers")
-      .select("*")
-      .in("id", trackerIds)
-      .order("created_at", { ascending: true });
-
-  if (trackerError) {
-    setMessage("trackerMessage", trackerError.message, "error");
-    showScreen("trackerScreen");
-    return;
-  }
-
-  const personalTracker = (trackers || []).find(
-    tracker =>
-      tracker.is_personal === true &&
-      tracker.owner_id === currentUser.id
-  );
-
-  $("trackerSelect").innerHTML = (trackers || []).map(tracker => {
-    let label = tracker.name;
-
-    if (tracker.is_personal === true &&
-        tracker.owner_id === currentUser.id) {
-      label += " — Personal Tracker";
-    } else if (tracker.owner_id === currentUser.id) {
-      label += " — Owner";
-    } else {
-      label += " — Shared";
-    }
-
-    return `
-      <option value="${tracker.id}">
-        ${esc(label)}
-      </option>
-    `;
-  }).join("");
-
-  const selected =
-    selectedTrackerId ||
-    personalTracker?.id ||
-    trackers?.[0]?.id ||
-    "";
-
-  $("trackerSelect").value = selected;
-
-  setMessage("trackerMessage", "");
-  showScreen("trackerScreen");
-}
-    async function joinTracker() {
-  const code = $("inviteCode").value.trim();
-
-  if (!code) {
-    setMessage("trackerMessage", "Enter an invite code.", "error");
-    return;
-  }
-
-  const { data: trackerId, error } =
-    await supabaseClient.rpc(
-      "join_tracker_by_invite",
-      { supplied_invite_code: code }
-    );
-
-  if (error) {
-    setMessage(
-      "trackerMessage",
-      error.message || "Unable to join tracker.",
-      "error"
-    );
-    return;
-  }
-
-  $("inviteCode").value = "";
-
-  await loadTrackers(trackerId);
-
-  setMessage(
-    "trackerMessage",
-    "You joined the shared tracker. Select Open Selected Tracker to use it.",
-    "good"
-  );
-}
-    async function useDefaultTracker(){
-      if (!currentUser){
-        setMessage("trackerMessage","Sign in first.","error");
-        return;
-      }
-    await ensureUserHasHomeTracker();
-     await loadTrackers();
-
-    async function openTracker(trackerId){
-      const { data, error } = await supabaseClient
-        .from("trackers")
-        .select("*")
-        .eq("id", trackerId);
-      if (error){
-        setMessage("trackerMessage",error.message || "Error loading tracker.","error");
-        return;
-      }
-      if (!data || !data.length){
-        setMessage("trackerMessage","No tracker found with that ID.","error");
-        return;
-      }
-      currentTracker = data[0];
       $("trackerTitle").textContent = currentTracker.name;
-      $("trackerSubtitle").textContent = "Invite Code: " + (currentTracker.invite_code || "");
-      $("currentInviteCode").value = currentTracker.invite_code || "";
+      $("trackerSubtitle").textContent =
+        `Invite Code: ${currentTracker.invite_code || ""}`;
+
       showScreen("appScreen");
       showPage("dash");
+
       await refreshData();
     }
 
-    function copyInviteCode(){
-      const input = $("currentInviteCode");
-      if (!input || !input.value){
-        setMessage("inviteStatus","No invite code available.","error");
-        return;
-      }
-      setMessage("inviteStatus","Copy this code manually: " + input.value,"good");
-    }
+    async function refreshData() {
+      if (!currentTracker) return;
 
-    async function prepareInvite(){
-      if (!currentTracker){
-        setMessage("inviteStatus","Open a tracker first.","error");
-        return;
-      }
-      const contact = $("inviteContact").value.trim();
-      const msg = $("inviteMessage").value.trim();
-      const code = currentTracker.invite_code;
-      if (!contact){
-        setMessage("inviteStatus","Enter an email or phone number.","error");
-        return;
-      }
-      if (!code){
-        setMessage("inviteStatus","This tracker does not have an invite code.","error");
-        return;
-      }
-      const contactType = contact.includes("@") ? "email" : "phone";
-      try {
-        await supabaseClient
-          .from("tracker_invites")
-          .insert({
-            tracker_id: currentTracker.id,
-            contact,
-            contact_type: contactType,
-            invite_code: code,
-            created_by: currentUser ? currentUser.id : null
-          });
-      } catch(e) {}
-
-      const appUrl = window.location.origin + window.location.pathname;
-      const baseMsg =
-        msg ||
-        ("I\u2019m sharing my Deadbeat Tracker with you.\n\n" +
-         "App link: " + appUrl + "\n" +
-         "Invite code: " + code + "\n\n" +
-         "Sign in or create an account, then use this invite code under 'Join a Shared Tracker' to join this specific tracker.");
-
-      let instructions;
-      if (contactType === "email"){
-        instructions = "Copy this text and email it to " + contact + ":\n\n" + baseMsg;
-      } else {
-        instructions = "Copy this text and text it to " + contact + ":\n\n" + baseMsg;
-      }
-      setMessage("inviteStatus",instructions,"good");
-    }
-
-    async function refreshData(){
-      if (!currentTracker){
-        showDebug("refreshData called with no currentTracker");
-        return;
-      }
-
-      const [cardsRes, entriesRes, trackerRes, recurringRes] = await Promise.all([
+      const [
+        cardsResult,
+        entriesResult,
+        trackerResult,
+        recurringResult
+      ] = await Promise.all([
         supabaseClient
           .from("cards")
           .select("*")
-          .eq("tracker_id", currentTracker.id)
+          .eq("tracker_id",currentTracker.id)
           .order("created_at",{ascending:true}),
+
         supabaseClient
           .from("entries")
           .select("*")
-          .eq("tracker_id", currentTracker.id)
+          .eq("tracker_id",currentTracker.id)
           .order("entry_date",{ascending:false}),
+
         supabaseClient
           .from("trackers")
           .select("*")
-          .eq("id", currentTracker.id)
+          .eq("id",currentTracker.id)
           .single(),
+
         supabaseClient
           .from("card_recurring_charges")
           .select("*")
-          .eq("tracker_id", currentTracker.id)
+          .eq("tracker_id",currentTracker.id)
           .order("charge_day",{ascending:true})
       ]);
 
-      if (cardsRes.error || entriesRes.error || trackerRes.error || recurringRes.error){
-        showDebug(
-          "Load error. Cards: " + (cardsRes.error?.message || "ok") +
-          "; Entries: " + (entriesRes.error?.message || "ok") +
-          "; Recurring: " + (recurringRes.error?.message || "ok")
-        );
+      if (cardsResult.error) {
+        alert(cardsResult.error.message);
+        return;
       }
 
-      if (cardsRes.error){ setMessage("settingsMessage",cardsRes.error.message,"error"); return; }
-      if (entriesRes.error){ setMessage("settingsMessage",entriesRes.error.message,"error"); return; }
-      if (trackerRes.error){ setMessage("settingsMessage",trackerRes.error.message,"error"); return; }
-
-      if (recurringRes.error){
-        setMessage(
-          "settingsMessage",
-          "Could not load recurring charges: " + recurringRes.error.message,
-          "error"
-        );
-        recurringCharges = [];
-      } else {
-        recurringCharges = recurringRes.data || [];
+      if (entriesResult.error) {
+        alert(entriesResult.error.message);
+        return;
       }
 
-      cards = cardsRes.data || [];
-      entries = entriesRes.data || [];
-      currentTracker = trackerRes.data;
+      if (trackerResult.error) {
+        alert(trackerResult.error.message);
+        return;
+      }
+
+      cards = cardsResult.data || [];
+      entries = entriesResult.data || [];
+      currentTracker = trackerResult.data;
+      recurringCharges = recurringResult.error
+        ? []
+        : recurringResult.data || [];
 
       $("trackerTitle").textContent = currentTracker.name;
-      $("trackerSubtitle").textContent = "Invite Code: " + (currentTracker.invite_code || "");
-      if ($("currentInviteCode")) $("currentInviteCode").value = currentTracker.invite_code || "";
+      $("trackerSubtitle").textContent =
+        `Invite Code: ${currentTracker.invite_code || ""}`;
 
-      await loadLinkedAccountsForCurrentTracker();
-      await loadEntryFundingMappingsForCurrentTracker();
+      render();
+    }
 
-      try {
-        render();
-      } catch(e) {
-        showDebug("Render error (entries/cards).");
+    function fillCardSelect(selectedId = "") {
+      $("entryCard").innerHTML = cards.map(card => `
+        <option value="${card.id}">
+          ${esc(cardName(card.id))}
+        </option>
+      `).join("");
+
+      if (selectedId) {
+        $("entryCard").value = selectedId;
       }
     }
 
-    function fillCardSelect(selectedId=""){
-      $("entryCard").innerHTML = cards.map(c =>
-        `<option value="${c.id}">${esc(cardName(c.id))}</option>`
-      ).join("");
-      if (selectedId) $("entryCard").value = selectedId;
-    }
-
-    function fillLinkedAccountSelect(selectEl, selectedLinkedAccountId=""){
-      if (!selectEl) return;
-      const accounts = currentLinkedAccounts || [];
-
-      selectEl.innerHTML = "";
-      const defaultOpt = document.createElement("option");
-      defaultOpt.value = "";
-      defaultOpt.textContent = selectEl.id === "entryFundingAccount"
-        ? "No specific funding account"
-        : "No account";
-      selectEl.appendChild(defaultOpt);
-
-      for (const a of accounts){
-        const opt = document.createElement("option");
-        opt.value = a.id;
-        const label = linkedAccountNameById(a.id);
-        opt.textContent = label || ("Account " + a.id);
-        selectEl.appendChild(opt);
-      }
-
-      if (selectedLinkedAccountId){
-        selectEl.value = selectedLinkedAccountId;
-      }
-    }
-
-    // New helper: fill default funding account select in Card modal
-    function fillCardDefaultFundingSelect(selectedLinkedAccountId = ""){
-      const selectEl = $("cardDefaultFundingAccount");
-      if (!selectEl) return;
-      fillLinkedAccountSelect(selectEl, selectedLinkedAccountId || "");
-    }
-
-    function openEntry(id=""){
-      if (!cards.length){
-        setMessage("trackerMessage","Add a credit card before adding an expense, payment, or transfer.","error");
+    function openEntry(id = "") {
+      if (!cards.length) {
+        alert("Add a credit card first.");
         openCard();
         return;
       }
+
       $("entryForm").reset();
       $("entryId").value = "";
       $("entryTitle").textContent = "Add Entry";
       $("entryDate").value = today();
-      $("entryCashMoved").checked = false;
       $("deleteEntryButton").classList.add("hidden");
-      $("entryType").value = "expense";
-      setEntryMessage("");
 
-      fillCardSelect(selectedCardIdForEntries || "");
-      fillLinkedAccountSelect($("entryFundingAccount"), "");
-      fillLinkedAccountSelect($("transferFromAccount"), "");
-      fillLinkedAccountSelect($("transferToAccount"), "");
+      fillCardSelect();
 
-      if (!id){
-        // New entry: if a card is selected, default the funding account from card default
-        const cardId = $("entryCard").value;
-        const card = cardById(cardId);
-        if (card && card.default_linked_account_id){
-          fillLinkedAccountSelect(
-            $("entryFundingAccount"),
-            card.default_linked_account_id
-          );
-        }
-      }
+      if (id) {
+        const entry = entries.find(item => item.id === id);
 
-      if (id){
-        const e = entries.find(x=>x.id===id);
-        if (!e) return;
-        $("entryId").value = e.id;
+        if (!entry) return;
+
+        $("entryId").value = entry.id;
         $("entryTitle").textContent = "Edit Entry";
-        $("entryType").value = e.entry_type || "expense";
-        $("entryMerchant").value = e.merchant;
-        $("entryAmount").value = e.amount;
-        $("entryDate").value = e.entry_date;
-        $("entryCategory").value = e.category || "Other";
-        $("entryNotes").value = e.notes || "";
-        $("entryCashMoved").checked = !!e.cash_moved;
-        fillCardSelect(e.card_id);
+        $("entryType").value = entry.entry_type;
+        $("entryMerchant").value = entry.merchant;
+        $("entryAmount").value = entry.amount;
+        $("entryDate").value = entry.entry_date;
+        $("entryCategory").value = entry.category || "Other";
+        $("entryNotes").value = entry.notes || "";
 
-        const existingFundingId = entryFundingMappings[e.id] || "";
-        // If entry has no explicit funding, fall back to card default
-        let fundingToUse = existingFundingId;
-        if (!fundingToUse){
-          const card = cardById(e.card_id);
-          if (card && card.default_linked_account_id){
-            fundingToUse = card.default_linked_account_id;
-          }
-        }
-        fillLinkedAccountSelect($("entryFundingAccount"), fundingToUse);
-
-        // For transfers, try to parse transfer info from notes (if present),
-        // but do not block editing if parsing fails.
-        if (e.entry_type === "transfer"){
-          fillLinkedAccountSelect($("transferFromAccount"), "");
-          fillLinkedAccountSelect($("transferToAccount"), "");
-
-          if (e.notes){
-            const regex = /Transfer from:\s*(.+?)\s*→\s*to:\s*(.+?)$/;
-            const matches = e.notes.match(regex);
-            if (matches){
-              const fromLabel = matches[1].trim();
-              const toLabel = matches[2].trim();
-              const fromAccount = currentLinkedAccounts.find(
-                a => linkedAccountNameById(a.id) === fromLabel
-              );
-              const toAccount = currentLinkedAccounts.find(
-                a => linkedAccountNameById(a.id) === toLabel
-              );
-              if (fromAccount){
-                fillLinkedAccountSelect($("transferFromAccount"), fromAccount.id);
-              }
-              if (toAccount){
-                fillLinkedAccountSelect($("transferToAccount"), toAccount.id);
-              }
-            }
-          }
-        } else {
-          fillLinkedAccountSelect($("transferFromAccount"), "");
-          fillLinkedAccountSelect($("transferToAccount"), "");
-        }
+        fillCardSelect(entry.card_id);
 
         $("deleteEntryButton").classList.remove("hidden");
       }
+
       openModal("entryModal");
     }
 
-    function validateEntryForm(){
-      const type = $("entryType").value;
-      const fundingId = $("entryFundingAccount").value || "";
-      const transferFromId = $("transferFromAccount").value || "";
-      const transferToId = $("transferToAccount").value || "";
-
-      setEntryMessage("");
-
-      if (type === "transfer"){
-        if (!transferFromId || !transferToId){
-          setEntryMessage(
-            "Transfer must have both Transfer From and Transfer To accounts selected.",
-            "error"
-          );
-          return false;
-        }
-        if (transferFromId === transferToId){
-          setEntryMessage(
-            "Transfer From and Transfer To cannot be the same account.",
-            "error"
-          );
-          return false;
-        }
-        if (fundingId){
-          setEntryMessage(
-            "Transfer must not have a Funding Account selected.",
-            "error"
-          );
-          return false;
-        }
-      } else {
-        if (transferFromId || transferToId){
-          setEntryMessage(
-            "Expense/Payment entries cannot have Transfer From/To set. Clear those fields.",
-            "error"
-          );
-          return false;
-        }
-      }
-      return true;
-    }
-
-    async function saveEntry(ev){
-      ev.preventDefault();
-      setEntryMessage("");
-
-      if (!currentTracker){
-        setEntryMessage("Open a tracker first.","error");
-        return;
-      }
-
-      if (!validateEntryForm()){
-        return;
-      }
+    async function saveEntry(event) {
+      event.preventDefault();
 
       const id = $("entryId").value;
-      const fundingAccountId = $("entryFundingAccount").value || null;
-      const transferFromId = $("transferFromAccount").value || "";
-      const transferToId = $("transferToAccount").value || "";
-      const type = $("entryType").value;
-
-      let notes = $("entryNotes").value.trim();
-
-      if (type === "transfer"){
-        const fromLabel = linkedAccountNameById(transferFromId);
-        const toLabel = linkedAccountNameById(transferToId);
-        const transferNote = "Transfer from: " + (fromLabel || transferFromId) + " \u2192 to: " + (toLabel || transferToId);
-        notes = notes ? (notes + " · " + transferNote) : transferNote;
-      }
 
       const record = {
         tracker_id: currentTracker.id,
         card_id: $("entryCard").value,
-        entry_type: type,
+        entry_type: $("entryType").value,
         merchant: $("entryMerchant").value.trim(),
         amount: Number($("entryAmount").value),
         entry_date: $("entryDate").value,
         category: $("entryCategory").value,
-        notes: notes,
-        cash_moved: $("entryCashMoved").checked
+        notes: $("entryNotes").value.trim()
       };
 
-      let res;
-      if (id){
-        res = await supabaseClient
+      let result;
+
+      if (id) {
+        result = await supabaseClient
           .from("entries")
           .update(record)
           .eq("id",id)
@@ -2563,240 +1531,194 @@ async function openSelectedTracker() {
           .single();
       } else {
         record.created_by = currentUser.id;
-        res = await supabaseClient
+
+        result = await supabaseClient
           .from("entries")
           .insert(record)
           .select()
           .single();
       }
-      if (res.error){
-        setEntryMessage(res.error.message || "Error saving entry.","error");
-        showDebug("Entry save error: " + res.error.message);
+
+      if (result.error) {
+        alert(result.error.message);
         return;
-      }
-
-      const savedEntry = res.data;
-      const entryId = savedEntry.id;
-
-      if (type === "transfer"){
-        await clearEntryFundingMapping(entryId);
-      } else if (fundingAccountId){
-        await saveEntryFundingMapping(entryId, fundingAccountId);
-      } else {
-        await clearEntryFundingMapping(entryId);
       }
 
       closeModal("entryModal");
       await refreshData();
     }
 
-    async function deleteEntry(){
+    async function deleteEntry() {
       const id = $("entryId").value;
+
       if (!id || !confirm("Delete this entry?")) return;
+
       const { error } = await supabaseClient
         .from("entries")
         .delete()
         .eq("id",id);
-      if (error){
-        setEntryMessage(error.message || "Error deleting entry.","error");
-        showDebug("Entry delete error: " + error.message);
+
+      if (error) {
+        alert(error.message);
         return;
       }
-      await clearEntryFundingMapping(id);
+
       closeModal("entryModal");
       await refreshData();
     }
 
-    async function toggleCashMoved(entryId){
-      const entry = entries.find(e=>e.id===entryId);
-      if (!entry) return;
-      const newVal = !entry.cash_moved;
-      const { data, error } = await supabaseClient
-        .from("entries")
-        .update({cash_moved:newVal})
-        .eq("id",entryId)
-        .select()
-        .single();
-      if (error){
-        setMessage("settingsMessage",error.message,"error");
-        showDebug("Toggle cash_moved error: " + error.message);
-        return;
-      }
-      const idx = entries.findIndex(e=>e.id===entryId);
-      if (idx !== -1) entries[idx] = data;
-      render();
-    }
-
-    async function toggleRecurringCashMoved(recurringId){
-      const rc = recurringCharges.find(r => r.id === recurringId);
-      if (!rc) return;
-      const newVal = !rc.cash_moved;
-
-      const { data, error } = await supabaseClient
-        .from("card_recurring_charges")
-        .update({ cash_moved: newVal })
-        .eq("id", recurringId)
-        .select()
-        .single();
-
-      if (error){
-        setMessage("settingsMessage", error.message, "error");
-        showDebug("Toggle recurring cash_moved error: " + error.message);
-        return;
-      }
-
-      const idx = recurringCharges.findIndex(r => r.id === recurringId);
-      if (idx !== -1) recurringCharges[idx] = data;
-
-      renderEntriesPage();
-      showDebug("Recurring cash_moved toggled for id=" + recurringId + " to " + newVal);
-    }
-
-    async function clearCardEntries(cardId){
-      const card = cardById(cardId);
-      if (!card) return;
-      if (!confirm("Clear all entries for this card?")) return;
-      const { error } = await supabaseClient
-        .from("entries")
-        .delete()
-        .eq("tracker_id",currentTracker.id)
-        .eq("card_id",cardId);
-      if (error){
-        setMessage("settingsMessage",error.message,"error");
-        showDebug("Clear card entries error: " + error.message);
-        return;
-      }
-      await refreshData();
-    }
-
-    function openCard(id=""){
+    function openCard(id = "") {
       $("cardForm").reset();
       $("cardId").value = "";
       $("cardTitle").textContent = "Add Card";
       $("deleteCardButton").classList.add("hidden");
-      setMessage("settingsMessage","");
 
-      // Ensure linked accounts are loaded so default funding selector is populated
-      fillCardDefaultFundingSelect("");
+      if (id) {
+        const card = cardById(id);
 
-      if (id){
-        const c = cardById(id);
-        if (!c) return;
-        $("cardId").value = c.id;
-        $("cardName").value = c.name;
-        $("cardLastFour").value = c.last_four || "";
-        $("cardCycleDay").value = c.cycle_end_day || "";
-        $("cardDueDay").value = c.due_day || "";
-        $("cardApr").value = c.apr || "";
-        $("cardBalance").value = c.starting_balance || "";
+        if (!card) return;
+
+        $("cardId").value = card.id;
+        $("cardName").value = card.name;
+        $("cardLastFour").value = card.last_four || "";
+        $("cardCycleDay").value = card.cycle_end_day || "";
+        $("cardDueDay").value = card.due_day || "";
+        $("cardApr").value = card.apr || "";
+        $("cardBalance").value = card.starting_balance || "";
+
         $("cardTitle").textContent = "Edit Card";
         $("deleteCardButton").classList.remove("hidden");
-
-        // populate default funding account if present
-        fillCardDefaultFundingSelect(c.default_linked_account_id || "");
-      } else {
-        fillCardDefaultFundingSelect("");
       }
+
       openModal("cardModal");
     }
 
-    async function saveCard(ev){
-      ev.preventDefault();
-      if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
-        return;
-      }
+    async function saveCard(event) {
+      event.preventDefault();
+
       const id = $("cardId").value;
+
       const record = {
         tracker_id: currentTracker.id,
         name: $("cardName").value.trim(),
-        last_four: $("cardLastFour").value.replace(/\D/g,"").slice(0,4),
-        cycle_end_day: Number($("cardCycleDay").value || 0) || null,
-        due_day: Number($("cardDueDay").value || 0) || null,
+        last_four: $("cardLastFour").value
+          .replace(/\D/g,"")
+          .slice(0,4),
+        cycle_end_day:
+          Number($("cardCycleDay").value || 0) || null,
+        due_day:
+          Number($("cardDueDay").value || 0) || null,
         apr: Number($("cardApr").value || 0),
-        starting_balance: Number($("cardBalance").value || 0),
-        // new per-card default funding account
-        default_linked_account_id: $("cardDefaultFundingAccount").value || null
+        starting_balance: Number($("cardBalance").value || 0)
       };
-      let res;
-      if (id){
-        res = await supabaseClient
+
+      let result;
+
+      if (id) {
+        result = await supabaseClient
           .from("cards")
           .update(record)
           .eq("id",id)
           .select()
           .single();
       } else {
-        res = await supabaseClient
+        result = await supabaseClient
           .from("cards")
           .insert(record)
           .select()
           .single();
       }
-      if (res.error){
-        setMessage("settingsMessage",res.error.message,"error");
-        showDebug("Card save error: " + res.error.message);
+
+      if (result.error) {
+        alert(result.error.message);
         return;
       }
+
       closeModal("cardModal");
       await refreshData();
     }
 
-    async function saveRecurringCharge(ev){
-      ev.preventDefault();
-      setRecurringMessage("");
+    async function deleteCard() {
+      const id = $("cardId").value;
 
-      if (!currentTracker){
-        setRecurringMessage("Open a tracker first.","error");
+      if (!id || !confirm("Delete this card and all of its entries?")) {
         return;
       }
+
+      const { error } = await supabaseClient
+        .from("cards")
+        .delete()
+        .eq("id",id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      closeModal("cardModal");
+      await refreshData();
+    }
+
+    function openRecurring(cardId, recurringId = "") {
+      $("recurringForm").reset();
+      $("recurringId").value = "";
+      $("recurringCardId").value = cardId;
+      $("recurringTitle").textContent = "Add Recurring Charge";
+      $("deleteRecurringButton").classList.add("hidden");
+
+      if (recurringId) {
+        const charge = recurringCharges.find(item => item.id === recurringId);
+
+        if (!charge) return;
+
+        $("recurringId").value = charge.id;
+        $("recurringName").value = charge.name;
+        $("recurringAmount").value = charge.amount;
+        $("recurringDay").value = charge.charge_day || "";
+        $("recurringNotes").value = charge.notes || "";
+        $("recurringActive").checked = charge.active !== false;
+
+        $("recurringTitle").textContent = "Edit Recurring Charge";
+        $("deleteRecurringButton").classList.remove("hidden");
+      }
+
+      openModal("recurringModal");
+    }
+
+    async function saveRecurring(event) {
+      event.preventDefault();
 
       const id = $("recurringId").value;
-      const cardId = $("recurringCardId").value;
-
-      if (!cardId){
-        setRecurringMessage("No card selected for this recurring charge.","error");
-        return;
-      }
 
       const record = {
         tracker_id: currentTracker.id,
-        card_id: cardId,
+        card_id: $("recurringCardId").value,
         name: $("recurringName").value.trim(),
-        amount: Number($("recurringAmount").value || 0),
+        amount: Number($("recurringAmount").value),
         charge_day: Number($("recurringDay").value || 0) || null,
         notes: $("recurringNotes").value.trim(),
-        active: $("recurringActive").checked,
-        cash_moved: $("recurringAutoTransfer").checked
+        active: $("recurringActive").checked
       };
 
-      let res;
-      if (id){
-        res = await supabaseClient
+      let result;
+
+      if (id) {
+        result = await supabaseClient
           .from("card_recurring_charges")
           .update(record)
           .eq("id",id)
           .select()
           .single();
       } else {
-        res = await supabaseClient
+        result = await supabaseClient
           .from("card_recurring_charges")
           .insert(record)
           .select()
           .single();
       }
 
-      if (res.error){
-        const msg = res.error.message || "Error saving recurring charge.";
-        setRecurringMessage(msg,"error");
-        showDebug("Recurring save error: " + msg);
-        return;
-      }
-
-      if (!res.data){
-        const msg = "Recurring save returned no data. Check RLS policy.";
-        setRecurringMessage(msg,"error");
-        showDebug(msg);
+      if (result.error) {
+        alert(result.error.message);
         return;
       }
 
@@ -2804,484 +1726,274 @@ async function openSelectedTracker() {
       await refreshData();
     }
 
-    async function deleteRecurringCharge(){
+    async function deleteRecurringCharge() {
       const id = $("recurringId").value;
-      if (!id || !confirm("Delete this recurring charge?")) return;
+
+      if (!id || !confirm("Delete this recurring charge?")) {
+        return;
+      }
+
       const { error } = await supabaseClient
         .from("card_recurring_charges")
         .delete()
         .eq("id",id);
-      if (error){
-        setRecurringMessage(error.message || "Error deleting recurring charge.","error");
-        showDebug("Recurring delete error: " + error.message);
+
+      if (error) {
+        alert(error.message);
         return;
       }
+
       closeModal("recurringModal");
       await refreshData();
     }
 
-    function openCardDetail(cardId){
-      selectedCardIdForEntries = cardId;
-      showPage("entries");
-      renderEntriesPage();
-    }
+    function openSettings() {
+      if (!currentTracker) return;
 
-    async function openSettings(){
-      if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
-        return;
-      }
-      $("inviteCodeDisplay").textContent = currentTracker.invite_code || "";
-      $("budgetType").value = currentTracker.budget_type || "monthly";
-      $("budgetInput").value = currentTracker.monthly_budget || 0;
-      $("payPeriodBudgetInput").value = currentTracker.pay_period_budget || 0;
-      $("payPeriodFirstDateInput").value = currentTracker.pay_period_first_date || "";
+      $("inviteCodeDisplay").value =
+        currentTracker.invite_code || "";
+
+      $("budgetInput").value =
+        currentTracker.monthly_budget || 0;
+
+      const leaveButton = $("leaveTrackerButton");
+
+      const canLeave =
+        currentTracker.is_personal !== true &&
+        currentTracker.owner_id !== currentUser.id;
+
+      leaveButton.classList.toggle("hidden", !canLeave);
+
       setMessage("settingsMessage","");
-
-      await loadLinkedAccountsForCurrentTracker();
-const leaveButton = $("leaveTrackerButton");
-
-if (leaveButton) {
-  const canLeave =
-    currentTracker.is_personal !== true &&
-    currentTracker.owner_id !== currentUser.id;
-
-  leaveButton.classList.toggle("hidden", !canLeave);
-}
       openModal("settingsModal");
     }
 
-    async function loadLinkedAccountsForCurrentTracker(){
-      if (!currentTracker){
-        currentLinkedAccounts = [];
-        renderLinkedAccounts([]);
-        return;
-      }
-      try {
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          currentLinkedAccounts = [];
-          renderLinkedAccounts([]);
-          return;
-        }
-        const jwt = session.access_token;
-        const url =
-          "https://deadbeat-plaid-server-3.onrender.com/linked-accounts" +
-          "?tracker_id=" + encodeURIComponent(currentTracker.id);
-
-        const resp = await fetch(url,{
-          method:"GET",
-          headers:{"Authorization":"Bearer " + jwt}
-        });
-
-        let data;
-        try {
-          data = await resp.json();
-        } catch(e){
-          currentLinkedAccounts = [];
-          renderLinkedAccounts([]);
-          showDebug("Linked accounts response was not JSON");
-          return;
-        }
-
-        if (!resp.ok){
-          currentLinkedAccounts = [];
-          renderLinkedAccounts([]);
-          showDebug("Linked accounts fetch failed: " + (data.error || resp.status));
-          return;
-        }
-
-        currentLinkedAccounts = data.accounts || [];
-        renderLinkedAccounts(currentLinkedAccounts);
-
-        // Also keep the card default funding dropdown current when card modal opens
-        fillCardDefaultFundingSelect(
-          $("cardDefaultFundingAccount") ? $("cardDefaultFundingAccount").value : ""
-        );
-      } catch(e){
-        currentLinkedAccounts = [];
-        renderLinkedAccounts([]);
-        showDebug("Linked accounts fetch error: " + (e.message || String(e)));
-      }
-    }
-
-    async function loadEntryFundingMappingsForCurrentTracker(){
-      if (!currentTracker){
-        entryFundingMappings = {};
-        return;
-      }
-      try{
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          entryFundingMappings = {};
-          return;
-        }
-        const jwt = session.access_token;
-        const url =
-          "https://deadbeat-plaid-server-3.onrender.com/entry-funding" +
-          "?tracker_id=" + encodeURIComponent(currentTracker.id);
-
-        const resp = await fetch(url,{
-          method:"GET",
-          headers:{"Authorization":"Bearer " + jwt}
-        });
-
-        let data;
-        try{
-          data = await resp.json();
-        } catch(e){
-          entryFundingMappings = {};
-          showDebug("Entry funding response was not JSON");
-          return;
-        }
-
-        if (!resp.ok){
-          entryFundingMappings = {};
-          showDebug("Entry funding fetch failed: " + (data.error || resp.status));
-          return;
-        }
-
-        entryFundingMappings = {};
-        for (const row of (data.mappings || [])){
-          entryFundingMappings[row.entry_id] = row.linked_account_id;
-        }
-        showDebug("Loaded entryFundingMappings: " + JSON.stringify(entryFundingMappings));
-      } catch(e){
-        entryFundingMappings = {};
-        showDebug("Entry funding fetch error: " + (e.message || String(e)));
-      }
-    }
-
-    async function saveEntryFundingMapping(entryId, linkedAccountId){
-      try{
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          setMessage("settingsMessage","You must be signed in to set entry funding account.","error");
-          return;
-        }
-        const jwt = session.access_token;
-
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/entry-funding",{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + jwt
-          },
-          body: JSON.stringify({
-            tracker_id: currentTracker.id,
-            entry_id: entryId,
-            linked_account_id: linkedAccountId
-          })
-        });
-
-        let data;
-        try{
-          data = await resp.json();
-        }catch(e){
-          data = {};
-        }
-
-        if (!resp.ok){
-          setMessage("settingsMessage",data.error || "Could not save entry funding mapping.","error");
-          showDebug("saveEntryFundingMapping failed: " + (data.error || resp.status));
-          return;
-        }
-
-        entryFundingMappings[entryId] = linkedAccountId;
-        showDebug("Entry funding saved: entryId=" + entryId + " linkedAccountId=" + linkedAccountId);
-      } catch(e){
-        console.error("saveEntryFundingMapping error",e);
-        setMessage("settingsMessage","Unexpected error saving entry funding account.","error");
-        showDebug("saveEntryFundingMapping error: " + (e.message || String(e)));
-      }
-    }
-
-    async function clearEntryFundingMapping(entryId){
-      try{
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          return;
-        }
-        const jwt = session.access_token;
-
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/entry-funding",{
-          method:"DELETE",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + jwt
-          },
-          body: JSON.stringify({
-            tracker_id: currentTracker.id,
-            entry_id: entryId
-          })
-        });
-
-        let data;
-        try{
-          data = await resp.json();
-        }catch(e){
-          data = {};
-        }
-
-        if (!resp.ok){
-          showDebug("clearEntryFundingMapping failed: " + (data.error || resp.status));
-          return;
-        }
-
-        delete entryFundingMappings[entryId];
-        showDebug("Entry funding cleared: entryId=" + entryId);
-      }catch(e){
-        console.error("clearEntryFundingMapping error",e);
-        showDebug("clearEntryFundingMapping error: " + (e.message || String(e)));
-      }
-    }
-
-    async function saveBudget(){
-      const budgetType = $("budgetType").value || "monthly";
-      const monthlyBudget = Number($("budgetInput").value || 0);
-      const payBudget = Number($("payPeriodBudgetInput").value || 0);
-      const first = $("payPeriodFirstDateInput").value || null;
-
-      const update = {
-        budget_type: budgetType,
-        monthly_budget: monthlyBudget,
-        pay_period_budget: payBudget,
-        pay_period_first_date: first
-      };
+    async function saveBudget() {
+      const budget = Number($("budgetInput").value || 0);
 
       const { data, error } = await supabaseClient
         .from("trackers")
-        .update(update)
+        .update({ monthly_budget: budget })
         .eq("id",currentTracker.id)
         .select()
         .single();
-      if (error){
+
+      if (error) {
         setMessage(
           "settingsMessage",
-          "Only the tracker owner can update the budget. " + error.message,
+          "Only the tracker owner can update the budget. " +
+          error.message,
           "error"
         );
         return;
       }
+
       currentTracker = data;
       render();
-      setMessage("settingsMessage","Budget settings saved.","good");
+
+      setMessage("settingsMessage","Budget saved.","good");
     }
 
-    async function linkBankAccount(){
-      if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
+    async function rotateInviteCode() {
+      const { data, error } = await supabaseClient.rpc(
+        "rotate_tracker_invite",
+        { p_tracker_id: currentTracker.id }
+      );
+
+      if (error) {
+        setMessage(
+          "settingsMessage",
+          error.message || "Unable to rotate invite code.",
+          "error"
+        );
         return;
       }
 
+      currentTracker.invite_code = data;
+      $("inviteCodeDisplay").value = data;
+      $("trackerSubtitle").textContent = `Invite Code: ${data}`;
+
+      setMessage(
+        "settingsMessage",
+        "Invite code replaced. Share the new code only with intended users.",
+        "good"
+      );
+    }
+
+    async function copyInviteCode() {
+      const code = $("inviteCodeDisplay").value;
+
+      if (!code) return;
+
       try {
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          setMessage("settingsMessage","You must be signed in to link a bank account.","error");
-          return;
-        }
-        const jwt = session.access_token;
-
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/create-link-token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + jwt
-          },
-          body: JSON.stringify({
-            tracker_id: currentTracker.id
-          })
-        });
-
-        const data = await resp.json();
-        if (!resp.ok){
-          setMessage("settingsMessage", data.error || "Could not create Plaid link token.", "error");
-          return;
-        }
-        const linkToken = data.link_token;
-        if (!linkToken){
-          setMessage("settingsMessage","Backend did not return a link token.","error");
-          return;
-        }
-
-        if (typeof Plaid === "undefined"){
-          setMessage("settingsMessage","Plaid Link script not loaded.", "error");
-          return;
-        }
-
-        const handler = Plaid.create({
-          token: linkToken,
-          onSuccess: async function(public_token, metadata) {
-            try {
-              const exchangeResp = await fetch("https://deadbeat-plaid-server-3.onrender.com/exchange-public-token", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": "Bearer " + jwt
-                },
-                body: JSON.stringify({
-                  public_token,
-                  tracker_id: currentTracker.id
-                })
-              });
-
-              const exchangeData = await exchangeResp.json();
-              if (!exchangeResp.ok){
-                setMessage("settingsMessage", exchangeData.error || "Error exchanging public token.", "error");
-                return;
-              }
-
-              setMessage("settingsMessage","Bank account linked successfully.","good");
-
-              await loadLinkedAccountsForCurrentTracker();
-              render();
-            } catch (e){
-              console.error("Exchange public_token error", e);
-              setMessage("settingsMessage","Unexpected error exchanging public token.","error");
-            }
-          },
-          onExit: function(err, metadata) {
-            if (err){
-              console.warn("Plaid Link exited with error:", err);
-              setMessage("settingsMessage","Plaid Link exited. You can try again.","error");
-            }
-          }
-        });
-
-        handler.open();
-      } catch (e){
-        console.error("linkBankAccount error", e);
-        setMessage("settingsMessage","Unexpected error starting Plaid Link.","error");
+        await navigator.clipboard.writeText(code);
+        setMessage("settingsMessage","Invite code copied.","good");
+      } catch (error) {
+        setMessage(
+          "settingsMessage",
+          "Copy this invite code manually: " + code,
+          "good"
+        );
       }
     }
 
-    function loadRememberedLogin(){
-      try {
-        const e = localStorage.getItem("deadbeat_email") || "";
-        const p = localStorage.getItem("deadbeat_password") || "";
-        if (e) $("signInEmail").value = e;
-        if (p) $("signInPassword").value = p;
-        if (e || p) $("rememberLogin").checked = true;
-      } catch(e){}
+    async function returnToTrackerSelection() {
+      closeModal("settingsModal");
+
+      currentTracker = null;
+      cards = [];
+      entries = [];
+      recurringCharges = [];
+
+      await ensurePersonalTracker();
+      await loadTrackers();
     }
-    function saveRememberedLoginIfNeeded(){
+
+    async function leaveCurrentTracker() {
+      if (!currentTracker) return;
+
+      if (
+        currentTracker.is_personal === true ||
+        currentTracker.owner_id === currentUser.id
+      ) {
+        setMessage(
+          "settingsMessage",
+          "You cannot leave your personal tracker or a tracker you own.",
+          "error"
+        );
+        return;
+      }
+
+      if (!confirm(
+        `Leave "${currentTracker.name}"? You will lose access to its cards and entries.`
+      )) {
+        return;
+      }
+
+      const { error } = await supabaseClient.rpc(
+        "leave_tracker",
+        { p_tracker_id: currentTracker.id }
+      );
+
+      if (error) {
+        setMessage(
+          "settingsMessage",
+          error.message || "Unable to leave tracker.",
+          "error"
+        );
+        return;
+      }
+
+      closeModal("settingsModal");
+
+      currentTracker = null;
+      cards = [];
+      entries = [];
+      recurringCharges = [];
+
+      await ensurePersonalTracker();
+      await loadTrackers();
+    }
+
+    function loadRememberedEmail() {
       try {
-        const remember = $("rememberLogin").checked;
-        if (!remember){
-          localStorage.removeItem("deadbeat_email");
-          localStorage.removeItem("deadbeat_password");
-          return;
+        const email = localStorage.getItem("deadbeat_email") || "";
+
+        if (email) {
+          $("signInEmail").value = email;
+          $("rememberEmail").checked = true;
         }
+      } catch (error) {}
+    }
+
+    function saveRememberedEmail() {
+      try {
+        const shouldRemember = $("rememberEmail").checked;
         const email = $("signInEmail").value.trim();
-        const password = $("signInPassword").value;
-        localStorage.setItem("deadbeat_email",email);
-        localStorage.setItem("deadbeat_password",password);
-      } catch(e){}
+
+        if (shouldRemember && email) {
+          localStorage.setItem("deadbeat_email",email);
+        } else {
+          localStorage.removeItem("deadbeat_email");
+        }
+
+        localStorage.removeItem("deadbeat_password");
+      } catch (error) {}
     }
 
-    function setAuthMessage(text, type){
-      const el = $("authMessage");
-      if (!el) return;
-      el.textContent = text || "";
-      el.className = "message";
-      if (!text) return;
-      el.classList.add("show");
-      if (type === "error") el.classList.add("error");
-      if (type === "good") el.classList.add("good");
-    }
-
-    async function handleSignIn(event){
+    async function signIn(event) {
       event.preventDefault();
-      showDebug("handleSignIn fired");
-      try {
-        const emailInput = $("signInEmail");
-        const passwordInput = $("signInPassword");
-        if (!emailInput || !passwordInput){
-          setAuthMessage("Login inputs not found in the page.", "error");
-          showDebug("Login inputs not found");
-          return;
-        }
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-        if (!email || !password){
-          setAuthMessage("Enter both email and password.", "error");
-          showDebug("Missing email or password");
-          return;
-        }
 
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
+      const email = $("signInEmail").value.trim();
+      const password = $("signInPassword").value;
+
+      const { data, error } =
+        await supabaseClient.auth.signInWithPassword({
           email,
           password
         });
-        showDebug("signInWithPassword returned");
 
-        if (error){
-          setAuthMessage(error.message || "Unable to sign in.", "error");
-          showDebug("Supabase sign-in error: " + error.message);
-          return;
-        }
-        if (!data || !data.user){
-          setAuthMessage("Sign in succeeded but no user returned.", "error");
-          showDebug("Sign-in succeeded but no user returned");
-          return;
-        }
-
-        currentUser = data.user;
-        saveRememberedLoginIfNeeded();
-        setAuthMessage("Signed in successfully.", "good");
-        showDebug("Signed in, loading tracker");
-
-        const home = await ensureUserHasHomeTracker();
-        if (home){
-          await openTracker(home.id);
-        } else {
-          await loadTrackers();
-        }
-      } catch (e){
-        console.error("Sign-in error:", e);
-        showDebug("Sign-in thrown error: " + (e.message || String(e)));
-        setAuthMessage("Unexpected error during sign in. Check console.", "error");
+      if (error) {
+        setMessage("authMessage",error.message,"error");
+        return;
       }
+
+      currentUser = data.user;
+
+      saveRememberedEmail();
+
+      await ensurePersonalTracker();
+      await loadTrackers();
     }
 
-    async function createAccount(ev){
-      ev.preventDefault();
+    async function createAccount(event) {
+      event.preventDefault();
+
       const displayName = $("displayName").value.trim();
       const email = $("createEmail").value.trim();
       const password = $("createPassword").value;
       const confirmPassword = $("confirmPassword").value;
-      if (password !== confirmPassword){
+
+      if (password !== confirmPassword) {
         setMessage("authMessage","Passwords do not match.","error");
         return;
       }
-      if (password.length < 6){
-        setMessage("authMessage","Password must have at least 6 characters.","error");
+
+      if (password.length < 6) {
+        setMessage(
+          "authMessage",
+          "Password must contain at least 6 characters.",
+          "error"
+        );
         return;
       }
-      const appUrl = window.location.origin + window.location.pathname;
+
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
-        options:{
-          emailRedirectTo: appUrl,
-          data:{ display_name: displayName }
+        options: {
+          emailRedirectTo:
+            window.location.origin + window.location.pathname,
+          data: {
+            display_name: displayName
+          }
         }
       });
-      if (error){
+
+      if (error) {
         setMessage("authMessage",error.message,"error");
         return;
       }
-      if (data.session?.user){
+
+      if (data.session?.user) {
         currentUser = data.session.user;
-        const home = await ensureUserHasHomeTracker();
-        if (home){
-          await openTracker(home.id);
-          return;
-        }
+        await ensurePersonalTracker();
         await loadTrackers();
         return;
       }
+
       showAuthPanel("signInPanel");
+
       setMessage(
         "authMessage",
         "Account created. Check your email, confirm your account, then sign in.",
@@ -3289,233 +2001,126 @@ if (leaveButton) {
       );
     }
 
-    async function resetPassword(ev){
-      ev.preventDefault();
+    async function resetPassword(event) {
+      event.preventDefault();
+
       const email = $("resetEmail").value.trim();
-      const appUrl = window.location.origin + window.location.pathname;
-      const redirect = appUrl + "?mode=reset";
-      const { error } = await supabaseClient.auth.resetPasswordForEmail(email,{
-        redirectTo: redirect
-      });
-      if (error){
+
+      const { error } =
+        await supabaseClient.auth.resetPasswordForEmail(email, {
+          redirectTo:
+            window.location.origin +
+            window.location.pathname +
+            "?mode=reset"
+        });
+
+      if (error) {
         setMessage("authMessage",error.message,"error");
         return;
       }
+
       setMessage(
         "authMessage",
-        "Password reset email sent. Click the link in your email, then set a new password.",
+        "Password reset email sent. Use the email link to set a new password.",
         "good"
       );
     }
 
-    async function completePasswordReset(ev){
-      ev.preventDefault();
-      const np = $("newPassword").value;
-      const npc = $("newPasswordConfirm").value;
-      if (np !== npc){
+    async function completePasswordReset(event) {
+      event.preventDefault();
+
+      const password = $("newPassword").value;
+      const confirmPassword = $("newPasswordConfirm").value;
+
+      if (password !== confirmPassword) {
         setMessage("authMessage","Passwords do not match.","error");
         return;
       }
-      if (np.length < 6){
-        setMessage("authMessage","Password must have at least 6 characters.","error");
-        return;
-      }
-      const { error } = await supabaseClient.auth.updateUser({password:np});
-      if (error){
+
+      const { error } =
+        await supabaseClient.auth.updateUser({ password });
+
+      if (error) {
         setMessage("authMessage",error.message,"error");
         return;
       }
-      setMessage("authMessage","Password updated. Please sign in with your new password.","good");
+
       showAuthPanel("signInPanel");
+
+      setMessage(
+        "authMessage",
+        "Password updated. Sign in with your new password.",
+        "good"
+      );
     }
 
-    async function forgotUsername(ev){
-      ev.preventDefault();
-      const email = $("forgotUsernameEmail").value.trim();
-      if (!email){
-        setMessage("authMessage","Enter your recovery email.","error");
-        return;
-      }
-      try{
-        await supabaseClient
-          .from("username_recovery_requests")
-          .insert({email});
-        setMessage(
-          "authMessage",
-          "If this email matches an account, your username (email) will be sent to you.",
-          "good"
-        );
-        showAuthPanel("signInPanel");
-      }catch(e){
-        setMessage(
-          "authMessage",
-          "Could not record username recovery request. Please contact support.",
-          "error"
-        );
-      }
-    }
-
-    async function signOut(){
+    async function signOut() {
       await supabaseClient.auth.signOut();
+
       currentUser = null;
       currentTracker = null;
       cards = [];
       entries = [];
       recurringCharges = [];
-      selectedCardIdForEntries = "";
-      entryFundingMappings = {};
+
       showScreen("authScreen");
       showAuthPanel("signInPanel");
+
       setMessage("authMessage","Signed out.","good");
-      showDebug("Signed out.");
     }
 
-    async function initialize(){
-      loadRememberedLogin();
-      const { data:{session} } = await supabaseClient.auth.getSession();
-      const params = new URLSearchParams(window.location.search);
-      const mode = params.get("mode");
+    async function initialize() {
+      loadRememberedEmail();
 
-      checkBackend();
+      const {
+        data: { session }
+      } = await supabaseClient.auth.getSession();
 
-      if (session?.user){
+      const mode =
+        new URLSearchParams(window.location.search).get("mode");
+
+      if (session?.user) {
         currentUser = session.user;
-        if (mode === "reset"){
+
+        if (mode === "reset") {
           showScreen("authScreen");
           showAuthPanel("resetConfirmPanel");
           return;
         }
-        const home = await ensureUserHasHomeTracker();
-        if (home){
-          await openTracker(home.id);
-        } else {
-          await loadTrackers();
-        }
+
+        await ensurePersonalTracker();
+        await loadTrackers();
       } else {
         showScreen("authScreen");
       }
     }
 
-    function openModal(id){
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.style.display = "flex";
-      el.classList.add("show");
-    }
+    $("signInForm").addEventListener("submit",signIn);
+    $("createAccountForm").addEventListener("submit",createAccount);
+    $("resetForm").addEventListener("submit",resetPassword);
+    $("resetConfirmForm").addEventListener("submit",completePasswordReset);
+    $("entryForm").addEventListener("submit",saveEntry);
+    $("cardForm").addEventListener("submit",saveCard);
+    $("recurringForm").addEventListener("submit",saveRecurring);
 
-    function closeModal(id){
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.remove("show");
-      el.style.display = "none";
-    }
-
-    function showPage(name){
-      ["dash","entries","cards"].forEach(p=>{
-        $(p+"Page").classList.toggle("active",p===name);
-        $(p+"Nav").classList.toggle("active",p===name);
-      });
-    }
-
-    async function unlinkSelectedBankAccount(){
-      if (!currentTracker){
-        setMessage("settingsMessage","Open a tracker first.","error");
-        return;
-      }
-      const select = $("unlinkAccountSelect");
-      const accountId = select ? select.value : "";
-      if (!accountId){
-        setMessage("settingsMessage","Select an account to unlink.","error");
-        return;
-      }
-
-      try{
-        const { data:{session} } = await supabaseClient.auth.getSession();
-        if (!session?.access_token){
-          setMessage("settingsMessage","You must be signed in to unlink an account.","error");
-          return;
-        }
-        const jwt = session.access_token;
-
-        const resp = await fetch("https://deadbeat-plaid-server-3.onrender.com/unlink-account",{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + jwt
-          },
-          body: JSON.stringify({
-            tracker_id: currentTracker.id,
-            linked_account_id: accountId
-          })
-        });
-
-        const data = await resp.json();
-        if (!resp.ok){
-          setMessage("settingsMessage",data.error || "Could not unlink account.","error");
-          showDebug("unlinkSelectedBankAccount failed: " + (data.error || resp.status));
-          return;
-        }
-
-        setMessage("settingsMessage","Bank account unlinked from this tracker.","good");
-        await loadLinkedAccountsForCurrentTracker();
-        await loadEntryFundingMappingsForCurrentTracker();
-        render();
-      }catch(e){
-        console.error("unlinkSelectedBankAccount error",e);
-        setMessage("settingsMessage","Unexpected error unlinking account.","error");
-        showDebug("unlinkSelectedBankAccount error: " + (e.message || String(e)));
-      }
-    }
-
-    function deleteAccount(){
-      setMessage("settingsMessage","Delete account is not yet implemented in this build.","error");
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const signInForm = $("signInForm");
-      if (signInForm) signInForm.addEventListener("submit", handleSignIn);
-
-      const createForm = $("createAccountForm");
-      if (createForm) createForm.addEventListener("submit", createAccount);
-
-      const resetForm = $("resetForm");
-      if (resetForm) resetForm.addEventListener("submit", resetPassword);
-
-      const resetConfirmForm = $("resetConfirmForm");
-      if (resetConfirmForm) resetConfirmForm.addEventListener("submit", completePasswordReset);
-
-      const forgotForm = $("forgotUsernameForm");
-      if (forgotForm) forgotForm.addEventListener("submit", forgotUsername);
-
-      const entryForm = $("entryForm");
-      if (entryForm) entryForm.addEventListener("submit", saveEntry);
-
-      const cardForm = $("cardForm");
-      if (cardForm) cardForm.addEventListener("submit", saveCard);
-
-      const recurringForm = $("recurringForm");
-      if (recurringForm) recurringForm.addEventListener("submit", saveRecurringCharge);
-
-      document.querySelectorAll(".modal-bg").forEach(m=>{
-        m.addEventListener("click",ev=>{
-          if (ev.target === m) closeModal(m.id);
-        });
-      });
-
-      document.addEventListener("keydown",ev=>{
-        if (ev.key === "Escape"){
-          const openModals = document.querySelectorAll(".modal-bg.show");
-          openModals.forEach(m => closeModal(m.id));
+    document.querySelectorAll(".modal-bg").forEach(modal => {
+      modal.addEventListener("click",event => {
+        if (event.target === modal) {
+          closeModal(modal.id);
         }
       });
-
-      buildMonthOptions();
-      initialize();
     });
 
-    supabaseClient.auth.onAuthStateChange((_event,session)=>{
-      if (session?.user) currentUser = session.user;
+    document.addEventListener("keydown",event => {
+      if (event.key === "Escape") {
+        closeModal("entryModal");
+        closeModal("cardModal");
+        closeModal("recurringModal");
+        closeModal("settingsModal");
+      }
     });
+
+    initialize();
   </script>
 </body>
 </html>
