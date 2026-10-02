@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 9.96 — dashboard card status colors */
+    /* BUILD 9.97 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -415,7 +415,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 9.96 — Credit-card images */
+    /* BUILD 9.97 — Credit-card images */
 
 .card-image-thumb{
   display:block;
@@ -469,18 +469,7 @@
   font-size:4rem;
 }
 
-.card-image-fallback-large{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:min(100%,420px);
-  height:180px;
-  margin:0 auto 16px;
-  border-radius:12px;
-  background:var(--light);
-  border:1px solid var(--border);
-  font-size:4rem;
-}
+
   </style>
 </head>
 
@@ -491,7 +480,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 9.96 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 9.97 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -704,7 +693,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 9.96 — Shared Supabase Version
+              BUILD 9.97 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1584,6 +1573,215 @@ async function deleteBankAccount() {
   await loadBankAccounts();
   openBankAccount();
 }
+    const CARD_IMAGE_CATALOG = [
+  {
+    network: "American Express",
+    vendor: "American Express",
+    product: "Basic",
+    imagePath: "images/cards/american-express-basic.png"
+  },
+  {
+    network: "American Express",
+    vendor: "American Express",
+    product: "Gold",
+    imagePath: "images/cards/american-express-gold.png"
+  },
+  {
+    network: "American Express",
+    vendor: "American Express",
+    product: "Platinum",
+    imagePath: "images/cards/american-express-platinum.png"
+  },
+
+  {
+    network: "Visa",
+    vendor: "Bank of America",
+    product: "Cash Rewards",
+    imagePath: "images/cards/bank-of-america-visa-cash-rewards.png"
+  },
+  {
+    network: "Mastercard",
+    vendor: "Bank of America",
+    product: "Business Advantage",
+    imagePath: "images/cards/bank-of-america-mc-business-adv.png"
+  },
+
+  {
+    network: "Visa",
+    vendor: "Chase",
+    product: "Sapphire",
+    imagePath: "images/cards/chase-visa-sapphire.png"
+  },
+
+  {
+    network: "Mastercard",
+    vendor: "Choice",
+    product: "Privileges",
+    imagePath: "images/cards/choice-mastercard-privileges.png"
+  },
+
+  {
+    network: "Mastercard",
+    vendor: "IHG",
+    product: "Business",
+    imagePath: "images/cards/ihg-mastercard-business.png"
+  },
+  {
+    network: "Mastercard",
+    vendor: "IHG",
+    product: "One Rewards",
+    imagePath: "images/cards/ihg-mastercard-one-rewards.png"
+  },
+  {
+    network: "Mastercard",
+    vendor: "IHG",
+    product: "Premier",
+    imagePath: "images/cards/ihg-mastercard-premier.png"
+  },
+
+  {
+    network: "Store Card",
+    vendor: "Military Store",
+    product: "STAR Card",
+    imagePath: "images/cards/military-store-starcard.png"
+  },
+
+  {
+    network: "Visa",
+    vendor: "Generic",
+    product: "Visa",
+    imagePath: "images/cards/generic-visa.png"
+  },
+  {
+    network: "Mastercard",
+    vendor: "Generic",
+    product: "Mastercard",
+    imagePath: "images/cards/generic-mastercard.png"
+  },
+  {
+    network: "Discover",
+    vendor: "Generic",
+    product: "Discover",
+    imagePath: "images/cards/generic-discover.png"
+  },
+  {
+    network: "Other",
+    vendor: "Generic",
+    product: "Debit Card",
+    imagePath: "images/cards/generic-debitcard.png"
+  },
+  {
+    network: "Other",
+    vendor: "USAA",
+    product: "Debit Card",
+    imagePath: "images/cards/generic-usaa-debitcard.png"
+  },
+  {
+    network: "Other",
+    vendor: "U.S. Bank",
+    product: "Debit Card",
+    imagePath: "images/cards/generic-usbank-debitcard.png"
+  }
+];
+
+function uniqueSorted(values) {
+  return [...new Set(values)].sort((a, b) =>
+    a.localeCompare(b)
+  );
+}
+
+function setSelectOptions(selectId, placeholder, values, selectedValue = "") {
+  const select = $(selectId);
+
+  if (!select) return;
+
+  select.innerHTML = `
+    <option value="">${placeholder}</option>
+    ${
+      values.map(value => `
+        <option value="${esc(value)}">${esc(value)}</option>
+      `).join("")
+    }
+  `;
+
+  select.value = selectedValue || "";
+}
+
+function updateCardVendorOptions(
+  selectedVendor = "",
+  selectedProduct = "",
+  selectedImagePath = ""
+) {
+  const network = $("cardNetwork").value || "";
+
+  const vendors = uniqueSorted(
+    CARD_IMAGE_CATALOG
+      .filter(item => item.network === network)
+      .map(item => item.vendor)
+  );
+
+  setSelectOptions(
+    "cardVendor",
+    vendors.length ? "Select a vendor" : "No vendor images available",
+    vendors,
+    selectedVendor
+  );
+
+  updateCardProductOptions(selectedProduct, selectedImagePath);
+}
+
+function updateCardProductOptions(
+  selectedProduct = "",
+  selectedImagePath = ""
+) {
+  const network = $("cardNetwork").value || "";
+  const vendor = $("cardVendor").value || "";
+
+  const products = uniqueSorted(
+    CARD_IMAGE_CATALOG
+      .filter(item =>
+        item.network === network &&
+        item.vendor === vendor
+      )
+      .map(item => item.product)
+  );
+
+  setSelectOptions(
+    "cardProduct",
+    products.length ? "Select a card product" : "No product images available",
+    products,
+    selectedProduct
+  );
+
+  updateCardImagePath(selectedImagePath);
+}
+
+function updateCardImagePath(savedImagePath = "") {
+  const network = $("cardNetwork").value || "";
+  const vendor = $("cardVendor").value || "";
+  const product = $("cardProduct").value || "";
+
+  const match = CARD_IMAGE_CATALOG.find(item =>
+    item.network === network &&
+    item.vendor === vendor &&
+    item.product === product
+  );
+
+  $("cardImagePath").value =
+    match?.imagePath ||
+    savedImagePath ||
+    "";
+}
+
+function initializeCardCatalogEvents() {
+  $("cardVendor").addEventListener("change", () => {
+    updateCardProductOptions();
+  });
+
+  $("cardProduct").addEventListener("change", () => {
+    updateCardImagePath();
+  });
+}
     function cardImageHTML(card, size = "thumb") {
   const imagePath = String(card.card_image_path || "").trim();
 
@@ -2435,7 +2633,7 @@ to_bank_account_id: $("entryToBankAccount").value || null
       await refreshData();
     }
 
-   function openCard(id = "") {
+ function openCard(id = "") {
   $("cardForm").reset();
   $("cardId").value = "";
   $("cardTitle").textContent = "Add Card";
@@ -2449,7 +2647,13 @@ to_bank_account_id: $("entryToBankAccount").value || null
     $("cardId").value = card.id;
     $("cardName").value = card.name || "";
     $("cardNetwork").value = card.card_network || "Other";
-    $("cardImagePath").value = card.card_image_path || "";
+
+    updateCardVendorOptions(
+      card.card_vendor || "",
+      card.card_product || "",
+      card.card_image_path || ""
+    );
+
     $("minimumPayment").value = card.minimum_payment || "";
     $("cardLastFour").value = card.last_four || "";
     $("cardCycleDay").value = card.cycle_end_day || "";
@@ -2459,59 +2663,61 @@ to_bank_account_id: $("entryToBankAccount").value || null
 
     $("cardTitle").textContent = "Edit Card";
     $("deleteCardButton").classList.remove("hidden");
+  } else {
+    updateCardVendorOptions();
   }
 
   openModal("cardModal");
 }
-
     async function saveCard(event) {
-      event.preventDefault();
+  event.preventDefault();
 
-      const id = $("cardId").value;
+  const id = $("cardId").value;
 
-const record = {
-  tracker_id: currentTracker.id,
-  name: $("cardName").value.trim(),
-card_network: $("cardNetwork").value || "Other",
-card_image_path: $("cardImagePath").value.trim(),
-minimum_payment: Number($("minimumPayment").value || 0),
-last_four: $("cardLastFour").value
-          .replace(/\D/g,"")
-          .slice(0,4),
-        cycle_end_day:
-          Number($("cardCycleDay").value || 0) || null,
-        due_day:
-          Number($("cardDueDay").value || 0) || null,
-        apr: Number($("cardApr").value || 0),
-        starting_balance: Number($("cardBalance").value || 0)
-      };
+  const record = {
+    tracker_id: currentTracker.id,
+    name: $("cardName").value.trim(),
+    card_network: $("cardNetwork").value || "Other",
+    card_vendor: $("cardVendor").value || null,
+    card_product: $("cardProduct").value || null,
+    card_image_path: $("cardImagePath").value.trim() || null,
+    minimum_payment: Number($("minimumPayment").value || 0),
+    last_four: $("cardLastFour").value
+      .replace(/\D/g, "")
+      .slice(0, 4),
+    cycle_end_day:
+      Number($("cardCycleDay").value || 0) || null,
+    due_day:
+      Number($("cardDueDay").value || 0) || null,
+    apr: Number($("cardApr").value || 0),
+    starting_balance: Number($("cardBalance").value || 0)
+  };
 
-      let result;
+  let result;
 
-      if (id) {
-        result = await supabaseClient
-          .from("cards")
-          .update(record)
-          .eq("id",id)
-          .select()
-          .single();
-      } else {
-        result = await supabaseClient
-          .from("cards")
-          .insert(record)
-          .select()
-          .single();
-      }
+  if (id) {
+    result = await supabaseClient
+      .from("cards")
+      .update(record)
+      .eq("id", id)
+      .select()
+      .single();
+  } else {
+    result = await supabaseClient
+      .from("cards")
+      .insert(record)
+      .select()
+      .single();
+  }
 
-      if (result.error) {
-        alert(result.error.message);
-        return;
-      }
+  if (result.error) {
+    alert(result.error.message);
+    return;
+  }
 
-      closeModal("cardModal");
-      await refreshData();
-    }
-
+  closeModal("cardModal");
+  await refreshData();
+}
     async function deleteCard() {
       const id = $("cardId").value;
 
@@ -2984,7 +3190,9 @@ selectedCardIdForEntries = "";
     $("cardForm").addEventListener("submit",saveCard);
     $("recurringForm").addEventListener("submit",saveRecurring);
    $("bankAccountForm").addEventListener("submit",saveBankAccount);
-
+    
+initializeCardCatalogEvents();
+    
     document.querySelectorAll(".modal-bg").forEach(modal => {
       modal.addEventListener("click",event => {
         if (event.target === modal) {
