@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.6 — dashboard card status colors */
+    /* BUILD 10.7 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -415,52 +415,49 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.6 — Credit-card images */
-.card-image-thumb{
-  display:block;
+    /* BUILD 10.7 — Credit-card images */
+.card-image-frame{
+  position:relative;
+  overflow:hidden;
+  background:white;
+  border-radius:8px;
+  border:1px solid rgba(18,53,91,.12);
+}
+
+.card-image-frame-thumb{
   flex:0 0 92px;
   width:92px;
   height:58px;
-  object-fit:contain;
-  object-position:center;
-  border-radius:6px;
-  background:white;
 }
 
-.card-image-large{
-  display:block;
-  width:min(100%,420px);
-  height:265px;
-  margin:0 auto 16px;
-  object-fit:contain;
-  object-position:center;
-  border-radius:12px;
-  background:white;
-  border:1px solid var(--border);
-}
-
-.card-image-fallback-thumb{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex:0 0 92px;
-  width:92px;
-  height:58px;
-  border-radius:6px;
-  background:rgba(255,255,255,.65);
-  font-size:1.4rem;
-}
-
-.card-image-fallback-large{
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.card-image-frame-large{
   width:min(100%,420px);
   height:265px;
   margin:0 auto 16px;
   border-radius:12px;
+}
+
+.card-image-frame img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  transform:scale(1.12);
+}
+
+.card-image-frame.image-load-failed::after{
+  content:"💳";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   background:var(--light);
-  border:1px solid var(--border);
+  font-size:2rem;
+}
+
+.card-image-frame-large.image-load-failed::after{
   font-size:4rem;
 }
 
@@ -475,7 +472,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.6 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.7 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -688,7 +685,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.6 — Shared Supabase Version
+              BUILD 10.7 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1925,36 +1922,29 @@ function updateCardImageSelection(savedImagePath = "") {
 function cardImageHTML(card, size = "thumb") {
   const imagePath = String(card.card_image_path || "").trim();
 
-  const imageClass =
+  const frameClass =
     size === "large"
-      ? "card-image-large"
-      : "card-image-thumb";
-
-  const fallbackClass =
-    size === "large"
-      ? "card-image-fallback-large"
-      : "card-image-fallback-thumb";
+      ? "card-image-frame-large"
+      : "card-image-frame-thumb";
 
   if (!imagePath) {
     return `
-      <div class="${fallbackClass}" title="No card image assigned">
-        💳
+      <div class="card-image-frame ${frameClass} image-load-failed"
+        title="No card image assigned">
       </div>
     `;
   }
 
   return `
-    <img
-      class="${imageClass}"
-      src="${esc(imagePath)}"
-      alt="${esc(card.name)} credit card"
-      onerror="
-        this.style.display='none';
-        this.nextElementSibling.style.display='flex';
-      "
-    >
-    <div class="${fallbackClass}" style="display:none">
-      💳
+    <div class="card-image-frame ${frameClass}">
+      <img
+        src="${esc(imagePath)}"
+        alt="${esc(card.name)} credit card"
+        onerror="
+          this.remove();
+          this.parentElement.classList.add('image-load-failed');
+        "
+      >
     </div>
   `;
 }
