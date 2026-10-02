@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.4 — dashboard card status colors */
+    /* BUILD 10.5 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -415,7 +415,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.4 — Credit-card images */
+    /* BUILD 10.5 — Credit-card images */
 .card-image-thumb{
   display:block;
   flex:0 0 92px;
@@ -475,7 +475,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.4 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.5 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -688,7 +688,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.4 — Shared Supabase Version
+              BUILD 10.5 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -949,22 +949,29 @@
 <div class="group">
   <label for="cardVendor">Card Vendor / Issuer</label>
   <input
-    id="cardVendor"
-    list="cardVendorSuggestions"
-    placeholder="Example: Chase, USAA, Apple, Robinhood"
-    oninput="updateCardImageSelection()"
-  >
+  id="cardVendor"
+  list="cardVendorSuggestions"
+  placeholder="Example: Chase, USAA, Apple, Robinhood"
+  autocomplete="off"
+  onfocus="this.select()"
+  onclick="this.select()"
+  oninput="updateCardImageSelection()"
+>
   <datalist id="cardVendorSuggestions"></datalist>
 </div>
 
 <div class="group">
   <label for="cardProduct">Credit Card Product</label>
   <input
-    id="cardProduct"
-    list="cardProductSuggestions"
-    placeholder="Example: Sapphire, Preferred, Gold"
-    oninput="updateCardImageSelection()"
-  >
+  <input
+  id="cardProduct"
+  list="cardProductSuggestions"
+  placeholder="Example: Sapphire, Preferred, Gold"
+  autocomplete="off"
+  onfocus="this.select()"
+  onclick="this.select()"
+  oninput="updateCardImageSelection()"
+>
   <datalist id="cardProductSuggestions"></datalist>
 </div>
 
@@ -1575,6 +1582,27 @@ async function deleteBankAccount() {
     product: "Basic",
     imagePath: "images/cards/american-express-basic.png"
   },
+      {
+  network: "American Express",
+  vendor: "American Express",
+  product: "Hilton Honors",
+  imagePath:
+    "images/cards/american-express-american-express-hilton-honors.png"
+},
+{
+  network: "American Express",
+  vendor: "American Express",
+  product: "Hilton Honors Surpass",
+  imagePath:
+    "images/cards/american-express-american-express-hilton-honors-surpass.png"
+},
+{
+  network: "American Express",
+  vendor: "American Express",
+  product: "Hilton Honors Aspire",
+  imagePath:
+    "images/cards/american-express-american-express-hilton-honors-aspire.png"
+},
   {
     network: "American Express",
     vendor: "American Express",
@@ -1895,7 +1923,7 @@ function updateCardImageSelection(savedImagePath = "") {
 
   $("cardImagePath").value = savedImagePath || "";
 }
-function updateCardImageSelection(savedImagePath = "") {
+unction updateCardImageSelection(savedImagePath = "") {
   const network = $("cardNetwork").value || "";
   const vendor = $("cardVendor").value.trim();
   const product = $("cardProduct").value.trim();
