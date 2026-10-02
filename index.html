@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.13 — dashboard card status colors */
+    /* BUILD 10.14 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.13 — Credit-card images */
+    /* BUILD 10.14 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -531,7 +531,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.13 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.14 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -744,7 +744,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.13 — Shared Supabase Version
+              BUILD 10.14 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1508,87 +1508,118 @@ function initializeCardDetailCarousel() {
     ...carousel.querySelectorAll(".card-detail-slide")
   ];
 
-  const scrollToSelectedCard = () => {
-    const activeSlide = slides.find(slide =>
+  let ignoreProgrammaticScroll = true;
+  let scrollTimer = null;
+
+  function centerSlide(slide, behavior = "auto") {
+    if (!slide) return;
+
+    const carouselRect = carousel.getBoundingClientRect();
+    const slideRect = slide.getBoundingClientRect();
+
+    const carouselCenter =
+      carouselRect.left + carouselRect.width / 2;
+
+    const slideCenter =
+      slideRect.left + slideRect.width / 2;
+
+    const distanceToCenter =
+      slideCenter - carouselCenter;
+
+    carousel.scrollBy({
+      left: distanceToCenter,
+      behavior
+    });
+  }
+
+  function setActiveCard(cardId) {
+    if (!cardId || cardId === selectedCardIdForEntries) {
+      return;
+    }
+
+    selectedCardIdForEntries = cardId;
+
+    slides.forEach(slide => {
+      slide.classList.toggle(
+        "active",
+        slide.dataset.cardId === cardId
+      );
+    });
+
+    renderSelectedCardTransactions();
+  }
+
+  function findCenteredSlide() {
+    const carouselRect = carousel.getBoundingClientRect();
+
+    const carouselCenter =
+      carouselRect.left + carouselRect.width / 2;
+
+    let closestSlide = null;
+    let closestDistance = Infinity;
+
+    slides.forEach(slide => {
+      const slideRect = slide.getBoundingClientRect();
+
+      const slideCenter =
+        slideRect.left + slideRect.width / 2;
+
+      const distance =
+        Math.abs(slideCenter - carouselCenter);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestSlide = slide;
+      }
+    });
+
+    return closestSlide;
+  }
+
+  function centerInitiallySelectedCard() {
+    const selectedSlide = slides.find(slide =>
       slide.dataset.cardId === selectedCardIdForEntries
     );
 
-    if (!activeSlide) return;
+    if (!selectedSlide) return;
 
-    const targetPosition =
-      activeSlide.offsetLeft -
-      (carousel.clientWidth - activeSlide.clientWidth) / 2;
-
-    carousel.scrollTo({
-      left: Math.max(0, targetPosition),
-      behavior: "auto"
-    });
-  };
+    centerSlide(selectedSlide, "auto");
+  }
 
   requestAnimationFrame(() => {
-    scrollToSelectedCard();
+    centerInitiallySelectedCard();
 
     requestAnimationFrame(() => {
-      scrollToSelectedCard();
+      centerInitiallySelectedCard();
+
+      setTimeout(() => {
+        ignoreProgrammaticScroll = false;
+      }, 350);
     });
   });
 
-  let scrollTimer = null;
-
   carousel.addEventListener("scroll", () => {
+    if (ignoreProgrammaticScroll) return;
+
     clearTimeout(scrollTimer);
 
     scrollTimer = setTimeout(() => {
-      const carouselCenter =
-        carousel.scrollLeft + carousel.clientWidth / 2;
+      const centeredSlide = findCenteredSlide();
 
-      let closestSlide = null;
-      let closestDistance = Infinity;
+      if (!centeredSlide) return;
 
-      slides.forEach(slide => {
-        const slideCenter =
-          slide.offsetLeft + slide.clientWidth / 2;
-
-        const distance =
-          Math.abs(slideCenter - carouselCenter);
-
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestSlide = slide;
-        }
-      });
-
-      if (!closestSlide) return;
-
-      const newCardId = closestSlide.dataset.cardId;
-
-      if (!newCardId || newCardId === selectedCardIdForEntries) {
-        return;
-      }
-
-      selectedCardIdForEntries = newCardId;
-
-      slides.forEach(slide => {
-        slide.classList.toggle(
-          "active",
-          slide.dataset.cardId === newCardId
-        );
-      });
-
-      renderSelectedCardTransactions();
+      setActiveCard(centeredSlide.dataset.cardId);
     }, 120);
   });
 
   slides.forEach(slide => {
     slide.addEventListener("click", () => {
-      const targetPosition =
-        slide.offsetLeft -
-        (carousel.clientWidth - slide.clientWidth) / 2;
+      const cardId = slide.dataset.cardId;
 
-      carousel.scrollTo({
-        left: Math.max(0, targetPosition),
-        behavior: "smooth"
-      });
+      if (!cardId) return;
+
+      setActiveCard(cardId);
+      centerSlide(slide, "smooth");
     });
   });
 }
@@ -2903,7 +2934,7 @@ $("entryDate").value = today();
 $("entryCashMoved").checked = false;
 $("deleteEntryButton").classList.add("hidden");
 
-      fillCardSelect();
+      fillCardSelect(selectedCardIdForEntries || "");
 fillBankAccountSelect("entryFromBankAccount");
 fillBankAccountSelect("entryToBankAccount");
 
@@ -3377,30 +3408,70 @@ selectedCardIdForEntries = "";
       } catch (error) {}
     }
 
-    async function signIn(event) {
-      event.preventDefault();
+async function signIn(event) {
+  event.preventDefault();
 
-      const email = $("signInEmail").value.trim();
-      const password = $("signInPassword").value;
-
-      const { data, error } =
-        await supabaseClient.auth.signInWithPassword({
-          email,
-          password
-        });
-
-      if (error) {
-        setMessage("authMessage",error.message,"error");
-        return;
-      }
-
-      currentUser = data.user;
-
-      saveRememberedEmail();
-
-      await ensurePersonalTracker();
-      await loadTrackers();
+  try {
+    if (!supabaseClient) {
+      setMessage(
+        "authMessage",
+        "Supabase client is not initialized.",
+        "error"
+      );
+      return;
     }
+
+    const email = $("signInEmail").value.trim();
+    const password = $("signInPassword").value;
+
+    if (!email || !password) {
+      setMessage(
+        "authMessage",
+        "Enter both email and password.",
+        "error"
+      );
+      return;
+    }
+
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+    if (error) {
+      setMessage("authMessage", error.message, "error");
+      return;
+    }
+
+    if (!data?.user) {
+      setMessage(
+        "authMessage",
+        "Sign-in completed but no user account was returned.",
+        "error"
+      );
+      return;
+    }
+
+    currentUser = data.user;
+
+    saveRememberedEmail();
+
+    await ensurePersonalTracker();
+    await loadTrackers();
+
+  } catch (error) {
+    console.error("Unexpected sign-in error:", error);
+
+    setMessage(
+      "authMessage",
+      `Unexpected sign-in error: ${
+        error?.message || String(error)
+      }`,
+      "error"
+    );
+  }
+}
 
     async function createAccount(event) {
       event.preventDefault();
