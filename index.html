@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.8 — dashboard card status colors */
+    /* BUILD 10.9 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.8 — Credit-card images */
+    /* BUILD 10.9 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -462,7 +462,19 @@
 .card-image-frame-large.image-load-failed::after{
   font-size:4rem;
 }
+.entry-date-group{
+  margin-bottom:18px;
+}
 
+.entry-date-header{
+  margin:0;
+  padding:9px 10px;
+  border-radius:8px;
+  background:var(--light);
+  color:var(--navy);
+  font-size:.9rem;
+  font-weight:800;
+}
 
   </style>
 </head>
@@ -474,7 +486,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.8 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.9 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -687,7 +699,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.8 — Shared Supabase Version
+              BUILD 10.9 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1358,13 +1370,13 @@ function renderEntriesPage() {
     ? cardById(selectedCardIdForEntries)
     : null;
 
-  if (!selectedCard) {
-    $("entriesList").innerHTML = entries.length
-      ? entries.map(entryHTML).join("")
-      : `<div class="empty">No expenses, payments, or transfers yet.</div>`;
+if (!selectedCard) {
+  $("entriesList").innerHTML = entries.length
+    ? entriesGroupedByDateHTML(entries)
+    : `<div class="empty">No expenses, payments, or transfers yet.</div>`;
 
-    return;
-  }
+  return;
+}
 
   const selectedEntries = entries.filter(entry =>
     entry.card_id === selectedCard.id
@@ -1394,11 +1406,11 @@ function renderEntriesPage() {
 ${cardInfoHTML(selectedCard)}
     </div>
 
-    ${
-      selectedEntries.length
-        ? selectedEntries.map(entryHTML).join("")
-        : `<div class="card empty">No entries for this card yet.</div>`
-    }
+ ${
+  selectedEntries.length
+    ? entriesGroupedByDateHTML(selectedEntries)
+    : `<div class="card empty">No entries for this card yet.</div>`
+}  
   `;
 }
 
@@ -2249,6 +2261,56 @@ function cardCashStillToMove(cardId) {
     </div>
   `;
 }
+    function formatEntryDate(dateString) {
+  if (!dateString) return "Unknown Date";
+
+  const parts = String(dateString).split("-");
+
+  if (parts.length !== 3) {
+    return String(dateString);
+  }
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]) - 1;
+  const day = Number(parts[2]);
+
+  const date = new Date(year, month, day);
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
+function entriesGroupedByDateHTML(entryList) {
+  const groups = new Map();
+
+  entryList.forEach(entry => {
+    const dateKey = entry.entry_date || "unknown";
+
+    if (!groups.has(dateKey)) {
+      groups.set(dateKey, []);
+    }
+
+    groups.get(dateKey).push(entry);
+  });
+
+  return [...groups.entries()]
+    .map(([dateKey, dateEntries]) => `
+      <section class="entry-date-group">
+        <h3 class="entry-date-header">
+          ${esc(formatEntryDate(dateKey))}
+        </h3>
+
+        <div style="margin-top:6px">
+          ${dateEntries.map(entryHTML).join("")}
+        </div>
+      </section>
+    `)
+    .join("");
+}
     function entryHTML(entry) {
   const payment = entry.entry_type === "payment";
   const transfer = entry.entry_type === "transfer";
@@ -2422,16 +2484,9 @@ $("cardsList").innerHTML = cards.length
           Add Recurring Charge
         </button>
       </div>
-
-      <div class="heading" style="margin-top:14px">
-        <h2 style="font-size:1rem">Recurring Charges</h2>
-      </div>
-
-      ${recurringHTML(card.id)}
     </div>
   `).join("")
   : `<div class="card empty">No credit cards saved.</div>`;
-    }
 
     async function ensurePersonalTracker() {
       const { data: trackerId, error } =
