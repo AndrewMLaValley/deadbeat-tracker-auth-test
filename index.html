@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.11 — dashboard card status colors */
+    /* BUILD 10.12 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.11 — Credit-card images */
+    /* BUILD 10.12 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -434,7 +434,8 @@
 
 .card-image-frame-large{
   width:min(100%,420px);
-  height:265px;
+  aspect-ratio:1.586 / 1;
+  height:auto;
   margin:0 auto 16px;
   border-radius:12px;
 }
@@ -446,6 +447,11 @@
   object-fit:cover;
   object-position:center;
   transform:scale(1.12);
+}
+
+.card-image-frame-large img{
+  object-fit:contain;
+  transform:none;
 }
 
 .card-image-frame.image-load-failed::after{
@@ -525,7 +531,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.11 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.12 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -738,7 +744,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.11 — Shared Supabase Version
+              BUILD 10.12 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1470,7 +1476,122 @@ function renderEntriesPage() {
   renderSelectedCardTransactions();
   initializeCardDetailCarousel();
 }
+function renderSelectedCardTransactions() {
+  const selectedCard = cardById(selectedCardIdForEntries);
+  const container = $("selectedCardTransactions");
 
+  if (!selectedCard || !container) return;
+
+  const selectedEntries = entries.filter(entry =>
+    entry.card_id === selectedCard.id
+  );
+
+  container.innerHTML = `
+    <h2>Transactions — ${esc(selectedCard.name)}</h2>
+
+    ${
+      selectedEntries.length
+        ? entriesGroupedByDateHTML(selectedEntries)
+        : `<div class="card empty">
+            No entries for this card yet.
+          </div>`
+    }
+  `;
+}
+
+function initializeCardDetailCarousel() {
+  const carousel = $("cardDetailCarousel");
+
+  if (!carousel) return;
+
+  const slides = [
+    ...carousel.querySelectorAll(".card-detail-slide")
+  ];
+
+  const scrollToSelectedCard = () => {
+    const activeSlide = slides.find(slide =>
+      slide.dataset.cardId === selectedCardIdForEntries
+    );
+
+    if (!activeSlide) return;
+
+    const targetPosition =
+      activeSlide.offsetLeft -
+      (carousel.clientWidth - activeSlide.clientWidth) / 2;
+
+    carousel.scrollTo({
+      left: Math.max(0, targetPosition),
+      behavior: "auto"
+    });
+  };
+
+  requestAnimationFrame(() => {
+    scrollToSelectedCard();
+
+    requestAnimationFrame(() => {
+      scrollToSelectedCard();
+    });
+  });
+
+  let scrollTimer = null;
+
+  carousel.addEventListener("scroll", () => {
+    clearTimeout(scrollTimer);
+
+    scrollTimer = setTimeout(() => {
+      const carouselCenter =
+        carousel.scrollLeft + carousel.clientWidth / 2;
+
+      let closestSlide = null;
+      let closestDistance = Infinity;
+
+      slides.forEach(slide => {
+        const slideCenter =
+          slide.offsetLeft + slide.clientWidth / 2;
+
+        const distance =
+          Math.abs(slideCenter - carouselCenter);
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSlide = slide;
+        }
+      });
+
+      if (!closestSlide) return;
+
+      const newCardId = closestSlide.dataset.cardId;
+
+      if (!newCardId || newCardId === selectedCardIdForEntries) {
+        return;
+      }
+
+      selectedCardIdForEntries = newCardId;
+
+      slides.forEach(slide => {
+        slide.classList.toggle(
+          "active",
+          slide.dataset.cardId === newCardId
+        );
+      });
+
+      renderSelectedCardTransactions();
+    }, 120);
+  });
+
+  slides.forEach(slide => {
+    slide.addEventListener("click", () => {
+      const targetPosition =
+        slide.offsetLeft -
+        (carousel.clientWidth - slide.clientWidth) / 2;
+
+      carousel.scrollTo({
+        left: Math.max(0, targetPosition),
+        behavior: "smooth"
+      });
+    });
+  });
+}
     function bankAccountById(id) {
   return bankAccounts.find(account => account.id === id);
 }
@@ -2511,143 +2632,7 @@ $("dashboardCards").innerHTML = cards.length
         ? entries.slice(0,5).map(entryHTML).join("")
         : `<div class="empty">No recent entries.</div>`;
 
-renderEntriesPage();
-function renderSelectedCardTransactions() {
-  const selectedCard = cardById(selectedCardIdForEntries);
-  const container = $("selectedCardTransactions");
 
-  if (!selectedCard || !container) return;
-
-  const selectedEntries = entries.filter(entry =>
-    entry.card_id === selectedCard.id
-  );
-
-  container.innerHTML = `
-    <h2>Transactions — ${esc(selectedCard.name)}</h2>
-
-    ${
-      selectedEntries.length
-        ? entriesGroupedByDateHTML(selectedEntries)
-        : `<div class="card empty">
-            No entries for this card yet.
-          </div>`
-    }
-  `;
-}
-
-function initializeCardDetailCarousel() {
-  const carousel = $("cardDetailCarousel");
-
-  if (!carousel) return;
-
-  const slides = [...carousel.querySelectorAll(".card-detail-slide")];
-
-  const activeSlide = slides.find(slide =>
-    slide.dataset.cardId === selectedCardIdForEntries
-  );
-
-  if (activeSlide) {
-    const targetPosition =
-      activeSlide.offsetLeft -
-      (carousel.clientWidth - activeSlide.clientWidth) / 2;
-
-    carousel.scrollLeft = Math.max(0, targetPosition);
-  }
-
-  let scrollTimer = null;
-
-  carousel.addEventListener("scroll", () => {
-    clearTimeout(scrollTimer);
-
-    scrollTimer = setTimeout(() => {
-      const carouselCenter =
-        carousel.scrollLeft + carousel.clientWidth / 2;
-
-      let closestSlide = null;
-      let closestDistance = Infinity;
-
-      slides.forEach(slide => {
-        const slideCenter =
-          slide.offsetLeft + slide.clientWidth / 2;
-
-        const distance =
-          Math.abs(slideCenter - carouselCenter);
-
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestSlide = slide;
-        }
-      });
-
-      if (!closestSlide) return;
-
-      const newCardId = closestSlide.dataset.cardId;
-
-      if (newCardId === selectedCardIdForEntries) return;
-
-      selectedCardIdForEntries = newCardId;
-
-      slides.forEach(slide => {
-        slide.classList.toggle(
-          "active",
-          slide.dataset.cardId === newCardId
-        );
-      });
-
-      renderSelectedCardTransactions();
-    }, 100);
-  });
-
-  slides.forEach(slide => {
-    slide.addEventListener("click", () => {
-      const cardId = slide.dataset.cardId;
-
-      if (!cardId) return;
-
-      const targetPosition =
-        slide.offsetLeft -
-        (carousel.clientWidth - slide.clientWidth) / 2;
-
-      carousel.scrollTo({
-        left: Math.max(0, targetPosition),
-        behavior: "smooth"
-      });
-    });
-  });
-}
-$("cardsList").innerHTML = cards.length
-  ? cards.map(card => `
-    <div class="card">
-      <div class="row">
-        <div>
-          <b>${esc(card.name)}</b>
-          <div class="sub">
-            ${esc(card.card_network || "Other")}
-            ${card.last_four ? ` · •••• ${esc(card.last_four)}` : ""}
-          </div>
-        </div>
-
-        ${cardImageHTML(card, "thumb")}
-      </div>
-
-      <strong>${money(cardBalance(card.id))}</strong>
-
-      <div class="actions">
-        <button class="secondary" type="button"
-          onclick="openCard('${card.id}')">
-          Edit Card
-        </button>
-
-        <button class="secondary" type="button"
-          onclick="openRecurring('${card.id}')">
-          Add Recurring Charge
-        </button>
-      </div>
-    </div>
-  `).join("")
-  : `<div class="card empty">No credit cards saved.</div>`;
-
-}
 
 async function ensurePersonalTracker() {
       const { data: trackerId, error } =
