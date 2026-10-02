@@ -2493,9 +2493,10 @@ to_bank_account_id: $("entryToBankAccount").value || null
     }
 
     function openCard(id = "") {
-      $("cardForm").reset();
-      $("cardId").value = "";
-      $("cardTitle").textContent = "Add Card";
+      $("cardName").value = card.name;
+$("cardNetwork").value = card.card_network || "Other";
+$("cardImagePath").value = card.card_image_path || "";
+$("minimumPayment").value = card.minimum_payment || "";
       $("deleteCardButton").classList.add("hidden");
 
       if (id) {
