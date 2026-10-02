@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.10 — dashboard card status colors */
+    /* BUILD 10.11 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.10 — Credit-card images */
+    /* BUILD 10.11 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -475,7 +475,46 @@
   font-size:.9rem;
   font-weight:800;
 }
+.card-detail-carousel{
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory;
+  scroll-behavior:smooth;
+  padding:4px 7% 14px;
+  -webkit-overflow-scrolling:touch;
+}
 
+.card-detail-carousel::-webkit-scrollbar{
+  display:none;
+}
+
+.card-detail-carousel{
+  scrollbar-width:none;
+}
+
+.card-detail-slide{
+  flex:0 0 86%;
+  scroll-snap-align:center;
+}
+
+.card-detail-slide.active{
+  outline:3px solid var(--blue);
+  outline-offset:2px;
+}
+
+.card-detail-slide .card{
+  min-height:100%;
+}
+
+.selected-card-transactions{
+  margin-top:16px;
+}
+
+.selected-card-transactions h2{
+  margin-bottom:10px;
+}
   </style>
 </head>
 
@@ -486,7 +525,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.10 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.11 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -699,7 +738,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.10 — Shared Supabase Version
+              BUILD 10.11 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1370,48 +1409,66 @@ function renderEntriesPage() {
     ? cardById(selectedCardIdForEntries)
     : null;
 
-if (!selectedCard) {
-  $("entriesList").innerHTML = entries.length
-    ? entriesGroupedByDateHTML(entries)
-    : `<div class="empty">No expenses, payments, or transfers yet.</div>`;
+  if (!selectedCard) {
+    $("entriesList").innerHTML = entries.length
+      ? entriesGroupedByDateHTML(entries)
+      : `<div class="empty">No expenses, payments, or transfers yet.</div>`;
 
-  return;
-}
-
-  const selectedEntries = entries.filter(entry =>
-    entry.card_id === selectedCard.id
-  );
+    return;
+  }
 
   $("entriesList").innerHTML = `
-    <div class="card" style="margin-bottom:12px">
-      <div class="row">
-        <div>
-          <h2>${esc(selectedCard.name)}</h2>
-          <div class="sub">
-            ${
-              selectedCard.last_four
-                ? `•••• ${selectedCard.last_four}`
-                : "Manual card"
-            }
-          </div>
-        </div>
+    <div class="row" style="margin-bottom:12px">
+      <h2>Card Details</h2>
 
-        <button class="secondary" type="button"
-          onclick="clearSelectedCardAndShowAllEntries()">
-          Show All
-        </button>
-      </div>
-
-      ${cardImageHTML(selectedCard, "large")}
-${cardInfoHTML(selectedCard)}
+      <button class="secondary" type="button"
+        onclick="clearSelectedCardAndShowAllEntries()">
+        Show All
+      </button>
     </div>
 
- ${
-  selectedEntries.length
-    ? entriesGroupedByDateHTML(selectedEntries)
-    : `<div class="card empty">No entries for this card yet.</div>`
-}  
+    <div id="cardDetailCarousel" class="card-detail-carousel">
+      ${cards.map(card => `
+        <article
+          class="card-detail-slide ${
+            card.id === selectedCard.id ? "active" : ""
+          }"
+          data-card-id="${card.id}"
+          tabindex="0"
+        >
+          <div class="card">
+            <div class="row">
+              <div>
+                <h2>${esc(card.name)}</h2>
+                <div class="sub">
+                  ${esc(card.card_network || "Other")}
+                  ${
+                    card.last_four
+                      ? ` · •••• ${esc(card.last_four)}`
+                      : ""
+                  }
+                </div>
+              </div>
+
+              <strong style="margin:0">
+                ${money(cardBalance(card.id))}
+              </strong>
+            </div>
+
+            ${cardImageHTML(card, "large")}
+            ${cardInfoHTML(card)}
+          </div>
+        </article>
+      `).join("")}
+    </div>
+
+    <div id="selectedCardTransactions"
+      class="selected-card-transactions">
+    </div>
   `;
+
+  renderSelectedCardTransactions();
+  initializeCardDetailCarousel();
 }
 
     function bankAccountById(id) {
@@ -2455,7 +2512,109 @@ $("dashboardCards").innerHTML = cards.length
         : `<div class="empty">No recent entries.</div>`;
 
 renderEntriesPage();
+function renderSelectedCardTransactions() {
+  const selectedCard = cardById(selectedCardIdForEntries);
+  const container = $("selectedCardTransactions");
 
+  if (!selectedCard || !container) return;
+
+  const selectedEntries = entries.filter(entry =>
+    entry.card_id === selectedCard.id
+  );
+
+  container.innerHTML = `
+    <h2>Transactions — ${esc(selectedCard.name)}</h2>
+
+    ${
+      selectedEntries.length
+        ? entriesGroupedByDateHTML(selectedEntries)
+        : `<div class="card empty">
+            No entries for this card yet.
+          </div>`
+    }
+  `;
+}
+
+function initializeCardDetailCarousel() {
+  const carousel = $("cardDetailCarousel");
+
+  if (!carousel) return;
+
+  const slides = [...carousel.querySelectorAll(".card-detail-slide")];
+
+  const activeSlide = slides.find(slide =>
+    slide.dataset.cardId === selectedCardIdForEntries
+  );
+
+  if (activeSlide) {
+    const targetPosition =
+      activeSlide.offsetLeft -
+      (carousel.clientWidth - activeSlide.clientWidth) / 2;
+
+    carousel.scrollLeft = Math.max(0, targetPosition);
+  }
+
+  let scrollTimer = null;
+
+  carousel.addEventListener("scroll", () => {
+    clearTimeout(scrollTimer);
+
+    scrollTimer = setTimeout(() => {
+      const carouselCenter =
+        carousel.scrollLeft + carousel.clientWidth / 2;
+
+      let closestSlide = null;
+      let closestDistance = Infinity;
+
+      slides.forEach(slide => {
+        const slideCenter =
+          slide.offsetLeft + slide.clientWidth / 2;
+
+        const distance =
+          Math.abs(slideCenter - carouselCenter);
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSlide = slide;
+        }
+      });
+
+      if (!closestSlide) return;
+
+      const newCardId = closestSlide.dataset.cardId;
+
+      if (newCardId === selectedCardIdForEntries) return;
+
+      selectedCardIdForEntries = newCardId;
+
+      slides.forEach(slide => {
+        slide.classList.toggle(
+          "active",
+          slide.dataset.cardId === newCardId
+        );
+      });
+
+      renderSelectedCardTransactions();
+    }, 100);
+  });
+
+  slides.forEach(slide => {
+    slide.addEventListener("click", () => {
+      const cardId = slide.dataset.cardId;
+
+      if (!cardId) return;
+
+      const targetPosition =
+        slide.offsetLeft -
+        (carousel.clientWidth - slide.clientWidth) / 2;
+
+      carousel.scrollTo({
+        left: Math.max(0, targetPosition),
+        behavior: "smooth"
+      });
+    });
+  });
+}
 $("cardsList").innerHTML = cards.length
   ? cards.map(card => `
     <div class="card">
