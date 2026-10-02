@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.5 — dashboard card status colors */
+    /* BUILD 10.6 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -415,7 +415,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.5 — Credit-card images */
+    /* BUILD 10.6 — Credit-card images */
 .card-image-thumb{
   display:block;
   flex:0 0 92px;
@@ -475,7 +475,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.5 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.6 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -688,7 +688,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.5 — Shared Supabase Version
+              BUILD 10.6 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -963,15 +963,14 @@
 <div class="group">
   <label for="cardProduct">Credit Card Product</label>
   <input
-  <input
-  id="cardProduct"
-  list="cardProductSuggestions"
-  placeholder="Example: Sapphire, Preferred, Gold"
-  autocomplete="off"
-  onfocus="this.select()"
-  onclick="this.select()"
-  oninput="updateCardImageSelection()"
->
+    id="cardProduct"
+    list="cardProductSuggestions"
+    placeholder="Example: Sapphire, Preferred, Gold"
+    autocomplete="off"
+    onfocus="this.select()"
+    onclick="this.select()"
+    oninput="updateCardImageSelection()"
+  >
   <datalist id="cardProductSuggestions"></datalist>
 </div>
 
@@ -1872,58 +1871,7 @@ function findCatalogImage(network, vendor, product) {
     normalizeCardText(item.product) === normalizedProduct
   );
 }
-
 function updateCardImageSelection(savedImagePath = "") {
-  const network = $("cardNetwork").value || "";
-  const vendor = $("cardVendor").value.trim();
-  const product = $("cardProduct").value.trim();
-
-  const vendorSuggestions = CARD_IMAGE_CATALOG
-    .filter(item =>
-      normalizeCardText(item.network) === normalizeCardText(network)
-    )
-    .map(item => item.vendor);
-
-  const productSuggestions = CARD_IMAGE_CATALOG
-    .filter(item =>
-      normalizeCardText(item.network) === normalizeCardText(network) &&
-      normalizeCardText(item.vendor) === normalizeCardText(vendor)
-    )
-    .map(item => item.product);
-
-  setDatalistOptions(
-    "cardVendorSuggestions",
-    vendorSuggestions
-  );
-
-  setDatalistOptions(
-    "cardProductSuggestions",
-    productSuggestions
-  );
-
-  const catalogMatch = findCatalogImage(
-    network,
-    vendor,
-    product
-  );
-
-  if (catalogMatch) {
-    $("cardImagePath").value = catalogMatch.imagePath;
-    return;
-  }
-
-  if (network && vendor && product) {
-    $("cardImagePath").value =
-      `images/cards/${slugifyCardText(vendor)}-` +
-      `${slugifyCardText(network)}-` +
-      `${slugifyCardText(product)}.png`;
-
-    return;
-  }
-
-  $("cardImagePath").value = savedImagePath || "";
-}
-unction updateCardImageSelection(savedImagePath = "") {
   const network = $("cardNetwork").value || "";
   const vendor = $("cardVendor").value.trim();
   const product = $("cardProduct").value.trim();
@@ -2454,37 +2402,43 @@ $("dashboardCards").innerHTML = cards.length
 
 renderEntriesPage();
 
-      $("cardsList").innerHTML = cards.length
-        ? cards.map(card => `
-          <div class="card">
-            <div class="row">
-              <b>${esc(card.name)}</b>
-              <button class="secondary" type="button"
-                onclick="openCard('${card.id}')">
-                Edit
-              </button>
-            </div>
-
-            <div class="sub">
-              ${card.last_four ? `•••• ${card.last_four}` : ""}
-            </div>
-
-            <strong>${money(cardBalance(card.id))}</strong>
-
-            ${cardInfoHTML(card)}
-
-            <div class="heading" style="margin-top:14px">
-              <h2 style="font-size:1rem">Recurring Charges</h2>
-              <button class="secondary" type="button"
-                onclick="openRecurring('${card.id}')">
-                + Add
-              </button>
-            </div>
-
-            ${recurringHTML(card.id)}
+$("cardsList").innerHTML = cards.length
+  ? cards.map(card => `
+    <div class="card">
+      <div class="row">
+        <div>
+          <b>${esc(card.name)}</b>
+          <div class="sub">
+            ${esc(card.card_network || "Other")}
+            ${card.last_four ? ` · •••• ${esc(card.last_four)}` : ""}
           </div>
-        `).join("")
-        : `<div class="card empty">No credit cards saved.</div>`;
+        </div>
+
+        ${cardImageHTML(card, "thumb")}
+      </div>
+
+      <strong>${money(cardBalance(card.id))}</strong>
+
+      <div class="actions">
+        <button class="secondary" type="button"
+          onclick="openCard('${card.id}')">
+          Edit Card
+        </button>
+
+        <button class="secondary" type="button"
+          onclick="openRecurring('${card.id}')">
+          Add Recurring Charge
+        </button>
+      </div>
+
+      <div class="heading" style="margin-top:14px">
+        <h2 style="font-size:1rem">Recurring Charges</h2>
+      </div>
+
+      ${recurringHTML(card.id)}
+    </div>
+  `).join("")
+  : `<div class="card empty">No credit cards saved.</div>`;
     }
 
     async function ensurePersonalTracker() {
