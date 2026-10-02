@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.1 — dashboard card status colors */
+    /* BUILD 10.2 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -415,7 +415,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.1 — Credit-card images */
+    /* BUILD 10.2 — Credit-card images */
 .card-image-thumb{
   display:block;
   flex:0 0 92px;
@@ -475,7 +475,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.1 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.2 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -688,7 +688,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.1 — Shared Supabase Version
+              BUILD 10.2 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -934,7 +934,7 @@
         </div>
 <div class="group">
   <label for="cardNetwork">Card Network / Type</label>
-  <select id="cardNetwork" onchange="updateCardVendorOptions()">
+  <select id="cardNetwork" onchange="updateCardImageSelection()">
     <option value="Visa">Visa</option>
     <option value="Mastercard">Mastercard</option>
     <option value="American Express">American Express</option>
@@ -942,22 +942,30 @@
     <option value="Capital One">Capital One</option>
     <option value="Store Card">Store Card</option>
     <option value="Other" selected>Other</option>
-  <option value="Apple" selected>Apple</option>
+  
   </select>
 </div>
        
 <div class="group">
   <label for="cardVendor">Card Vendor / Issuer</label>
-  <select id="cardVendor">
-    <option value="">Select a vendor</option>
-  </select>
+  <input
+    id="cardVendor"
+    list="cardVendorSuggestions"
+    placeholder="Example: Chase, USAA, Apple, Robinhood"
+    oninput="updateCardImageSelection()"
+  >
+  <datalist id="cardVendorSuggestions"></datalist>
 </div>
 
 <div class="group">
   <label for="cardProduct">Credit Card Product</label>
-  <select id="cardProduct">
-    <option value="">Select a card product</option>
-  </select>
+  <input
+    id="cardProduct"
+    list="cardProductSuggestions"
+    placeholder="Example: Sapphire, Preferred, Gold"
+    oninput="updateCardImageSelection()"
+  >
+  <datalist id="cardProductSuggestions"></datalist>
 </div>
 
 <input id="cardImagePath" type="hidden">
@@ -1700,136 +1708,111 @@ function uniqueSorted(values) {
   );
 }
 
-function setSelectOptions(selectId, placeholder, values, selectedValue = "") {
-  const select = $(selectId);
-
-  if (!select) return;
-
-  select.innerHTML = `
-    <option value="">${placeholder}</option>
-    ${
-      values.map(value => `
-        <option value="${esc(value)}">${esc(value)}</option>
-      `).join("")
-    }
-  `;
-
-  select.value = selectedValue || "";
+function normalizeCardText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
-function updateCardVendorOptions(
-  selectedVendor = "",
-  selectedProduct = "",
-  selectedImagePath = ""
-) {
-  const network = $("cardNetwork").value || "";
+function slugifyCardText(value) {
+  const normalized = normalizeCardText(value);
 
-  const vendors = uniqueSorted(
-    CARD_IMAGE_CATALOG
-      .filter(item => item.network === network)
-      .map(item => item.vendor)
-  );
+  const aliases = {
+    "u.s. bank": "us-bank",
+    "us bank": "us-bank",
+    "u.s bank": "us-bank",
+    "bank of america": "bank-of-america",
+    "american express": "american-express",
+    "southwest airlines": "southwest-airlines",
+    "sam's club": "sams-club",
+    "sam’s club": "sams-club",
+    "military store": "military-store"
+  };
 
-  setSelectOptions(
-    "cardVendor",
-    vendors.length ? "Select a vendor" : "No vendor images available",
-    vendors,
-    selectedVendor
-  );
-
-  updateCardProductOptions(selectedProduct, selectedImagePath);
-}
-
-function updateCardProductOptions(
-  selectedProduct = "",
-  selectedImagePath = ""
-) {
-  const network = $("cardNetwork").value || "";
-  const vendor = $("cardVendor").value || "";
-
-  const products = uniqueSorted(
-    CARD_IMAGE_CATALOG
-      .filter(item =>
-        item.network === network &&
-        item.vendor === vendor
-      )
-      .map(item => item.product)
-  );
-
-  setSelectOptions(
-    "cardProduct",
-    products.length ? "Select a card product" : "No product images available",
-    products,
-    selectedProduct
-  );
-
-  updateCardImagePath(selectedImagePath);
-}
-
-function updateCardImagePath(savedImagePath = "") {
-  const network = $("cardNetwork").value || "";
-  const vendor = $("cardVendor").value || "";
-  const product = $("cardProduct").value || "";
-
-  const match = CARD_IMAGE_CATALOG.find(item =>
-    item.network === network &&
-    item.vendor === vendor &&
-    item.product === product
-  );
-
-  $("cardImagePath").value =
-    match?.imagePath ||
-    savedImagePath ||
-    "";
-}
-
-function initializeCardCatalogEvents() {
-  $("cardVendor").addEventListener("change", () => {
-    updateCardProductOptions();
-  });
-
-  $("cardProduct").addEventListener("change", () => {
-    updateCardImagePath();
-  });
-}
-    function cardImageHTML(card, size = "thumb") {
-  const imagePath = String(card.card_image_path || "").trim();
-
-  const imageClass =
-    size === "large"
-      ? "card-image-large"
-      : "card-image-thumb";
-
-  const fallbackClass =
-    size === "large"
-      ? "card-image-fallback-large"
-      : "card-image-fallback-thumb";
-
-  if (!imagePath) {
-    return `
-      <div class="${fallbackClass}" title="No card image assigned">
-        💳
-      </div>
-    `;
+  if (aliases[normalized]) {
+    return aliases[normalized];
   }
 
-  return `
-    <img
-      class="${imageClass}"
-      src="${esc(imagePath)}"
-      alt="${esc(card.name)} credit card"
-      onerror="
-        this.style.display='none';
-        this.nextElementSibling.style.display='flex';
-      "
-    >
-
-    <div class="${fallbackClass}" style="display:none">
-      💳
-    </div>
-  `;
+  return normalized
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
-   
+
+function setDatalistOptions(listId, values) {
+  const list = $(listId);
+
+  if (!list) return;
+
+  list.innerHTML = uniqueSorted(values)
+    .map(value => `
+      <option value="${esc(value)}"></option>
+    `)
+    .join("");
+}
+
+function findCatalogImage(network, vendor, product) {
+  const normalizedNetwork = normalizeCardText(network);
+  const normalizedVendor = normalizeCardText(vendor);
+  const normalizedProduct = normalizeCardText(product);
+
+  return CARD_IMAGE_CATALOG.find(item =>
+    normalizeCardText(item.network) === normalizedNetwork &&
+    normalizeCardText(item.vendor) === normalizedVendor &&
+    normalizeCardText(item.product) === normalizedProduct
+  );
+}
+
+function updateCardImageSelection(savedImagePath = "") {
+  const network = $("cardNetwork").value || "";
+  const vendor = $("cardVendor").value.trim();
+  const product = $("cardProduct").value.trim();
+
+  const vendorSuggestions = CARD_IMAGE_CATALOG
+    .filter(item =>
+      normalizeCardText(item.network) === normalizeCardText(network)
+    )
+    .map(item => item.vendor);
+
+  const productSuggestions = CARD_IMAGE_CATALOG
+    .filter(item =>
+      normalizeCardText(item.network) === normalizeCardText(network) &&
+      normalizeCardText(item.vendor) === normalizeCardText(vendor)
+    )
+    .map(item => item.product);
+
+  setDatalistOptions(
+    "cardVendorSuggestions",
+    vendorSuggestions
+  );
+
+  setDatalistOptions(
+    "cardProductSuggestions",
+    productSuggestions
+  );
+
+  const catalogMatch = findCatalogImage(
+    network,
+    vendor,
+    product
+  );
+
+  if (catalogMatch) {
+    $("cardImagePath").value = catalogMatch.imagePath;
+    return;
+  }
+
+  if (network && vendor && product) {
+    $("cardImagePath").value =
+      `images/cards/${slugifyCardText(vendor)}-` +
+      `${slugifyCardText(network)}-` +
+      `${slugifyCardText(product)}.png`;
+
+    return;
+  }
+
+  $("cardImagePath").value = savedImagePath || "";
+}
     function cardById(id) {
       return cards.find(card => card.id === id);
     }
@@ -2656,13 +2639,13 @@ to_bank_account_id: $("entryToBankAccount").value || null
 
     $("cardId").value = card.id;
     $("cardName").value = card.name || "";
-    $("cardNetwork").value = card.card_network || "Other";
+$("cardNetwork").value = card.card_network || "Other";
+$("cardVendor").value = card.card_vendor || "";
+$("cardProduct").value = card.card_product || "";
 
-    updateCardVendorOptions(
-      card.card_vendor || "",
-      card.card_product || "",
-      card.card_image_path || ""
-    );
+updateCardImageSelection(
+  card.card_image_path || ""
+);
 
     $("minimumPayment").value = card.minimum_payment || "";
     $("cardLastFour").value = card.last_four || "";
@@ -2673,9 +2656,9 @@ to_bank_account_id: $("entryToBankAccount").value || null
 
     $("cardTitle").textContent = "Edit Card";
     $("deleteCardButton").classList.remove("hidden");
-  } else {
-    updateCardVendorOptions();
-  }
+} else {
+  updateCardImageSelection();
+}
 
   openModal("cardModal");
 }
@@ -3201,7 +3184,7 @@ selectedCardIdForEntries = "";
     $("recurringForm").addEventListener("submit",saveRecurring);
    $("bankAccountForm").addEventListener("submit",saveBankAccount);
     
-initializeCardCatalogEvents();
+
     
     document.querySelectorAll(".modal-bg").forEach(modal => {
       modal.addEventListener("click",event => {
