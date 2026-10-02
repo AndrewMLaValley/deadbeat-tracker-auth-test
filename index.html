@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <link rel="icon" type="image/png" href="apply-touch-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="apply-touch-icon.png">
- <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Deadbeat Tracker">
+
+  <link rel="icon" type="image/png" href="apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Deadbeat Tracker">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#12355b">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+
   <title>Deadbeat Credit Card Spending Tracker</title>
 
   <style>
@@ -347,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 9.91 — dashboard card status colors */
+    /* BUILD 9.93 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -412,49 +414,8 @@
   width:100%;
   margin-top:12px;
 }
-    .card-image-thumb{
-  width:64px;
-  height:40px;
-  object-fit:contain;
-  border-radius:6px;
-  background:white;
-}
 
-.card-image-large{
-  display:block;
-  width:min(100%,420px);
-  max-height:240px;
-  margin:0 auto 16px;
-  object-fit:contain;
-  border-radius:12px;
-  background:white;
-  border:1px solid var(--border);
-}
-
-.card-image-fallback-thumb{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:64px;
-  height:40px;
-  border-radius:6px;
-  background:rgba(255,255,255,.65);
-  font-size:1.4rem;
-}
-
-.card-image-fallback-large{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:min(100%,420px);
-  height:180px;
-  margin:0 auto 16px;
-  border-radius:12px;
-  background:var(--light);
-  border:1px solid var(--border);
-  font-size:4rem;
-}
-    /* BUILD 9.88 — Credit-card images */
+    /* BUILD 9.93 — Credit-card images */
 
 .card-image-thumb{
   width:64px;
@@ -508,7 +469,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 9.91 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 9.93 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -721,7 +682,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 9.91 — Shared Supabase Version
+              BUILD 9.93 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -977,7 +938,8 @@
     <option value="Other" selected>Other</option>
   </select>
 </div>
-       <div class="group">
+       
+<div class="group">
   <label for="cardImagePath">Card Image File Path</label>
   <input id="cardImagePath"
     placeholder="Example: images/cards/southwest-visa.png">
@@ -985,16 +947,6 @@
   <p class="sub">
     Enter the image path exactly as it appears in the GitHub repository.
     Leave this blank to use the default card symbol.
-  </p>
-</div> 
-        <div class="group">
-  <label for="cardImagePath">Card Image File Path</label>
-  <input id="cardImagePath"
-    placeholder="Example: images/cards/southwest-visa.png">
-
-  <p class="sub">
-    Enter the image path exactly as it appears in your GitHub Pages files.
-    Leave blank to use the standard card fallback image.
   </p>
 </div>
         <div class="group">
@@ -1088,13 +1040,7 @@
     Cash automatically moved or set aside for this charge
   </label>
 </div>
-        <div class="group">
-  <label>
-    <input id="recurringCashMoved" type="checkbox"
-      style="width:auto;margin-right:8px">
-    Cash automatically moved or set aside for this charge
-  </label>
-</div>
+
         <div class="group">
           <label>
             <input id="recurringActive" type="checkbox" checked style="width:auto;margin-right:8px">
@@ -1639,43 +1585,7 @@ async function deleteBankAccount() {
     </div>
   `;
 }
-    function cardImageHTML(card, size = "thumb") {
-  const imagePath = String(card.card_image_path || "").trim();
-
-  const imageClass =
-    size === "large"
-      ? "card-image-large"
-      : "card-image-thumb";
-
-  const fallbackClass =
-    size === "large"
-      ? "card-image-fallback-large"
-      : "card-image-fallback-thumb";
-
-  if (!imagePath) {
-    return `
-      <div class="${fallbackClass}" title="No card image assigned">
-        💳
-      </div>
-    `;
-  }
-
-  return `
-    <img
-      class="${imageClass}"
-      src="${esc(imagePath)}"
-      alt="${esc(card.name)} credit card"
-      onerror="
-        this.style.display='none';
-        this.nextElementSibling.style.display='flex';
-      "
-    >
-
-    <div class="${fallbackClass}" style="display:none">
-      💳
-    </div>
-  `;
-}
+   
     function cardById(id) {
       return cards.find(card => card.id === id);
     }
@@ -1784,48 +1694,8 @@ function monthlyCashStillToMove() {
       return recurringForCard(cardId)
         .reduce((sum,charge) => sum + Number(charge.amount),0);
     }
-function cardCashMoved(cardId) {
-  const entryCashMoved = entries
-    .filter(entry =>
-      entry.card_id === cardId &&
-      entry.entry_type === "expense" &&
-      entry.cash_moved === true &&
-      String(entry.entry_date).slice(0,7) === currentMonth()
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
 
-  const recurringCashMoved = recurringCharges
-    .filter(charge =>
-      charge.card_id === cardId &&
-      charge.active !== false &&
-      charge.cash_moved === true
-    )
-    .reduce((sum, charge) => sum + Number(charge.amount), 0);
 
-  return entryCashMoved + recurringCashMoved;
-}
-
-function cardCashStillToMove(cardId) {
-  const cardExpenses = entries
-    .filter(entry =>
-      entry.card_id === cardId &&
-      entry.entry_type === "expense" &&
-      String(entry.entry_date).slice(0,7) === currentMonth()
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-
-  const plannedRecurring = recurringCharges
-    .filter(charge =>
-      charge.card_id === cardId &&
-      charge.active !== false
-    )
-    .reduce((sum, charge) => sum + Number(charge.amount), 0);
-
-  return Math.max(
-    0,
-    cardExpenses + plannedRecurring - cardCashMoved(cardId)
-  );
-}
 
    function dateForDay(year, monthIndex, requestedDay) {
   const lastDayOfMonth = new Date(
@@ -2426,9 +2296,9 @@ await loadBankAccounts();
       $("entryTitle").textContent = "Add Entry";
 $("entryDate").value = today();
 $("entryCashMoved").checked = false;
-$("deleteEntryButton").classList.add("hidden");;
+$("deleteEntryButton").classList.add("hidden");
 
-      fillCardSelect();fillCardSelect();
+      fillCardSelect();
 fillBankAccountSelect("entryFromBankAccount");
 fillBankAccountSelect("entryToBankAccount");
 
@@ -2529,35 +2399,34 @@ to_bank_account_id: $("entryToBankAccount").value || null
       await refreshData();
     }
 
-    function openCard(id = "") {
-      $("cardName").value = card.name;
-$("cardNetwork").value = card.card_network || "Other";
-$("cardImagePath").value = card.card_image_path || "";
-$("minimumPayment").value = card.minimum_payment || "";
-      $("deleteCardButton").classList.add("hidden");
+   function openCard(id = "") {
+  $("cardForm").reset();
+  $("cardId").value = "";
+  $("cardTitle").textContent = "Add Card";
+  $("deleteCardButton").classList.add("hidden");
 
-      if (id) {
-        const card = cardById(id);
+  if (id) {
+    const card = cardById(id);
 
-        if (!card) return;
+    if (!card) return;
 
-$("cardId").value = card.id;
-$("cardName").value = card.name;
-$("cardNetwork").value = card.card_network || "Other";
-$("cardImagePath").value = card.card_image_path || "";
-$("minimumPayment").value = card.minimum_payment || "";
-$("cardLastFour").value = card.last_four || "";
-      $("cardCycleDay").value = card.cycle_end_day || "";
-        $("cardDueDay").value = card.due_day || "";
-        $("cardApr").value = card.apr || "";
-        $("cardBalance").value = card.starting_balance || "";
+    $("cardId").value = card.id;
+    $("cardName").value = card.name || "";
+    $("cardNetwork").value = card.card_network || "Other";
+    $("cardImagePath").value = card.card_image_path || "";
+    $("minimumPayment").value = card.minimum_payment || "";
+    $("cardLastFour").value = card.last_four || "";
+    $("cardCycleDay").value = card.cycle_end_day || "";
+    $("cardDueDay").value = card.due_day || "";
+    $("cardApr").value = card.apr || "";
+    $("cardBalance").value = card.starting_balance || "";
 
-        $("cardTitle").textContent = "Edit Card";
-        $("deleteCardButton").classList.remove("hidden");
-      }
+    $("cardTitle").textContent = "Edit Card";
+    $("deleteCardButton").classList.remove("hidden");
+  }
 
-      openModal("cardModal");
-    }
+  openModal("cardModal");
+}
 
     async function saveCard(event) {
       event.preventDefault();
@@ -2810,10 +2679,11 @@ cash_moved: $("recurringCashMoved").checked
     async function returnToTrackerSelection() {
       closeModal("settingsModal");
 
-      currentTracker = null;
+currentTracker = null;
 cards = [];
 entries = [];
 recurringCharges = [];
+bankAccounts = [];
 selectedCardIdForEntries = "";
 
       await ensurePersonalTracker();
@@ -2861,6 +2731,7 @@ currentTracker = null;
 cards = [];
 entries = [];
 recurringCharges = [];
+bankAccounts = [];
 selectedCardIdForEntries = "";
 
       await ensurePersonalTracker();
@@ -3034,6 +2905,7 @@ currentTracker = null;
 cards = [];
 entries = [];
 recurringCharges = [];
+bankAccounts = [];
 selectedCardIdForEntries = "";
 
       showScreen("authScreen");
