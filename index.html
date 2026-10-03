@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.28 — dashboard card status colors */
+    /* BUILD 10.29 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.28 — Credit-card images */
+    /* BUILD 10.29 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -606,7 +606,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.28 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.29 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -819,7 +819,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.28 — Shared Supabase Version
+              BUILD 10.29 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -3807,15 +3807,80 @@ async function syncPlaidAccountsToBankAccounts() {
   for (const account of usableAccounts) {
     const record = plaidAccountToBankAccountRecord(account);
 
-    const { error } = await supabaseClient
-      .from("bank_accounts")
-      .upsert(record, {
-        onConflict: "tracker_id,plaid_linked_account_id"
-      });
+    const { data: plaidMatch, error: plaidMatchError } =
+      await supabaseClient
+        .from("bank_accounts")
+        .select("id")
+        .eq("tracker_id", currentTracker.id)
+        .eq(
+          "plaid_linked_account_id",
+          record.plaid_linked_account_id
+        )
+        .maybeSingle();
 
-    if (error) {
+    if (plaidMatchError) {
       throw new Error(
-        `Unable to synchronize ${record.name}: ${error.message}`
+        `Unable to check linked Plaid account: ${
+          plaidMatchError.message
+        }`
+      );
+    }
+
+    if (plaidMatch?.id) {
+      const { error: updateError } = await supabaseClient
+        .from("bank_accounts")
+        .update(record)
+        .eq("id", plaidMatch.id);
+
+      if (updateError) {
+        throw new Error(
+          `Unable to update ${record.name}: ${updateError.message}`
+        );
+      }
+
+      continue;
+    }
+
+    const { data: nameMatch, error: nameMatchError } =
+      await supabaseClient
+        .from("bank_accounts")
+        .select("id")
+        .eq("tracker_id", currentTracker.id)
+        .eq("name", record.name)
+        .maybeSingle();
+
+    if (nameMatchError) {
+      throw new Error(
+        `Unable to check existing account name: ${
+          nameMatchError.message
+        }`
+      );
+    }
+
+    if (nameMatch?.id) {
+      const { error: updateError } = await supabaseClient
+        .from("bank_accounts")
+        .update(record)
+        .eq("id", nameMatch.id);
+
+      if (updateError) {
+        throw new Error(
+          `Unable to synchronize ${record.name}: ${
+            updateError.message
+          }`
+        );
+      }
+
+      continue;
+    }
+
+    const { error: insertError } = await supabaseClient
+      .from("bank_accounts")
+      .insert(record);
+
+    if (insertError) {
+      throw new Error(
+        `Unable to add ${record.name}: ${insertError.message}`
       );
     }
   }
