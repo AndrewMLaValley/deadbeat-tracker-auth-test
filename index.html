@@ -3696,7 +3696,282 @@ cash_moved: $("recurringCashMoved").checked
       closeModal("recurringModal");
       await refreshData();
     }
+function plaidAccountLabel(account) {
+  const institution = account.institution_name || "Bank";
+  const name = account.plaid_account_name || "Account";
+  const mask = account.plaid_account_mask
+    ? ` •••• ${account.plaid_account_mask}`
+    : "";
 
+  return `${institution}: ${name}${mask}`;
+}
+
+function renderLinkedPlaidAccounts() {
+  const container = $("linkedPlaidAccounts");
+
+  if (!container) return;
+
+  if (!plaidLinkedAccounts.length) {
+    container.textContent = "No Plaid bank accounts linked yet.";
+    return;
+  }
+
+  container.innerHTML = plaidLinkedAccounts
+    .map(account => {
+      const label = plaidAccountLabel(account);
+
+      const balance = account.available_balance != null
+        ? `Available: ${money(account.available_balance)}`
+        : account.current_balance != null
+          ? `Current: ${money(account.current_balance)}`
+          : "Balance not available";
+
+      const type = [
+        account.plaid_account_type,
+        account.plaid_account_subtype
+      ].filter(Boolean).join(" · ");
+
+      return `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <b>${esc(label)}</b>
+          <div class="sub">
+            ${esc(type || "Account")} · ${esc(balance)}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+async function loadLinkedPlaidAccounts() {
+  const container = $("linkedPlaidAccounts");
+
+  if (!currentTracker) {
+    plaidLinkedAccounts = [];
+
+    if (container) {
+      container.textContent = "Open a tracker first.";
+    }
+
+    return;
+  }
+
+  try {
+    const {
+      data: { session }
+    } = await supabaseClient.auth.getSession();
+
+    if (!session?.access_token) {
+      plaidLinkedAccounts = [];
+
+      if (container) {
+        container.textContent = "Sign in to view linked bank accounts.";
+      }
+
+      return;
+    }
+
+    if (container) {
+      container.textContent = "Loading linked bank accounts...";
+    }
+
+    const response = await fetch(
+      `${PLAID_BACKEND_URL}/linked-accounts?tracker_id=${
+        encodeURIComponent(currentTracker.id)
+      }`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      }
+    );
+
+    let result;
+
+    try {
+      result = await response.json();
+    } catch (error) {
+      result = {};
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Unable to load linked Plaid accounts."
+      );
+    }
+
+    plaidLinkedAccounts = result.accounts || [];
+    renderLinkedPlaidAccounts();
+
+  } catch (error) {
+    plaidLinkedAccounts = [];
+
+    if (container) {
+      container.textContent =
+        `Unable to load linked accounts: ${
+          error.message || String(error)
+        }`;
+    }
+
+    setMessage(
+      "settingsMessage",
+      error.message || "Unable to load linked Plaid accounts.",
+      "error"
+    );
+  }
+}
+
+async function linkPlaidBankAccount() {
+  if (!currentTracker) {
+    setMessage(
+      "settingsMessage",
+      "Open a tracker before linking a bank account.",
+      "error"
+    );
+    return;
+  }
+
+  if (typeof window.Plaid === "undefined") {
+    setMessage(
+      "settingsMessage",
+      "Plaid Link did not load. Refresh the page and try again.",
+      "error"
+    );
+    return;
+  }
+
+  try {
+    const {
+      data: { session }
+    } = await supabaseClient.auth.getSession();
+
+    if (!session?.access_token) {
+      setMessage(
+        "settingsMessage",
+        "You must be signed in to link a bank account.",
+        "error"
+      );
+      return;
+    }
+
+    setMessage(
+      "settingsMessage",
+      "Preparing Plaid Sandbox Link...",
+      ""
+    );
+
+    const tokenResponse = await fetch(
+      `${PLAID_BACKEND_URL}/create-link-token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          tracker_id: currentTracker.id
+        })
+      }
+    );
+
+    let tokenResult;
+
+    try {
+      tokenResult = await tokenResponse.json();
+    } catch (error) {
+      tokenResult = {};
+    }
+
+    if (!tokenResponse.ok || !tokenResult.link_token) {
+      throw new Error(
+        tokenResult.error ||
+        "The backend did not return a Plaid Link token."
+      );
+    }
+
+    const plaidHandler = window.Plaid.create({
+      token: tokenResult.link_token,
+
+      onSuccess: async (publicToken) => {
+        try {
+          setMessage(
+            "settingsMessage",
+            "Saving linked bank account...",
+            ""
+          );
+
+          const exchangeResponse = await fetch(
+            `${PLAID_BACKEND_URL}/exchange-public-token`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({
+                public_token: publicToken,
+                tracker_id: currentTracker.id
+              })
+            }
+          );
+
+          let exchangeResult;
+
+          try {
+            exchangeResult = await exchangeResponse.json();
+          } catch (error) {
+            exchangeResult = {};
+          }
+
+          if (!exchangeResponse.ok) {
+            throw new Error(
+              exchangeResult.error ||
+              "Unable to save the linked Plaid account."
+            );
+          }
+
+          setMessage(
+            "settingsMessage",
+            "Bank account linked successfully.",
+            "good"
+          );
+
+          await loadLinkedPlaidAccounts();
+
+        } catch (error) {
+          setMessage(
+            "settingsMessage",
+            error.message ||
+            "Unexpected error while saving linked bank account.",
+            "error"
+          );
+        }
+      },
+
+      onExit: (error) => {
+        if (error) {
+          setMessage(
+            "settingsMessage",
+            "Plaid Link closed before account linking completed.",
+            "error"
+          );
+        }
+      }
+    });
+
+    plaidHandler.open();
+
+  } catch (error) {
+    setMessage(
+      "settingsMessage",
+      error.message ||
+      "Unexpected error while opening Plaid Link.",
+      "error"
+    );
+  }
+}
     function openSettings() {
       if (!currentTracker) return;
 
@@ -3714,8 +3989,9 @@ cash_moved: $("recurringCashMoved").checked
 
       leaveButton.classList.toggle("hidden", !canLeave);
 
-      setMessage("settingsMessage","");
-      openModal("settingsModal");
+     setMessage("settingsMessage","");
+openModal("settingsModal");
+loadLinkedPlaidAccounts();
     }
 
     async function saveBudget() {
