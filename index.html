@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.24 — dashboard card status colors */
+    /* BUILD 10.25 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.24 — Credit-card images */
+    /* BUILD 10.25 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -569,7 +569,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.24 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.25 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -782,7 +782,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.24 — Shared Supabase Version
+              BUILD 10.25 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1536,8 +1536,9 @@ function renderEntriesPage() {
               </strong>
             </div>
 
-            ${cardImageHTML(card, "large")}
-            ${cardInfoHTML(card)}
+${cardImageHTML(card, "large")}
+${minimumPaymentWarningHTML(card)}
+${cardInfoHTML(card)}
           </div>
         </article>
       `).join("")}
@@ -2765,7 +2766,40 @@ function cardCashStillToMove(cardId) {
     expensesThisMonth + recurringPlanned - cardCashMoved(cardId)
   );
 } 
-    
+  function minimumPaymentWarningHTML(card) {
+  const paymentStatus = getMinimumPaymentStatus(card);
+
+  if (!paymentStatus.risk) {
+    return "";
+  }
+
+  const minimumPayment = Number(card.minimum_payment || 0);
+
+  const paymentShortfall = Math.max(
+    0,
+    minimumPayment - Number(paymentStatus.paymentsRecorded || 0)
+  );
+
+  if (paymentShortfall <= 0) {
+    return "";
+  }
+
+  const deadline = paymentStatus.deadlineDate
+    ? paymentStatus.deadlineDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      })
+    : "the payment deadline";
+
+  return `
+    <div class="minimum-payment-warning">
+      <b>Minimum Payment Required</b><br>
+      A minimum payment of ${money(paymentShortfall)}
+      is required by ${esc(deadline)}.
+    </div>
+  `;
+}  
   function cardInfoHTML(card) {
   const paymentStatus = getMinimumPaymentStatus(card);
 
