@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD10.18 — dashboard card status colors */
+    /* BUILD 10.19 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD10.18 — Credit-card images */
+    /* BUILD 10.19 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -521,6 +521,44 @@
 .selected-card-transactions h2{
   margin-bottom:10px;
 }
+.minimum-payment-warning{
+  margin:12px 0;
+  padding:12px;
+  border:2px solid var(--red);
+  border-radius:10px;
+  background:#fdecea;
+  color:#7f1d1d;
+  font-size:.9rem;
+  line-height:1.45;
+}
+
+.recurring-charge-covered{
+  background:#e5f6ee !important;
+  border-left:5px solid var(--green) !important;
+}
+
+.recurring-status{
+  margin-top:5px;
+  font-size:.8rem;
+  font-weight:700;
+}
+
+.recurring-status.covered{
+  color:var(--green);
+}
+
+.recurring-status.pending{
+  color:var(--muted);
+}
+
+.transaction-section{
+  margin-top:18px;
+}
+
+.transaction-section h2{
+  margin-bottom:10px;
+}
+    
   </style>
 </head>
 
@@ -531,7 +569,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD10.18 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.19 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -744,7 +782,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD10.18 — Shared Supabase Version
+              BUILD 10.19 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1409,7 +1447,43 @@ function openAllEntries() {
   showPage("entries");
   renderEntriesPage();
 }
+function initializeDashboardSwipeNavigation() {
+  const dashboard = $("dashPage");
 
+  if (!dashboard || dashboard.dataset.swipeReady === "true") {
+    return;
+  }
+
+  dashboard.dataset.swipeReady = "true";
+
+  let startX = 0;
+  let startY = 0;
+
+  dashboard.addEventListener("touchstart", event => {
+    const touch = event.changedTouches[0];
+
+    startX = touch.clientX;
+    startY = touch.clientY;
+  }, { passive: true });
+
+  dashboard.addEventListener("touchend", event => {
+    const touch = event.changedTouches[0];
+
+    const distanceX = touch.clientX - startX;
+    const distanceY = touch.clientY - startY;
+
+    const horizontalSwipe =
+      Math.abs(distanceX) > Math.abs(distanceY);
+
+    if (
+      horizontalSwipe &&
+      distanceX < -80 &&
+      cards.length
+    ) {
+      openCardDetail(cards[0].id);
+    }
+  }, { passive: true });
+}
 function renderEntriesPage() {
   const selectedCard = selectedCardIdForEntries
     ? cardById(selectedCardIdForEntries)
@@ -1936,20 +2010,16 @@ async function deleteBankAccount() {
 {
   network: "Visa",
   vendor: "Chase",
-  product: "Southwest Business",
-  imagePath: "images/cards/southwest-visa-business.png"
-},
-{
-  network: "Visa",
-  vendor: "Chase",
   product: "Southwest Performance Business",
-  imagePath: "images/cards/southwest-visa-performancebusiness.png"
+  imagePath:
+    "images/cards/southwest-visa-performance-business.png"
 },
 {
   network: "Visa",
   vendor: "Chase",
   product: "Southwest Rapid Rewards Premier",
-  imagePath: "images/cards/southwest-visa-png.png"
+  imagePath:
+    "images/cards/southwest-visa-premier.png"
 },
 
 {
@@ -2089,6 +2159,107 @@ async function deleteBankAccount() {
     product: "Debit Card",
     imagePath: "images/cards/generic-usbank-debitcard.png"
   }
+      {
+  network: "American Express",
+  vendor: "Navy Federal",
+  product: "More Rewards",
+  imagePath:
+    "images/cards/navy-federal-american-express-more-rewards.png"
+},
+{
+  network: "Mastercard",
+  vendor: "Navy Federal",
+  product: "GO REWARDS",
+  imagePath:
+    "images/cards/navy-federal-mastercard-go-rewards.png"
+},
+{
+  network: "Visa",
+  vendor: "Navy Federal",
+  product: "Flagship Rewards",
+  imagePath:
+    "images/cards/navy-federal-visa-flagship-premier.png"
+},
+{
+  network: "Visa",
+  vendor: "Navy Federal",
+  product: "GO REWARDS",
+  imagePath:
+    "images/cards/navy-federal-visa-go-rewards.png"
+},
+{
+  network: "Visa",
+  vendor: "Navy Federal",
+  product: "Debit Card",
+  imagePath:
+    "images/cards/navy-federal-visa-debit.png"
+},
+
+{
+  network: "Mastercard",
+  vendor: "Sam's Club",
+  product: "Plus Member",
+  imagePath:
+    "images/cards/sams-club-mastercard-plus-member.png"
+},
+{
+  network: "Mastercard",
+  vendor: "Sam's Club",
+  product: "Basic",
+  imagePath:
+    "images/cards/sams-club-mastercard-basic.png"
+},
+
+{
+  network: "Visa",
+  vendor: "U.S. Bank",
+  product: "Connect Signature",
+  imagePath:
+    "images/cards/us-bank-visa-connect-signature.png"
+},
+{
+  network: "Visa",
+  vendor: "U.S. Bank",
+  product: "Visa Platinum",
+  imagePath:
+    "images/cards/us-bank-visa-platinum.png"
+},
+{
+  network: "Visa",
+  vendor: "U.S. Bank",
+  product: "Shield",
+  imagePath:
+    "images/cards/us-bank-visa-shield.png"
+},
+{
+  network: "Visa",
+  vendor: "U.S. Bank",
+  product: "Smartly Signature",
+  imagePath:
+    "images/cards/us-bank-visa-smartly-signature.png"
+},
+{
+  network: "Visa",
+  vendor: "U.S. Bank",
+  product: "Platinum",
+  imagePath:
+    "images/cards/us-bank-platinum.png"
+},
+
+{
+  network: "Visa",
+  vendor: "USAA",
+  product: "Debit Card",
+  imagePath:
+    "images/cards/usaa-visa-debit-card.png"
+},
+{
+  network: "American Express",
+  vendor: "USAA",
+  product: "Basic",
+  imagePath:
+    "images/cards/usaa-american-express-basic.png"
+}
 ];
 
 function uniqueSorted(values) {
@@ -3723,7 +3894,7 @@ selectedCardIdForEntries = "";
     $("cardForm").addEventListener("submit",saveCard);
     $("recurringForm").addEventListener("submit",saveRecurring);
    $("bankAccountForm").addEventListener("submit",saveBankAccount);
-    
+    initializeDashboardSwipeNavigation();
 
     
     document.querySelectorAll(".modal-bg").forEach(modal => {
