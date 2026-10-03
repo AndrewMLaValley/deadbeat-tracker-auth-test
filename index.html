@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.26 — dashboard card status colors */
+    /* BUILD 10.27 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.26 — Credit-card images */
+    /* BUILD 10.27 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -606,7 +606,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.26 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.27 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -819,7 +819,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.26 — Shared Supabase Version
+              BUILD 10.27 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1255,6 +1255,23 @@
 <button class="secondary wide" type="button" onclick="openBankAccount()">
   Manage Bank Accounts
 </button>
+      <button class="secondary wide" type="button"
+  onclick="linkPlaidBankAccount()">
+  Link Bank Account (Plaid Sandbox)
+</button>
+
+<button class="secondary wide" type="button"
+  onclick="loadLinkedPlaidAccounts()">
+  Refresh Linked Bank Accounts
+</button>
+
+<div class="group">
+  <label>Linked Bank Accounts</label>
+
+  <div id="linkedPlaidAccounts" class="sub">
+    No Plaid bank accounts linked yet.
+  </div>
+</div>
       <button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
         Switch Tracker
       </button>
@@ -1336,7 +1353,7 @@
   </div>
 </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script>
     /*
       Replace only the two values below with your NEW Supabase project values.
@@ -1379,7 +1396,10 @@ let entries = [];
 let recurringCharges = [];
 let selectedCardIdForEntries = "";
 let bankAccounts = [];
-    
+    let plaidLinkedAccounts = [];
+
+const PLAID_BACKEND_URL =
+  "https://deadbeat-plaid-server-3.onrender.com";
     function money(value) {
       return new Intl.NumberFormat("en-US", {
         style:"currency",
