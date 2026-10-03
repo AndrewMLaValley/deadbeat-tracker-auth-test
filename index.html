@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.25 — dashboard card status colors */
+    /* BUILD 10.26 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.25 — Credit-card images */
+    /* BUILD 10.26 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -558,7 +558,44 @@
 .transaction-section h2{
   margin-bottom:10px;
 }
-    
+   #dashboardCards{
+  grid-auto-rows:1fr;
+}
+
+.dashboard-card{
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  min-height:158px;
+  height:100%;
+}
+
+.dashboard-card-top{
+  width:100%;
+}
+
+.dashboard-card-footer{
+  margin-top:14px;
+}
+
+.dashboard-card-balance{
+  display:block;
+  margin:0;
+  font-size:1.35rem;
+}
+
+.dashboard-payment-required{
+  margin-top:8px;
+  color:var(--red);
+  font-size:.82rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+
+.dashboard-payment-placeholder{
+  height:27px;
+  margin-top:8px;
+} 
   </style>
 </head>
 
@@ -569,7 +606,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.25 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.26 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -782,7 +819,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.25 — Shared Supabase Version
+              BUILD 10.26 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -3036,21 +3073,36 @@ $("dashboardCards").innerHTML = cards.length
         statusClass = "payment-risk";
       }
 
-      return `
-        <button class="dashboard-card ${statusClass}" type="button"
-          onclick="openCardDetail('${card.id}')">
-          <div class="row">
-            <b>${esc(card.name)}</b>
-           ${cardImageHTML(card, "thumb")}
-          </div>
+     return `
+  <button class="dashboard-card ${statusClass}" type="button"
+    onclick="openCardDetail('${card.id}')">
 
-          <div class="sub">
-            ${esc(card.card_network || "Other")}
-          </div>
+    <div class="dashboard-card-top">
+      <div class="row">
+        <b>${esc(card.name)}</b>
+        ${cardImageHTML(card, "thumb")}
+      </div>
 
-          <strong>${money(balance)}</strong>
-        </button>
-      `;
+      <div class="sub">
+        ${esc(card.card_network || "Other")}
+      </div>
+    </div>
+
+    <div class="dashboard-card-footer">
+      <strong class="dashboard-card-balance">
+        ${money(balance)}
+      </strong>
+
+      ${
+        paymentStatus.risk
+          ? `<div class="dashboard-payment-required">
+              Payment Required
+            </div>`
+          : `<div class="dashboard-payment-placeholder"></div>`
+      }
+    </div>
+  </button>
+`;
     }).join("")
   : `<div class="card empty">No credit cards saved.</div>`;
 
