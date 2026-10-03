@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.29 — dashboard card status colors */
+    /* BUILD 10.30 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.29 — Credit-card images */
+    /* BUILD 10.30 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -606,7 +606,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.29 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.30 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -819,7 +819,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.29 — Shared Supabase Version
+              BUILD 10.30 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1271,6 +1271,27 @@
   <div id="linkedPlaidAccounts" class="sub">
     No Plaid bank accounts linked yet.
   </div>
+</div>
+
+<div class="group">
+  <label for="unlinkPlaidAccountSelect">
+    Unlink a Plaid Bank Account
+  </label>
+
+  <select id="unlinkPlaidAccountSelect">
+    <option value="">Select a linked account</option>
+  </select>
+
+  <button class="danger wide" type="button"
+    onclick="unlinkSelectedPlaidAccount()">
+    Unlink Selected Bank Account
+  </button>
+
+  <p class="sub">
+    Unlinking removes the Sandbox connection and hides the account
+    from future From/To Bank Account selections. Existing entries
+    remain in the tracker.
+  </p>
 </div>
       <button class="secondary wide" type="button" onclick="returnToTrackerSelection()">
         Switch Tracker
@@ -3708,11 +3729,17 @@ function plaidAccountLabel(account) {
 
 function renderLinkedPlaidAccounts() {
   const container = $("linkedPlaidAccounts");
+  const select = $("unlinkPlaidAccountSelect");
 
-  if (!container) return;
+  if (!container || !select) return;
 
   if (!plaidLinkedAccounts.length) {
     container.textContent = "No Plaid bank accounts linked yet.";
+
+    select.innerHTML = `
+      <option value="">No linked account available</option>
+    `;
+
     return;
   }
 
@@ -3741,6 +3768,17 @@ function renderLinkedPlaidAccounts() {
       `;
     })
     .join("");
+
+  select.innerHTML = `
+    <option value="">Select a linked account</option>
+    ${
+      plaidLinkedAccounts.map(account => `
+        <option value="${esc(String(account.id))}">
+          ${esc(plaidAccountLabel(account))}
+        </option>
+      `).join("")
+    }
+  `;
 }
 function plaidAccountToBankAccountRecord(account) {
   const institution =
@@ -3968,7 +4006,131 @@ renderLinkedPlaidAccounts();
     );
   }
 }
+async function unlinkSelectedPlaidAccount() {
+  const select = $("unlinkPlaidAccountSelect");
+  const linkedAccountId = select?.value || "";
 
+  if (!currentTracker) {
+    setMessage(
+      "settingsMessage",
+      "Open a tracker before unlinking a bank account.",
+      "error"
+    );
+    return;
+  }
+
+  if (!linkedAccountId) {
+    setMessage(
+      "settingsMessage",
+      "Select a linked bank account to unlink.",
+      "error"
+    );
+    return;
+  }
+
+  const selectedAccount = plaidLinkedAccounts.find(account =>
+    String(account.id) === String(linkedAccountId)
+  );
+
+  const accountLabel = selectedAccount
+    ? plaidAccountLabel(selectedAccount)
+    : "the selected account";
+
+  if (!confirm(`Unlink ${accountLabel}?`)) {
+    return;
+  }
+
+  try {
+    const {
+      data: { session }
+    } = await supabaseClient.auth.getSession();
+
+    if (!session?.access_token) {
+      setMessage(
+        "settingsMessage",
+        "You must be signed in to unlink a bank account.",
+        "error"
+      );
+      return;
+    }
+
+    setMessage(
+      "settingsMessage",
+      "Unlinking bank account...",
+      ""
+    );
+
+    const response = await fetch(
+      `${PLAID_BACKEND_URL}/unlink-account`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          tracker_id: currentTracker.id,
+          linked_account_id: linkedAccountId
+        })
+      }
+    );
+
+    let result;
+
+    try {
+      result = await response.json();
+    } catch (error) {
+      result = {};
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Unable to unlink the selected bank account."
+      );
+    }
+
+    const { error: deactivateError } = await supabaseClient
+      .from("bank_accounts")
+      .update({
+        active: false
+      })
+      .eq("tracker_id", currentTracker.id)
+      .eq(
+        "plaid_linked_account_id",
+        String(linkedAccountId)
+      );
+
+    if (deactivateError) {
+      throw new Error(
+        `Plaid account unlinked, but local account cleanup failed: ${
+          deactivateError.message
+        }`
+      );
+    }
+
+    plaidLinkedAccounts = plaidLinkedAccounts.filter(account =>
+      String(account.id) !== String(linkedAccountId)
+    );
+
+    await loadBankAccounts();
+    renderLinkedPlaidAccounts();
+
+    setMessage(
+      "settingsMessage",
+      "Bank account unlinked successfully.",
+      "good"
+    );
+
+  } catch (error) {
+    setMessage(
+      "settingsMessage",
+      error.message ||
+      "Unexpected error while unlinking bank account.",
+      "error"
+    );
+  }
+}
 async function linkPlaidBankAccount() {
   if (!currentTracker) {
     setMessage(
