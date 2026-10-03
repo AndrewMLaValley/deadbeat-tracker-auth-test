@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.23 — dashboard card status colors */
+    /* BUILD 10.24 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.23 — Credit-card images */
+    /* BUILD 10.24 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -569,7 +569,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.23 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.24 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -782,7 +782,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.23 — Shared Supabase Version
+              BUILD 10.24 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1587,16 +1587,38 @@ function renderSelectedCardTransactions() {
     entry.card_id === selectedCard.id
   );
 
-  container.innerHTML = `
-    <h2>Transactions — ${esc(selectedCard.name)}</h2>
+  const requiringAttention = selectedEntries.filter(entry =>
+    entry.cash_moved !== true
+  );
 
-    ${
-      selectedEntries.length
-        ? entriesGroupedByDateHTML(selectedEntries)
-        : `<div class="card empty">
-            No entries for this card yet.
-          </div>`
-    }
+  const coveredTransactions = selectedEntries.filter(entry =>
+    entry.cash_moved === true
+  );
+
+  container.innerHTML = `
+    <section class="transaction-section">
+      <h2>Transactions Requiring Attention</h2>
+
+      ${
+        requiringAttention.length
+          ? entriesGroupedByDateHTML(requiringAttention)
+          : `<div class="card empty">
+              No transactions currently require attention.
+            </div>`
+      }
+    </section>
+
+    <section class="transaction-section">
+      <h2>Covered / Cash Moved Transactions</h2>
+
+      ${
+        coveredTransactions.length
+          ? entriesGroupedByDateHTML(coveredTransactions)
+          : `<div class="card empty">
+              No covered transactions yet.
+            </div>`
+      }
+    </section>
   `;
 }
 
@@ -2804,7 +2826,22 @@ Recurring Planned Charges: ${money(recurringTotal(card.id))}<br>
 function entriesGroupedByDateHTML(entryList) {
   const groups = new Map();
 
-  entryList.forEach(entry => {
+  const sortedEntries = [...entryList].sort((a, b) => {
+    const dateComparison =
+      String(b.entry_date || "").localeCompare(
+        String(a.entry_date || "")
+      );
+
+    if (dateComparison !== 0) {
+      return dateComparison;
+    }
+
+    return String(b.created_at || "").localeCompare(
+      String(a.created_at || "")
+    );
+  });
+
+  sortedEntries.forEach(entry => {
     const dateKey = entry.entry_date || "unknown";
 
     if (!groups.has(dateKey)) {
