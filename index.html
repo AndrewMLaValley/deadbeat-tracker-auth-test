@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.32 — dashboard card status colors */
+    /* BUILD 10.33 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.32 — Credit-card images */
+    /* BUILD 10.33 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -671,6 +671,16 @@ body.night-mode .minimum-payment-warning{
 body.night-mode .total{
   background:linear-gradient(135deg,#0b1f35,#275783);
 }
+    body.night-mode .add{
+  background:#5aa7f5;
+  color:#07111d;
+  border:2px solid #b9dbff;
+  box-shadow:0 7px 18px rgba(90,167,245,.55);
+}
+
+body.night-mode .add:hover{
+  background:#7bbcff;
+}
   </style>
 </head>
 
@@ -681,7 +691,7 @@ body.night-mode .total{
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.32 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.33 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -894,7 +904,7 @@ body.night-mode .total{
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.32 — Shared Supabase Version
+              BUILD 10.33 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1469,6 +1479,7 @@ body.night-mode .total{
 </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
   <script>
     /*
       Replace only the two values below with your NEW Supabase project values.
@@ -1710,23 +1721,34 @@ function updateAutomaticAppearance() {
     return;
   }
 
+  if (!window.SunCalc) {
+    applyAppearance(false);
+
+    updateAppearanceStatus(
+      "Sunrise/sunset calculator did not load. " +
+      "Refresh the page and try again."
+    );
+
+    return;
+  }
+
   const now = new Date();
 
-  const sunrise = calculateSunTime(
+  const sunTimes = window.SunCalc.getTimes(
     now,
     solarLocation.latitude,
-    solarLocation.longitude,
-    true
+    solarLocation.longitude
   );
 
-  const sunset = calculateSunTime(
-    now,
-    solarLocation.latitude,
-    solarLocation.longitude,
-    false
-  );
+  const sunrise = sunTimes.sunrise;
+  const sunset = sunTimes.sunset;
 
-  if (!sunrise || !sunset) {
+  if (
+    !sunrise ||
+    !sunset ||
+    isNaN(sunrise.getTime()) ||
+    isNaN(sunset.getTime())
+  ) {
     applyAppearance(false);
 
     updateAppearanceStatus(
