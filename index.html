@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.31 — dashboard card status colors */
+    /* BUILD 10.32 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.31 — Credit-card images */
+    /* BUILD 10.32 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -596,6 +596,81 @@
   height:27px;
   margin-top:8px;
 } 
+    /* BUILD 10.30 — Automatic Day/Night Appearance */
+
+body.night-mode{
+  --navy:#0b1f35;
+  --blue:#5aa7f5;
+  --green:#42c997;
+  --red:#ff7169;
+  --bg:#0d1522;
+  --text:#e7edf5;
+  --muted:#a7b5c8;
+  --border:#33445a;
+  --light:#1d2a3b;
+}
+
+body.night-mode .card,
+body.night-mode .panel,
+body.night-mode .modal,
+body.night-mode .nav,
+body.night-mode .list,
+body.night-mode input,
+body.night-mode select,
+body.night-mode textarea{
+  background:#172233;
+  color:var(--text);
+  border-color:var(--border);
+}
+
+body.night-mode .nav button{
+  background:#172233;
+  color:var(--muted);
+}
+
+body.night-mode .nav .active{
+  background:#203248;
+  color:#7fc0ff;
+}
+
+body.night-mode .secondary{
+  background:#293c53;
+  color:#e7edf5;
+}
+
+body.night-mode .notice{
+  background:#3a311b;
+  color:#f5df91;
+}
+
+body.night-mode .dashboard-card{
+  background:#172233;
+  color:var(--text);
+}
+
+body.night-mode .dashboard-card.has-balance,
+body.night-mode .dashboard-card.payment-risk{
+  background:#172233;
+}
+
+body.night-mode .entry-date-header{
+  background:#293c53;
+  color:#e7edf5;
+}
+
+body.night-mode .card-image-frame{
+  background:#172233;
+  border-color:#405572;
+}
+
+body.night-mode .minimum-payment-warning{
+  background:#4a2024;
+  color:#ffd3d1;
+}
+
+body.night-mode .total{
+  background:linear-gradient(135deg,#0b1f35,#275783);
+}
   </style>
 </head>
 
@@ -606,7 +681,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.31 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.32 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -819,7 +894,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.31 — Shared Supabase Version
+              BUILD 10.32 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1239,7 +1314,26 @@
       <button class="secondary wide" type="button" onclick="rotateInviteCode()">
         Rotate Invite Code
       </button>
+<div class="group">
+  <label for="appearanceMode">Appearance</label>
 
+  <select id="appearanceMode"
+    onchange="changeAppearanceMode()">
+    <option value="auto">
+      Automatic — Sunrise/Sunset
+    </option>
+    <option value="day">
+      Day Mode
+    </option>
+    <option value="night">
+      Night Mode
+    </option>
+  </select>
+
+  <p id="appearanceStatus" class="sub">
+    Appearance setting not initialized.
+  </p>
+</div>
       <div class="group">
         <label for="budgetInput">Monthly Budget</label>
         <input id="budgetInput" type="number" min="0" step=".01">
@@ -1447,7 +1541,347 @@ const PLAID_BACKEND_URL =
     function currentMonth() {
       return today().slice(0,7);
     }
+let appearanceMode = "auto";
+let solarLocation = null;
+let appearanceCheckTimer = null;
 
+function normalizeSolarHours(hours) {
+  let value = hours;
+
+  while (value < 0) value += 24;
+  while (value >= 24) value -= 24;
+
+  return value;
+}
+
+function calculateSunTime(date, latitude, longitude, isSunrise) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+
+  const startOfYear = Date.UTC(year, 0, 0);
+  const currentDate = Date.UTC(year, month, day);
+
+  const dayOfYear = Math.floor(
+    (currentDate - startOfYear) / 86400000
+  );
+
+  const longitudeHour = longitude / 15;
+
+  const approximateTime =
+    dayOfYear +
+    (
+      (isSunrise ? 6 : 18) -
+      longitudeHour
+    ) / 24;
+
+  const meanAnomaly =
+    (0.9856 * approximateTime) - 3.289;
+
+  let trueLongitude =
+    meanAnomaly +
+    (1.916 * Math.sin(meanAnomaly * Math.PI / 180)) +
+    (0.020 * Math.sin(2 * meanAnomaly * Math.PI / 180)) +
+    282.634;
+
+  trueLongitude = normalizeSolarHours(trueLongitude / 15) * 15;
+
+  let rightAscension =
+    Math.atan(
+      0.91764 *
+      Math.tan(trueLongitude * Math.PI / 180)
+    ) * 180 / Math.PI;
+
+  rightAscension = normalizeSolarHours(rightAscension / 15) * 15;
+
+  const longitudeQuadrant =
+    Math.floor(trueLongitude / 90) * 90;
+
+  const rightAscensionQuadrant =
+    Math.floor(rightAscension / 90) * 90;
+
+  rightAscension =
+    rightAscension +
+    (longitudeQuadrant - rightAscensionQuadrant);
+
+  rightAscension = rightAscension / 15;
+
+  const sinDeclination =
+    0.39782 * Math.sin(trueLongitude * Math.PI / 180);
+
+  const cosDeclination =
+    Math.cos(
+      Math.asin(sinDeclination)
+    );
+
+  const latitudeRadians =
+    latitude * Math.PI / 180;
+
+  const cosLocalHour =
+    (
+      Math.cos(90.833 * Math.PI / 180) -
+      (sinDeclination * Math.sin(latitudeRadians))
+    ) /
+    (
+      cosDeclination *
+      Math.cos(latitudeRadians)
+    );
+
+  if (cosLocalHour > 1 || cosLocalHour < -1) {
+    return null;
+  }
+
+  let localHourAngle;
+
+  if (isSunrise) {
+    localHourAngle =
+      360 -
+      (Math.acos(cosLocalHour) * 180 / Math.PI);
+  } else {
+    localHourAngle =
+      Math.acos(cosLocalHour) * 180 / Math.PI;
+  }
+
+  localHourAngle = localHourAngle / 15;
+
+  const localMeanTime =
+    localHourAngle +
+    rightAscension -
+    (0.06571 * approximateTime) -
+    6.622;
+
+  const universalTime =
+    normalizeSolarHours(
+      localMeanTime - longitudeHour
+    );
+
+  const utcMidnight =
+    Date.UTC(year, month, day);
+
+  return new Date(
+    utcMidnight +
+    (universalTime * 60 * 60 * 1000)
+  );
+}
+
+function formatSolarTime(date) {
+  if (!date) return "Unavailable";
+
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function applyAppearance(isNight) {
+  document.body.classList.toggle(
+    "night-mode",
+    isNight
+  );
+
+  const themeColor = document.querySelector(
+    'meta[name="theme-color"]'
+  );
+
+  if (themeColor) {
+    themeColor.content = isNight
+      ? "#0d1522"
+      : "#12355b";
+  }
+}
+
+function updateAppearanceStatus(text) {
+  const status = $("appearanceStatus");
+
+  if (status) {
+    status.textContent = text;
+  }
+}
+
+function updateAutomaticAppearance() {
+  if (!solarLocation) {
+    applyAppearance(false);
+
+    updateAppearanceStatus(
+      "Automatic mode needs device location permission " +
+      "to calculate sunrise and sunset."
+    );
+
+    return;
+  }
+
+  const now = new Date();
+
+  const sunrise = calculateSunTime(
+    now,
+    solarLocation.latitude,
+    solarLocation.longitude,
+    true
+  );
+
+  const sunset = calculateSunTime(
+    now,
+    solarLocation.latitude,
+    solarLocation.longitude,
+    false
+  );
+
+  if (!sunrise || !sunset) {
+    applyAppearance(false);
+
+    updateAppearanceStatus(
+      "Sunrise and sunset are unavailable for the current location."
+    );
+
+    return;
+  }
+
+  const isNight =
+    now < sunrise ||
+    now >= sunset;
+
+  applyAppearance(isNight);
+
+  if (isNight) {
+    updateAppearanceStatus(
+      `Night Mode — Sunrise at ${formatSolarTime(sunrise)}.`
+    );
+  } else {
+    updateAppearanceStatus(
+      `Day Mode — Sunset at ${formatSolarTime(sunset)}.`
+    );
+  }
+}
+
+function requestSolarLocation() {
+  if (!navigator.geolocation) {
+    applyAppearance(false);
+
+    updateAppearanceStatus(
+      "This browser does not support device location."
+    );
+
+    return;
+  }
+
+  updateAppearanceStatus(
+    "Requesting device location for sunrise/sunset calculation..."
+  );
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      solarLocation = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      };
+
+      updateAutomaticAppearance();
+    },
+
+    error => {
+      solarLocation = null;
+      applyAppearance(false);
+
+      updateAppearanceStatus(
+        "Location permission was not granted. " +
+        "Use Day Mode or Night Mode manually."
+      );
+
+      console.warn(
+        "Sunrise/sunset location request failed:",
+        error.message
+      );
+    },
+
+    {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 21600000
+    }
+  );
+}
+
+function changeAppearanceMode() {
+  const selector = $("appearanceMode");
+
+  if (!selector) return;
+
+  appearanceMode = selector.value;
+
+  try {
+    localStorage.setItem(
+      "deadbeat_appearance_mode",
+      appearanceMode
+    );
+  } catch (error) {}
+
+  if (appearanceMode === "day") {
+    applyAppearance(false);
+
+    updateAppearanceStatus(
+      "Day Mode is enabled."
+    );
+
+    return;
+  }
+
+  if (appearanceMode === "night") {
+    applyAppearance(true);
+
+    updateAppearanceStatus(
+      "Night Mode is enabled."
+    );
+
+    return;
+  }
+
+  if (solarLocation) {
+    updateAutomaticAppearance();
+  } else {
+    requestSolarLocation();
+  }
+}
+
+function initializeAppearance() {
+  try {
+    appearanceMode =
+      localStorage.getItem(
+        "deadbeat_appearance_mode"
+      ) || "auto";
+  } catch (error) {
+    appearanceMode = "auto";
+  }
+
+  const selector = $("appearanceMode");
+
+  if (selector) {
+    selector.value = appearanceMode;
+  }
+
+  if (appearanceMode === "day") {
+    applyAppearance(false);
+
+    updateAppearanceStatus(
+      "Day Mode is enabled."
+    );
+  } else if (appearanceMode === "night") {
+    applyAppearance(true);
+
+    updateAppearanceStatus(
+      "Night Mode is enabled."
+    );
+  } else {
+    requestSolarLocation();
+  }
+
+  if (!appearanceCheckTimer) {
+    appearanceCheckTimer = setInterval(() => {
+      if (appearanceMode === "auto") {
+        updateAutomaticAppearance();
+      }
+    }, 300000);
+  }
+}
     function setMessage(id, text="", type="") {
       const el = $(id);
       if (!el) return;
@@ -4298,7 +4732,19 @@ async function linkPlaidBankAccount() {
 
       $("budgetInput").value =
         currentTracker.monthly_budget || 0;
+const appearanceSelector = $("appearanceMode");
 
+if (appearanceSelector) {
+  appearanceSelector.value = appearanceMode;
+}
+
+if (appearanceMode === "auto") {
+  updateAutomaticAppearance();
+} else if (appearanceMode === "day") {
+  updateAppearanceStatus("Day Mode is enabled.");
+} else if (appearanceMode === "night") {
+  updateAppearanceStatus("Night Mode is enabled.");
+}
       const leaveButton = $("leaveTrackerButton");
 
       const canLeave =
@@ -4694,7 +5140,7 @@ selectedCardIdForEntries = "";
     $("recurringForm").addEventListener("submit",saveRecurring);
    $("bankAccountForm").addEventListener("submit",saveBankAccount);
     initializeDashboardSwipeNavigation();
-
+initializeAppearance();
     
     document.querySelectorAll(".modal-bg").forEach(modal => {
       modal.addEventListener("click",event => {
