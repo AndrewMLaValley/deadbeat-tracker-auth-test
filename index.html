@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.27 — dashboard card status colors */
+    /* BUILD 10.28 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.27 — Credit-card images */
+    /* BUILD 10.28 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -606,7 +606,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.27 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.28 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -819,7 +819,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.27 — Shared Supabase Version
+              BUILD 10.28 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -3742,7 +3742,86 @@ function renderLinkedPlaidAccounts() {
     })
     .join("");
 }
+function plaidAccountToBankAccountRecord(account) {
+  const institution =
+    account.institution_name || "Linked Bank";
 
+  const accountName =
+    account.plaid_account_name || "Account";
+
+  const mask = account.plaid_account_mask || "";
+
+  const subtype =
+    String(account.plaid_account_subtype || "")
+      .toLowerCase();
+
+  const type =
+    String(account.plaid_account_type || "")
+      .toLowerCase();
+
+  let accountType = "other";
+
+  if (subtype === "checking") {
+    accountType = "checking";
+  } else if (subtype === "savings") {
+    accountType = "savings";
+  } else if (type === "depository") {
+    accountType = "other";
+  }
+
+  const displayName = mask
+    ? `${institution} — ${accountName} •••• ${mask}`
+    : `${institution} — ${accountName}`;
+
+  return {
+    tracker_id: currentTracker.id,
+    name: displayName,
+    account_type: accountType,
+    last_four: mask || null,
+    active: true,
+    source_type: "plaid",
+    plaid_linked_account_id: String(account.id),
+    plaid_institution_name: institution
+  };
+}
+
+async function syncPlaidAccountsToBankAccounts() {
+  if (!currentTracker) return;
+
+  const usableAccounts = plaidLinkedAccounts.filter(account => {
+    const type =
+      String(account.plaid_account_type || "")
+        .toLowerCase();
+
+    const subtype =
+      String(account.plaid_account_subtype || "")
+        .toLowerCase();
+
+    return (
+      type === "depository" ||
+      subtype === "checking" ||
+      subtype === "savings"
+    );
+  });
+
+  for (const account of usableAccounts) {
+    const record = plaidAccountToBankAccountRecord(account);
+
+    const { error } = await supabaseClient
+      .from("bank_accounts")
+      .upsert(record, {
+        onConflict: "tracker_id,plaid_linked_account_id"
+      });
+
+    if (error) {
+      throw new Error(
+        `Unable to synchronize ${record.name}: ${error.message}`
+      );
+    }
+  }
+
+  await loadBankAccounts();
+}
 async function loadLinkedPlaidAccounts() {
   const container = $("linkedPlaidAccounts");
 
@@ -3803,8 +3882,10 @@ async function loadLinkedPlaidAccounts() {
     }
 
     plaidLinkedAccounts = result.accounts || [];
-    renderLinkedPlaidAccounts();
 
+await syncPlaidAccountsToBankAccounts();
+
+renderLinkedPlaidAccounts();
   } catch (error) {
     plaidLinkedAccounts = [];
 
