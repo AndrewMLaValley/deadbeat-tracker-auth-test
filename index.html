@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.17 — dashboard card status colors */
+    /* BUILD10.18 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.17 — Credit-card images */
+    /* BUILD10.18 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -531,7 +531,7 @@
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.17 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD10.18 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -744,7 +744,7 @@
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.17 — Shared Supabase Version
+              BUILD10.18 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
@@ -1461,8 +1461,19 @@ function renderEntriesPage() {
               </strong>
             </div>
 
-            ${cardImageHTML(card, "large")}
-            ${cardInfoHTML(card)}
+           ${cardImageHTML(card, "large")}
+${cardInfoHTML(card)}
+
+<div class="heading" style="margin-top:16px">
+  <h2 style="font-size:1rem">Scheduled Recurring Payments</h2>
+
+  <button class="secondary" type="button"
+    onclick="openRecurring('${card.id}')">
+    + Add
+  </button>
+</div>
+
+${recurringHTML(card.id)}
           </div>
         </article>
       `).join("")}
