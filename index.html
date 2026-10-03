@@ -349,7 +349,7 @@
     @media(max-width:430px){
       .grid{grid-template-columns:1fr}
     }
-    /* BUILD 10.33 — dashboard card status colors */
+    /* BUILD 10.34 — dashboard card status colors */
 
 .dashboard-card{
   width:100%;
@@ -417,7 +417,7 @@
   margin-top:12px;
 }
 
-    /* BUILD 10.33 — Credit-card images */
+    /* BUILD 10.34 — Credit-card images */
 .card-image-frame{
   position:relative;
   overflow:hidden;
@@ -671,15 +671,17 @@ body.night-mode .minimum-payment-warning{
 body.night-mode .total{
   background:linear-gradient(135deg,#0b1f35,#275783);
 }
-    body.night-mode .add{
-  background:#5aa7f5;
-  color:#07111d;
+body.night-mode .add{
+  background:#2d8cff;
+  color:#ffffff;
   border:2px solid #b9dbff;
-  box-shadow:0 7px 18px rgba(90,167,245,.55);
+  box-shadow:0 7px 18px rgba(90,167,245,.65);
+  text-shadow:0 1px 2px rgba(0,0,0,.35);
 }
 
 body.night-mode .add:hover{
-  background:#7bbcff;
+  background:#5aa7f5;
+  color:#ffffff;
 }
   </style>
 </head>
@@ -691,7 +693,7 @@ body.night-mode .add:hover{
     <div class="auth-wrap">
       <div class="card">
         <h1 style="margin:0;color:#12355b">Deadbeat Tracker</h1>
-        <p class="sub">BUILD 10.33 — Shared Supabase Tracker</p>
+        <p class="sub">BUILD 10.34 — Shared Supabase Tracker</p>
 
         <!-- SIGN IN -->
         <div id="signInPanel" class="password-panel active">
@@ -904,7 +906,7 @@ body.night-mode .add:hover{
           <div>
             <h1 id="trackerTitle">Deadbeat Tracker</h1>
             <p style="font-size:.75rem;font-weight:700">
-              BUILD 10.33 — Shared Supabase Version
+              BUILD 10.34 — Shared Supabase Version
             </p>
             <p id="trackerSubtitle">Credit-card spending tracker</p>
           </div>
